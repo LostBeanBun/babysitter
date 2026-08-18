@@ -5,6 +5,7 @@ import { countAllRecords, clearAllData } from '@/db'
 import { exportAllJson, exportBabyCsvs, importAllJson } from '@/services/export'
 import { BABY_AVATARS } from '@/constants'
 import { setTheme, themeMode, type ThemeMode } from '@/composables/useTheme'
+import { FEED_REMINDER_KEY } from '@/utils/feedingGuide'
 import PageHeader from '@/components/common/PageHeader.vue'
 import Modal from '@/components/common/Modal.vue'
 import type { Baby } from '@/types'
@@ -24,6 +25,21 @@ const clearAllConfirm = ref(false)
 const clearBusy = ref(false)
 
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
+
+// 喂奶提醒开关
+const feedReminder = ref(localStorage.getItem(FEED_REMINDER_KEY) === 'on')
+
+async function toggleFeedReminder() {
+  feedReminder.value = !feedReminder.value
+  localStorage.setItem(FEED_REMINDER_KEY, feedReminder.value ? 'on' : 'off')
+  if (feedReminder.value && 'Notification' in window && Notification.permission === 'default') {
+    try {
+      await Notification.requestPermission()
+    } catch {
+      /* 用户拒绝或环境不支持时静默 */
+    }
+  }
+}
 
 const THEME_OPTIONS: { value: ThemeMode; label: string; icon: string }[] = [
   { value: 'system', label: '跟随系统', icon: '🖥️' },
@@ -196,6 +212,23 @@ async function confirmClearAll() {
       </div>
     </div>
 
+    <!-- 喂奶提醒 -->
+    <p class="section-title">喂奶提醒</p>
+    <div class="card">
+      <div class="reminder-row">
+        <div class="reminder-info">
+          <p class="reminder-title">🍼 喂奶间隔提醒</p>
+          <p class="reminder-sub">超过建议间隔时，在今日页提示并发送浏览器通知</p>
+        </div>
+        <button class="switch" :class="{ on: feedReminder }" role="switch" :aria-checked="feedReminder" @click="toggleFeedReminder">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+      <p class="reminder-hint">
+        按宝宝月龄自动给出建议间隔：0-1月 约2.5h · 1-3月 约3h · 3-6月 约3.5h · 6-9月 约4h · 9-12月 约4.5h · 12月以上 约5h
+      </p>
+    </div>
+
     <!-- 关于 -->
     <p class="section-title">关于</p>
     <div class="card">
@@ -360,6 +393,71 @@ async function confirmClearAll() {
   color: var(--text-muted);
   margin-bottom: 10px;
   line-height: 1.6;
+}
+
+.reminder-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reminder-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.reminder-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+.reminder-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  line-height: 1.7;
+}
+
+.switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: var(--border);
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.switch.on {
+  background: var(--primary);
+}
+
+.switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.switch.on .switch-knob {
+  transform: translateX(20px);
 }
 
 .data-counts {
