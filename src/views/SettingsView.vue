@@ -15,7 +15,17 @@ import type { Baby } from '@/types'
 const babyStore = useBabyStore()
 const { t, locale } = useI18n()
 
-const recordCounts = ref({ feedings: 0, diapers: 0, pumpings: 0, sleeps: 0, growths: 0 })
+const recordCounts = ref({
+  feedings: 0,
+  diapers: 0,
+  pumpings: 0,
+  sleeps: 0,
+  growths: 0,
+  solidFoods: 0,
+  medications: 0,
+  vaccinations: 0,
+  temperatures: 0,
+})
 const babyModal = ref<{ mode: 'add' | 'edit'; id?: number } | null>(null)
 const babyName = ref('')
 const babyBirthDate = ref('')
@@ -145,6 +155,10 @@ async function handleImportFile(e: Event) {
         pumpings: result.pumpings,
         sleeps: result.sleeps,
         growths: result.growths,
+        solidFoods: result.solidFoods,
+        medications: result.medications,
+        vaccinations: result.vaccinations,
+        temperatures: result.temperatures,
       }),
     )
     recordCounts.value = await countAllRecords()
@@ -163,7 +177,17 @@ async function confirmClearAll() {
     // 同步重置内存中的当前宝宝，避免残留旧 id 在后续导入时"巧合命中"
     babyStore.activeBabyId = null
     localStorage.removeItem('babysitter.activeBabyId')
-    recordCounts.value = { feedings: 0, diapers: 0, pumpings: 0, sleeps: 0, growths: 0 }
+    recordCounts.value = {
+      feedings: 0,
+      diapers: 0,
+      pumpings: 0,
+      sleeps: 0,
+      growths: 0,
+      solidFoods: 0,
+      medications: 0,
+      vaccinations: 0,
+      temperatures: 0,
+    }
     clearAllConfirm.value = false
   } finally {
     clearBusy.value = false
@@ -210,6 +234,10 @@ async function confirmClearAll() {
         <span>{{ t('log.filters.pumping') }} {{ t('common.records', { n: recordCounts.pumpings }) }}</span>
         <span>{{ t('log.filters.sleep') }} {{ t('common.records', { n: recordCounts.sleeps }) }}</span>
         <span>{{ t('log.filters.growth') }} {{ t('common.records', { n: recordCounts.growths }) }}</span>
+        <span>{{ t('log.filters.solidFood') }} {{ t('common.records', { n: recordCounts.solidFoods }) }}</span>
+        <span>{{ t('log.filters.medication') }} {{ t('common.records', { n: recordCounts.medications }) }}</span>
+        <span>{{ t('log.filters.vaccination') }} {{ t('common.records', { n: recordCounts.vaccinations }) }}</span>
+        <span>{{ t('log.filters.temperature') }} {{ t('common.records', { n: recordCounts.temperatures }) }}</span>
       </div>
       <button class="btn btn-primary btn-block" :disabled="activeBaby === undefined" @click="handleExportJson">
         <span class="btn-label">{{

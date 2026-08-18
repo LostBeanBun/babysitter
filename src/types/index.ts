@@ -115,6 +115,72 @@ export interface GrowthRecord {
   updatedAt: number
 }
 
+/** 辅食记录 */
+export interface SolidFood {
+  id?: number
+  babyId: number
+  /** 进食时间 */
+  time: number
+  /** 食物名称 */
+  food: string
+  /** 用量描述（如「半碗」） */
+  amount?: string
+  notes?: string
+  createdAt: number
+  updatedAt: number
+}
+
+/** 用药记录 */
+export interface Medication {
+  id?: number
+  babyId: number
+  /** 用药时间 */
+  time: number
+  /** 药品名称 */
+  name: string
+  /** 剂量（如「5ml」） */
+  dose?: string
+  notes?: string
+  createdAt: number
+  updatedAt: number
+}
+
+/** 疫苗状态：planned=待接种提醒，done=已接种记录 */
+export type VaccinationStatus = 'planned' | 'done'
+
+/** 疫苗记录/提醒 */
+export interface Vaccination {
+  id?: number
+  babyId: number
+  /** 疫苗名称 */
+  name: string
+  /** 剂次（如「第 1 剂」） */
+  dose?: string
+  /** 接种日期（当天 0 点毫秒时间戳） */
+  date: number
+  status: VaccinationStatus
+  notes?: string
+  createdAt: number
+  updatedAt: number
+}
+
+/** 体温测量方式 */
+export type TemperatureMethod = 'armpit' | 'ear' | 'forehead' | 'rectal'
+
+/** 体温记录 */
+export interface Temperature {
+  id?: number
+  babyId: number
+  /** 测量时间 */
+  time: number
+  /** 体温 ℃ */
+  value: number
+  method?: TemperatureMethod
+  notes?: string
+  createdAt: number
+  updatedAt: number
+}
+
 /** 导出文件的元信息 */
 export interface ExportMeta {
   app: 'babysitter'
@@ -130,4 +196,8 @@ export interface ExportFile {
   pumpings: Pumping[]
   sleeps: Sleep[]
   growths?: GrowthRecord[]
+  solidFoods?: SolidFood[]
+  medications?: Medication[]
+  vaccinations?: Vaccination[]
+  temperatures?: Temperature[]
 }

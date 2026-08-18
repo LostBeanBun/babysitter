@@ -1,4 +1,12 @@
-import type { FeedType, DiaperType, DiaperColor, DiaperAmount, PumpSide, SleepType } from '@/types'
+import type {
+  FeedType,
+  DiaperType,
+  DiaperColor,
+  DiaperAmount,
+  PumpSide,
+  SleepType,
+  TemperatureMethod,
+} from '@/types'
 
 /** 喂养类型标签（i18n key，配合 t() 使用） */
 export const FEED_TYPE_LABELS: Record<FeedType, string> = {
@@ -75,6 +83,21 @@ export const SLEEP_TYPE_LABELS: Record<SleepType, string> = {
   night: 'sleep.types.night',
 }
 
+/** 体温测量方式 */
+export const TEMP_METHOD_LABELS: Record<TemperatureMethod, string> = {
+  armpit: 'temperature.methods.armpit',
+  ear: 'temperature.methods.ear',
+  forehead: 'temperature.methods.forehead',
+  rectal: 'temperature.methods.rectal',
+}
+
+export const TEMP_METHOD_LIST: { value: TemperatureMethod; label: string; icon: string }[] = [
+  { value: 'armpit', label: 'temperature.methods.armpit', icon: '🤗' },
+  { value: 'ear', label: 'temperature.methods.ear', icon: '👂' },
+  { value: 'forehead', label: 'temperature.methods.forehead', icon: '🤒' },
+  { value: 'rectal', label: 'temperature.methods.rectal', icon: '🌡️' },
+]
+
 /** 主题色（统计图表统一使用） */
 export const CHART_COLORS = {
   feedAmount: '#E8906C',
@@ -84,6 +107,7 @@ export const CHART_COLORS = {
   sleep: '#8FAED8',
   diaper: '#9A8FC8',
   pump: '#D8A8C8',
+  temperature: '#E8A45A',
   primary: '#E8906C',
 }
 

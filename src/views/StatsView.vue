@@ -10,6 +10,9 @@ import { useDiaperStore } from '@/stores/diaper'
 import { usePumpingStore } from '@/stores/pumping'
 import { useSleepStore } from '@/stores/sleep'
 import { useGrowthStore } from '@/stores/growth'
+import { useSolidFoodStore } from '@/stores/solidFood'
+import { useMedicationStore } from '@/stores/medication'
+import { useTemperatureStore } from '@/stores/temperature'
 import {
   buildDailySeries,
   aggregateRange,
@@ -29,6 +32,9 @@ const diaperStore = useDiaperStore()
 const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
 const growthStore = useGrowthStore()
+const solidFoodStore = useSolidFoodStore()
+const medicationStore = useMedicationStore()
+const temperatureStore = useTemperatureStore()
 
 const { t } = useI18n()
 
@@ -58,6 +64,9 @@ const days = computed<DayAggregate[]>(() =>
     sleepStore.sleeps,
     rangeStart.value,
     rangeEnd.value,
+    solidFoodStore.solidFoods,
+    medicationStore.medications,
+    temperatureStore.temperatures,
   ),
 )
 
@@ -71,6 +80,9 @@ const currentAgg = computed(() =>
     sleepStore.sleeps,
     rangeStart.value,
     rangeEnd.value,
+    solidFoodStore.solidFoods,
+    medicationStore.medications,
+    temperatureStore.temperatures,
   ),
 )
 const previousAgg = computed(() =>
@@ -81,6 +93,9 @@ const previousAgg = computed(() =>
     sleepStore.sleeps,
     previousStart.value,
     rangeStart.value,
+    solidFoodStore.solidFoods,
+    medicationStore.medications,
+    temperatureStore.temperatures,
   ),
 )
 const comparisons = computed<ComparisonResult[]>(() => compareRanges(currentAgg.value, previousAgg.value))
@@ -227,6 +242,43 @@ const pumpOption = computed<EChartsOption>(() => ({
   ],
 }))
 
+const temperatureOption = computed<EChartsOption>(() => ({
+  grid: { left: 44, right: 16, top: 12, bottom: 28 },
+  xAxis: {
+    type: 'category',
+    data: xLabels.value,
+    axisLabel: { color: axisColor.value, fontSize: 10 },
+    axisLine: { lineStyle: { color: axisLineColor.value } },
+  },
+  yAxis: {
+    type: 'value',
+    min: 35,
+    max: 40,
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}℃` },
+    splitLine: { lineStyle: { color: splitLineColor.value } },
+  },
+  series: [
+    {
+      name: t('stats.series.temperature'),
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      data: days.value.map((d) => (d.temperatureCount > 0 ? +d.temperatureAvg.toFixed(1) : null)),
+      connectNulls: false,
+      lineStyle: { width: 2.5, color: CHART_COLORS.temperature },
+      itemStyle: { color: CHART_COLORS.temperature },
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        label: { show: false },
+        data: [{ yAxis: 37.3 }],
+        lineStyle: { color: '#D97A52', type: 'dashed', width: 1 },
+      },
+    },
+  ],
+}))
+
 // 对比面板格式化
 function formatComparisonValue(c: ComparisonResult, value: number): string {
   if (c.key === 'sleepMs') return formatDuration(value)
@@ -287,6 +339,21 @@ const summaryItems = computed(() => {
       label: t('stats.summary.growthRecords'),
       value: t('common.records', { n: rangeGrowthCount.value }),
       sub: rangeLabel.value,
+    },
+    {
+      label: t('stats.summary.solidFood'),
+      value: t('common.times', { n: agg.solidFoodCount }),
+      sub: t('common.daily', { value: t('common.times', { n: (agg.solidFoodCount / days).toFixed(1) }) }),
+    },
+    {
+      label: t('stats.summary.medication'),
+      value: t('common.times', { n: agg.medicationCount }),
+      sub: t('common.daily', { value: t('common.times', { n: (agg.medicationCount / days).toFixed(1) }) }),
+    },
+    {
+      label: t('stats.summary.temperature'),
+      value: t('common.times', { n: agg.temperatureCount }),
+      sub: t('common.daily', { value: t('common.times', { n: (agg.temperatureCount / days).toFixed(1) }) }),
     },
   ]
 })
@@ -515,6 +582,11 @@ const heightOption = computed<EChartsOption>(() => ({
       :option="diaperOption"
     />
     <ChartCard :title="t('stats.charts.pumpTitle')" :subtitle="rangeLabel" :option="pumpOption" />
+    <ChartCard
+      :title="t('stats.charts.temperatureTitle')"
+      :subtitle="`${rangeLabel} · ${t('stats.charts.temperatureSub')}`"
+      :option="temperatureOption"
+    />
 
     <!-- 成长曲线 -->
     <p class="section-title">{{ t('stats.growthSection') }}</p>

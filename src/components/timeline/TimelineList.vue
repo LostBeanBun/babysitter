@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Feeding, DiaperChange, Pumping, Sleep, GrowthRecord } from '@/types'
+import type {
+  Feeding,
+  DiaperChange,
+  Pumping,
+  Sleep,
+  GrowthRecord,
+  SolidFood,
+  Medication,
+  Vaccination,
+  Temperature,
+} from '@/types'
 import {
   FEED_TYPE_LABELS,
   DIAPER_TYPE_LABELS,
@@ -9,21 +19,26 @@ import {
   DIAPER_AMOUNT_LABELS,
   PUMP_SIDE_LABELS,
   SLEEP_TYPE_LABELS,
+  TEMP_METHOD_LABELS,
 } from '@/constants'
-import { formatTime, formatDuration, formatAmount } from '@/utils/format'
+import { formatTime, formatDuration, formatAmount, formatDate } from '@/utils/format'
 
 const { t, locale } = useI18n()
 
+export type TimelineKind = 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature'
+
 export interface TimelineEntry {
   id: number
-  kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth'
+  kind: TimelineKind
   time: number
   icon: string
   color: string
   title: string
   detail: string
   duration?: number
-  raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord
+  /** 自定义时间显示（如疫苗用日期） */
+  timeLabel?: string
+  raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature
 }
 
 const props = defineProps<{
@@ -32,6 +47,10 @@ const props = defineProps<{
   pumpings: Pumping[]
   sleeps: Sleep[]
   growths?: GrowthRecord[]
+  solidFoods?: SolidFood[]
+  medications?: Medication[]
+  vaccinations?: Vaccination[]
+  temperatures?: Temperature[]
   /** 是否按天分组显示（默认按时间倒序扁平显示） */
   grouped?: boolean
 }>()
@@ -124,6 +143,68 @@ const entries = computed<TimelineEntry[]>(() => {
     })
   }
 
+  for (const sf of props.solidFoods ?? []) {
+    const detailParts: string[] = [sf.food]
+    if (sf.amount) detailParts.push(sf.amount)
+    list.push({
+      id: sf.id!,
+      kind: 'solidFood',
+      time: sf.time,
+      icon: '🍎',
+      color: '#D8905A',
+      title: t('timeline.solidFood'),
+      detail: detailParts.join(' · '),
+      raw: sf,
+    })
+  }
+
+  for (const m of props.medications ?? []) {
+    const detailParts: string[] = [m.name]
+    if (m.dose) detailParts.push(m.dose)
+    list.push({
+      id: m.id!,
+      kind: 'medication',
+      time: m.time,
+      icon: '💊',
+      color: '#D86A8A',
+      title: t('timeline.medication'),
+      detail: detailParts.join(' · '),
+      raw: m,
+    })
+  }
+
+  for (const v of props.vaccinations ?? []) {
+    const detailParts: string[] = [v.name]
+    if (v.dose) detailParts.push(v.dose)
+    detailParts.push(v.status === 'done' ? t('timeline.vaccinationDone') : t('timeline.vaccinationPlanned'))
+    list.push({
+      id: v.id!,
+      kind: 'vaccination',
+      time: v.date,
+      icon: '💉',
+      color: v.status === 'done' ? '#6AB0D8' : '#D8A45A',
+      title: t('timeline.vaccination'),
+      detail: detailParts.join(' · '),
+      timeLabel: formatDate(v.date),
+      raw: v,
+    })
+  }
+
+  for (const tmp of props.temperatures ?? []) {
+    const detailParts: string[] = [t('timeline.temperatureValue', { value: tmp.value })]
+    if (tmp.method) detailParts.push(t(TEMP_METHOD_LABELS[tmp.method]))
+    list.push({
+      id: tmp.id!,
+      kind: 'temperature',
+      time: tmp.time,
+      icon: '🌡️',
+      color: '#E8A45A',
+      title: t('timeline.temperature'),
+      detail: detailParts.join(' · '),
+      raw: tmp,
+    })
+  }
+
   return list.sort((a, b) => b.time - a.time)
 })
 
@@ -151,7 +232,7 @@ const groupedEntries = computed(() => {
         <div class="tl-body">
           <div class="tl-title-row">
             <span class="tl-title">{{ e.title }}</span>
-            <span class="tl-time">{{ formatTime(e.time) }}</span>
+            <span class="tl-time">{{ e.timeLabel ?? formatTime(e.time) }}</span>
           </div>
           <p class="tl-detail">{{ e.detail }}</p>
         </div>
@@ -169,7 +250,7 @@ const groupedEntries = computed(() => {
           <div class="tl-body">
             <div class="tl-title-row">
               <span class="tl-title">{{ e.title }}</span>
-              <span class="tl-time">{{ formatTime(e.time) }}</span>
+              <span class="tl-time">{{ e.timeLabel ?? formatTime(e.time) }}</span>
             </div>
             <p class="tl-detail">{{ e.detail }}</p>
           </div>

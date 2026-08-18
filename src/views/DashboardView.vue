@@ -7,6 +7,10 @@ import { useDiaperStore } from '@/stores/diaper'
 import { usePumpingStore } from '@/stores/pumping'
 import { useSleepStore } from '@/stores/sleep'
 import { useGrowthStore } from '@/stores/growth'
+import { useSolidFoodStore } from '@/stores/solidFood'
+import { useMedicationStore } from '@/stores/medication'
+import { useVaccinationStore } from '@/stores/vaccination'
+import { useTemperatureStore } from '@/stores/temperature'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatCard from '@/components/common/StatCard.vue'
 import TimelineList, { type TimelineEntry } from '@/components/timeline/TimelineList.vue'
@@ -16,6 +20,10 @@ import DiaperForm from '@/components/forms/DiaperForm.vue'
 import PumpingForm from '@/components/forms/PumpingForm.vue'
 import SleepForm from '@/components/forms/SleepForm.vue'
 import GrowthForm from '@/components/forms/GrowthForm.vue'
+import SolidFoodForm from '@/components/forms/SolidFoodForm.vue'
+import MedicationForm from '@/components/forms/MedicationForm.vue'
+import VaccinationForm from '@/components/forms/VaccinationForm.vue'
+import TemperatureForm from '@/components/forms/TemperatureForm.vue'
 import { startOfDay, formatDuration, formatAmount, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { MS_PER_DAY, BABY_AVATARS, FEED_TYPE_LABELS } from '@/constants'
 import {
@@ -31,12 +39,18 @@ import type {
   Pumping,
   Sleep,
   GrowthRecord,
+  SolidFood,
+  Medication,
+  Vaccination,
+  Temperature,
   FeedType,
   DiaperType,
   DiaperColor,
   DiaperAmount,
   PumpSide,
   SleepType,
+  VaccinationStatus,
+  TemperatureMethod,
 } from '@/types'
 
 /** 各表单编辑 props 结构（与表单组件 props.editing 一致） */
@@ -68,6 +82,23 @@ type PumpingFormProps = {
 }
 type SleepFormProps = { id: number; type: SleepType; startTime: number; endTime: number; notes?: string }
 type GrowthFormProps = { id: number; date: number; weight?: number; height?: number; notes?: string }
+type SolidFoodFormProps = { id: number; time: number; food: string; amount?: string; notes?: string }
+type MedicationFormProps = { id: number; time: number; name: string; dose?: string; notes?: string }
+type VaccinationFormProps = {
+  id: number
+  date: number
+  name: string
+  dose?: string
+  status: VaccinationStatus
+  notes?: string
+}
+type TemperatureFormProps = {
+  id: number
+  time: number
+  value: number
+  method?: TemperatureMethod
+  notes?: string
+}
 
 const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
@@ -75,6 +106,10 @@ const diaperStore = useDiaperStore()
 const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
 const growthStore = useGrowthStore()
+const solidFoodStore = useSolidFoodStore()
+const medicationStore = useMedicationStore()
+const vaccinationStore = useVaccinationStore()
+const temperatureStore = useTemperatureStore()
 
 const { t, locale } = useI18n()
 
@@ -129,6 +164,31 @@ const todaySleeps = computed(() =>
 const todayGrowths = computed(() =>
   growthStore.growths.filter((g) => g.date >= todayStart.value && g.date <= todayEnd.value),
 )
+const todaySolidFoods = computed(() =>
+  solidFoodStore.solidFoods.filter((s) => s.time >= todayStart.value && s.time <= todayEnd.value),
+)
+const todayMedications = computed(() =>
+  medicationStore.medications.filter((m) => m.time >= todayStart.value && m.time <= todayEnd.value),
+)
+const todayVaccinations = computed(() =>
+  vaccinationStore.vaccinations.filter((v) => v.date >= todayStart.value && v.date <= todayEnd.value),
+)
+const todayTemperatures = computed(() =>
+  temperatureStore.temperatures.filter((tmp) => tmp.time >= todayStart.value && tmp.time <= todayEnd.value),
+)
+
+// —— 疫苗提醒（今日页卡片：近 14 天内的待接种项）——
+const upcomingVaccinations = computed(() => {
+  const cutoff = todayStart.value - 14 * MS_PER_DAY
+  return vaccinationStore.vaccinations
+    .filter((v) => v.status === 'planned' && v.date >= cutoff)
+    .sort((a, b) => a.date - b.date)
+    .slice(0, 3)
+})
+
+function vaccineDaysLeft(date: number): number {
+  return Math.round((date - todayStart.value) / MS_PER_DAY)
+}
 
 // 今日汇总
 const totalMilk = computed(() => todayFeedings.value.reduce((sum, f) => sum + (f.amount ?? 0), 0))
@@ -240,6 +300,11 @@ function generateSummary() {
     t('dashboard.summaryPump', { n: todayPumpings.value.length, amount: pumpAmountPart }),
     t('dashboard.summaryGrowth', { n: todayGrowths.value.length }),
   ]
+  if (todaySolidFoods.value.length > 0) lines.push(t('dashboard.summarySolidFood', { n: todaySolidFoods.value.length }))
+  if (todayMedications.value.length > 0)
+    lines.push(t('dashboard.summaryMedication', { n: todayMedications.value.length }))
+  if (todayTemperatures.value.length > 0)
+    lines.push(t('dashboard.summaryTemperature', { n: todayTemperatures.value.length }))
   dailySummary.value = lines.join('\n')
   summaryCopied.value = false
   summaryOpen.value = true
@@ -256,12 +321,33 @@ async function copySummary() {
 }
 
 // 弹窗状态
-const modalState = ref<{ kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth'; editing?: TimelineEntry } | null>(
-  null,
-)
+const modalState = ref<{
+  kind:
+    | 'feeding'
+    | 'diaper'
+    | 'pumping'
+    | 'sleep'
+    | 'growth'
+    | 'solidFood'
+    | 'medication'
+    | 'vaccination'
+    | 'temperature'
+  editing?: TimelineEntry
+} | null>(null)
 const confirmDelete = ref<TimelineEntry | null>(null)
 
-function openAdd(kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth') {
+function openAdd(
+  kind:
+    | 'feeding'
+    | 'diaper'
+    | 'pumping'
+    | 'sleep'
+    | 'growth'
+    | 'solidFood'
+    | 'medication'
+    | 'vaccination'
+    | 'temperature',
+) {
   modalState.value = { kind }
 }
 
@@ -280,7 +366,11 @@ async function confirmDeleteAction() {
   else if (e.kind === 'diaper') await diaperStore.remove(e.id)
   else if (e.kind === 'pumping') await pumpingStore.remove(e.id)
   else if (e.kind === 'sleep') await sleepStore.remove(e.id)
-  else await growthStore.remove(e.id)
+  else if (e.kind === 'growth') await growthStore.remove(e.id)
+  else if (e.kind === 'solidFood') await solidFoodStore.remove(e.id)
+  else if (e.kind === 'medication') await medicationStore.remove(e.id)
+  else if (e.kind === 'vaccination') await vaccinationStore.remove(e.id)
+  else await temperatureStore.remove(e.id)
   confirmDelete.value = null
 }
 
@@ -324,8 +414,24 @@ const editPayload = computed(() => {
     const s = e.raw as Sleep
     return { id: e.id, type: s.type, startTime: s.startTime, endTime: s.endTime, notes: s.notes }
   }
-  const g = e.raw as GrowthRecord
-  return { id: e.id, date: g.date, weight: g.weight, height: g.height, notes: g.notes }
+  if (e.kind === 'growth') {
+    const g = e.raw as GrowthRecord
+    return { id: e.id, date: g.date, weight: g.weight, height: g.height, notes: g.notes }
+  }
+  if (e.kind === 'solidFood') {
+    const sf = e.raw as SolidFood
+    return { id: e.id, time: sf.time, food: sf.food, amount: sf.amount, notes: sf.notes }
+  }
+  if (e.kind === 'medication') {
+    const m = e.raw as Medication
+    return { id: e.id, time: m.time, name: m.name, dose: m.dose, notes: m.notes }
+  }
+  if (e.kind === 'vaccination') {
+    const v = e.raw as Vaccination
+    return { id: e.id, date: v.date, name: v.name, dose: v.dose, status: v.status, notes: v.notes }
+  }
+  const tmp = e.raw as Temperature
+  return { id: e.id, time: tmp.time, value: tmp.value, method: tmp.method, notes: tmp.notes }
 })
 </script>
 
@@ -357,6 +463,28 @@ const editPayload = computed(() => {
         <div class="fr-text">
           <p class="fr-title">{{ t('feed.sinceLast', { duration: formatDuration(sinceMs ?? 0) }) }}</p>
           <p class="fr-sub">{{ t('feed.reminderSub', { label: recommendedIntervalLabel(activeBaby) }) }}</p>
+        </div>
+      </div>
+
+      <!-- 疫苗提醒条 -->
+      <div v-if="upcomingVaccinations.length > 0" class="vaccine-banner" @click="openAdd('vaccination')">
+        <span class="vb-icon">💉</span>
+        <div class="vb-text">
+          <p class="vb-title">{{ t('dashboard.vaccineReminderTitle') }}</p>
+          <p class="vb-sub">
+            <span v-for="v in upcomingVaccinations" :key="v.id" class="vb-item">
+              {{ v.name }}<template v-if="v.dose"> · {{ v.dose }}</template>
+              <span class="vb-days">
+                {{
+                  vaccineDaysLeft(v.date) === 0
+                    ? t('dashboard.vaccineToday')
+                    : vaccineDaysLeft(v.date) > 0
+                      ? t('dashboard.vaccineDaysLeft', { n: vaccineDaysLeft(v.date) })
+                      : t('dashboard.vaccineOverdue', { n: -vaccineDaysLeft(v.date) })
+                }}
+              </span>
+            </span>
+          </p>
         </div>
       </div>
 
@@ -420,6 +548,22 @@ const editPayload = computed(() => {
           <span class="quick-icon">📏</span>
           <span class="quick-label">{{ t('log.filters.growth') }}</span>
         </button>
+        <button class="quick-btn solidFood" @click="openAdd('solidFood')">
+          <span class="quick-icon">🍎</span>
+          <span class="quick-label">{{ t('log.filters.solidFood') }}</span>
+        </button>
+        <button class="quick-btn medication" @click="openAdd('medication')">
+          <span class="quick-icon">💊</span>
+          <span class="quick-label">{{ t('log.filters.medication') }}</span>
+        </button>
+        <button class="quick-btn vaccination" @click="openAdd('vaccination')">
+          <span class="quick-icon">💉</span>
+          <span class="quick-label">{{ t('log.filters.vaccination') }}</span>
+        </button>
+        <button class="quick-btn temperature" @click="openAdd('temperature')">
+          <span class="quick-icon">🌡️</span>
+          <span class="quick-label">{{ t('log.filters.temperature') }}</span>
+        </button>
       </div>
 
       <!-- 喂奶间隔分析 -->
@@ -452,7 +596,11 @@ const editPayload = computed(() => {
               todayDiapers.length +
               todayPumpings.length +
               todaySleeps.length +
-              todayGrowths.length >
+              todayGrowths.length +
+              todaySolidFoods.length +
+              todayMedications.length +
+              todayVaccinations.length +
+              todayTemperatures.length >
             0
           "
           :feedings="todayFeedings"
@@ -460,6 +608,10 @@ const editPayload = computed(() => {
           :pumpings="todayPumpings"
           :sleeps="todaySleeps"
           :growths="todayGrowths"
+          :solid-foods="todaySolidFoods"
+          :medications="todayMedications"
+          :vaccinations="todayVaccinations"
+          :temperatures="todayTemperatures"
           @edit="onEdit"
           @delete="onDelete"
         />
@@ -504,6 +656,30 @@ const editPayload = computed(() => {
           @saved="onSaved"
           @cancelled="modalState = null"
         />
+        <SolidFoodForm
+          v-else-if="modalState?.kind === 'solidFood'"
+          :editing="modalState?.editing ? (editPayload as SolidFoodFormProps) : undefined"
+          @saved="onSaved"
+          @cancelled="modalState = null"
+        />
+        <MedicationForm
+          v-else-if="modalState?.kind === 'medication'"
+          :editing="modalState?.editing ? (editPayload as MedicationFormProps) : undefined"
+          @saved="onSaved"
+          @cancelled="modalState = null"
+        />
+        <VaccinationForm
+          v-else-if="modalState?.kind === 'vaccination'"
+          :editing="modalState?.editing ? (editPayload as VaccinationFormProps) : undefined"
+          @saved="onSaved"
+          @cancelled="modalState = null"
+        />
+        <TemperatureForm
+          v-else-if="modalState?.kind === 'temperature'"
+          :editing="modalState?.editing ? (editPayload as TemperatureFormProps) : undefined"
+          @saved="onSaved"
+          @cancelled="modalState = null"
+        />
       </BaseModal>
 
       <!-- 删除确认 -->
@@ -520,7 +696,15 @@ const editPayload = computed(() => {
                       ? 'log.filters.pumping'
                       : confirmDelete?.kind === 'sleep'
                         ? 'log.filters.sleep'
-                        : 'log.filters.growth',
+                        : confirmDelete?.kind === 'growth'
+                          ? 'log.filters.growth'
+                          : confirmDelete?.kind === 'solidFood'
+                            ? 'log.filters.solidFood'
+                            : confirmDelete?.kind === 'medication'
+                              ? 'log.filters.medication'
+                              : confirmDelete?.kind === 'vaccination'
+                                ? 'log.filters.vaccination'
+                                : 'log.filters.temperature',
               ),
             })
           }}
@@ -698,6 +882,50 @@ const editPayload = computed(() => {
   margin-top: 2px;
 }
 
+/* 疫苗提醒条 */
+.vaccine-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.vaccine-banner:active {
+  background: var(--primary-soft);
+}
+
+.vaccine-banner .vb-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.vaccine-banner .vb-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.vaccine-banner .vb-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.vb-days {
+  color: var(--primary);
+  font-weight: 600;
+  margin-left: 4px;
+}
+
 .interval-card {
   display: flex;
   align-items: center;
@@ -811,14 +1039,19 @@ const editPayload = computed(() => {
   gap: 10px;
 }
 
-/* 小屏下快捷按钮更紧凑 */
-@media (max-width: 400px) {
+/* 小屏下快捷按钮 3×3 网格：按钮更大、触控友好、英文长标签完整显示 */
+@media (max-width: 520px) {
   .quick-actions {
-    gap: 8px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
   }
 
   .quick-btn {
-    padding: 12px 4px;
+    padding: 14px 6px;
+  }
+
+  .quick-label {
+    font-size: 13px;
   }
 }
 
@@ -838,6 +1071,7 @@ const editPayload = computed(() => {
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  min-width: 0; /* 允许 grid track 收缩，避免长标签撑破容器 */
   padding: 14px 8px;
   border-radius: var(--radius);
   border: 1.5px solid var(--border);
@@ -853,12 +1087,19 @@ const editPayload = computed(() => {
 
 .quick-icon {
   font-size: 24px;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .quick-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .empty-inline {

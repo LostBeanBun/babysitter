@@ -1,4 +1,4 @@
-import type { Feeding, DiaperChange, Pumping, Sleep } from '@/types'
+import type { Feeding, DiaperChange, Pumping, Sleep, SolidFood, Medication, Temperature } from '@/types'
 import { startOfDay, formatDate } from '@/utils/format'
 import { MS_PER_DAY } from '@/constants'
 
@@ -34,6 +34,14 @@ export interface DayAggregate {
   pumpCount: number
   /** 吸奶总时长 ms */
   pumpMs: number
+  /** 辅食次数 */
+  solidFoodCount: number
+  /** 用药次数 */
+  medicationCount: number
+  /** 体温测量次数 */
+  temperatureCount: number
+  /** 当日体温平均值 ℃（无记录为 0） */
+  temperatureAvg: number
 }
 
 /** 生成空聚合 */
@@ -57,6 +65,10 @@ export function emptyDay(dayStart: number): DayAggregate {
     pumpAmount: 0,
     pumpCount: 0,
     pumpMs: 0,
+    solidFoodCount: 0,
+    medicationCount: 0,
+    temperatureCount: 0,
+    temperatureAvg: 0,
   }
 }
 
@@ -78,6 +90,9 @@ export interface RangeAggregate {
   pumpAmount: number
   pumpCount: number
   pumpMs: number
+  solidFoodCount: number
+  medicationCount: number
+  temperatureCount: number
 }
 
 /** 生成从 start 到 end（不含）的每日序列 */
@@ -88,6 +103,9 @@ export function buildDailySeries(
   sleeps: Sleep[],
   start: number,
   end: number,
+  solidFoods: SolidFood[] = [],
+  medications: Medication[] = [],
+  temperatures: Temperature[] = [],
 ): DayAggregate[] {
   const days: DayAggregate[] = []
   const startDay = startOfDay(start)
@@ -143,6 +161,29 @@ export function buildDailySeries(
     if (dp.type === 'dirty' || dp.type === 'both') d.dirtyCount++
   }
 
+  for (const sf of solidFoods) {
+    const d = dayMap.get(startOfDay(sf.time))
+    if (!d) continue
+    d.solidFoodCount++
+  }
+
+  for (const m of medications) {
+    const d = dayMap.get(startOfDay(m.time))
+    if (!d) continue
+    d.medicationCount++
+  }
+
+  // 体温：每天聚合次数与均值
+  for (const tmp of temperatures) {
+    const d = dayMap.get(startOfDay(tmp.time))
+    if (!d) continue
+    d.temperatureCount++
+    d.temperatureAvg += tmp.value
+  }
+  for (const d of days) {
+    if (d.temperatureCount > 0) d.temperatureAvg = d.temperatureAvg / d.temperatureCount
+  }
+
   return days
 }
 
@@ -154,8 +195,11 @@ export function aggregateRange(
   sleeps: Sleep[],
   start: number,
   end: number,
+  solidFoods: SolidFood[] = [],
+  medications: Medication[] = [],
+  temperatures: Temperature[] = [],
 ): RangeAggregate {
-  const days = buildDailySeries(feedings, diapers, pumpings, sleeps, start, end)
+  const days = buildDailySeries(feedings, diapers, pumpings, sleeps, start, end, solidFoods, medications, temperatures)
   const agg: RangeAggregate = {
     dayCount: days.length,
     totalMilkAmount: 0,
@@ -173,6 +217,9 @@ export function aggregateRange(
     pumpAmount: 0,
     pumpCount: 0,
     pumpMs: 0,
+    solidFoodCount: 0,
+    medicationCount: 0,
+    temperatureCount: 0,
   }
   for (const d of days) {
     agg.totalMilkAmount += d.totalMilkAmount
@@ -190,6 +237,9 @@ export function aggregateRange(
     agg.pumpAmount += d.pumpAmount
     agg.pumpCount += d.pumpCount
     agg.pumpMs += d.pumpMs
+    agg.solidFoodCount += d.solidFoodCount
+    agg.medicationCount += d.medicationCount
+    agg.temperatureCount += d.temperatureCount
   }
   return agg
 }
@@ -248,6 +298,24 @@ export function compareRanges(current: RangeAggregate, previous: RangeAggregate)
       previous: previous.pumpAmount,
     },
     { key: 'pumpCount', label: 'stats.compare.pumpCount', current: current.pumpCount, previous: previous.pumpCount },
+    {
+      key: 'solidFoodCount',
+      label: 'stats.compare.solidFoodCount',
+      current: current.solidFoodCount,
+      previous: previous.solidFoodCount,
+    },
+    {
+      key: 'medicationCount',
+      label: 'stats.compare.medicationCount',
+      current: current.medicationCount,
+      previous: previous.medicationCount,
+    },
+    {
+      key: 'temperatureCount',
+      label: 'stats.compare.temperatureCount',
+      current: current.temperatureCount,
+      previous: previous.temperatureCount,
+    },
   ]
 
   return items.map((item) => {
