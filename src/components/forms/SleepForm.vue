@@ -190,15 +190,9 @@ async function submit() {
 
 .time-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* 窄屏（手机）自动单列，宽屏两列，避免 datetime-local 挤压重叠 */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
-}
-
-@media (max-width: 400px) {
-  .time-row {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
 }
 
 .form-actions {
