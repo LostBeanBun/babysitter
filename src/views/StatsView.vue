@@ -3,19 +3,24 @@ import { computed, ref } from 'vue'
 import type { EChartsOption } from 'echarts'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ChartCard from '@/components/charts/ChartCard.vue'
+import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
 import { usePumpingStore } from '@/stores/pumping'
 import { useSleepStore } from '@/stores/sleep'
+import { useGrowthStore } from '@/stores/growth'
 import { buildDailySeries, aggregateRange, compareRanges, RANGE_PRESETS, type DayAggregate, type ComparisonResult } from '@/services/stats'
 import { CHART_COLORS } from '@/constants'
+import { whoData, ageInMonths } from '@/constants/whoGrowth'
 import { formatDuration, formatPercentChange } from '@/utils/format'
 import { isDark } from '@/composables/useTheme'
 
+const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
 const diaperStore = useDiaperStore()
 const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
+const growthStore = useGrowthStore()
 
 // 图表配色跟随主题
 const axisColor = computed(() => (isDark.value ? '#b9ab9e' : '#8c7b72'))
@@ -145,6 +150,104 @@ function formatComparisonValue(c: ComparisonResult, value: number): string {
 }
 
 const rangeLabel = computed(() => range.value.label)
+
+// —— 成长曲线（体重/身高 + WHO 生长标准参考）——
+const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
+const growthRecords = computed(() => [...growthStore.growths].sort((a, b) => a.date - b.date))
+/** 有出生日期才能换算月龄 */
+const hasBirthDate = computed(() => Boolean(activeBaby.value?.birthDate))
+const whoPoints = computed(() => whoData(activeBaby.value?.gender))
+
+const weightPoints = computed(() =>
+  growthRecords.value
+    .filter((g) => g.weight != null)
+    .map((g) => ({ month: ageInMonths(activeBaby.value!.birthDate!, g.date), weight: g.weight! }))
+    .sort((a, b) => a.month - b.month),
+)
+const heightPoints = computed(() =>
+  growthRecords.value
+    .filter((g) => g.height != null)
+    .map((g) => ({ month: ageInMonths(activeBaby.value!.birthDate!, g.date), height: g.height! }))
+    .sort((a, b) => a.month - b.month),
+)
+/** 图表横轴上限：至少覆盖已有记录的最大月龄（不低于 24 月） */
+const growthXMax = computed(() => Math.max(24, Math.ceil(Math.max(3, ...weightPoints.value.map((p) => p.month), ...heightPoints.value.map((p) => p.month)))))
+const hasGrowthData = computed(() => weightPoints.value.length > 0 || heightPoints.value.length > 0)
+
+function whoSeries(field: 'weight' | 'length', key: 'p3' | 'p50' | 'p97'): [number, number][] {
+  return whoPoints.value.filter((p) => p.month <= growthXMax.value).map((p) => [p.month, p[field][key]])
+}
+
+const growthTooltip = (unit: string) => ({
+  trigger: 'axis' as const,
+  valueFormatter: (v: unknown) => (Array.isArray(v) ? `${Number(v[1]).toFixed(1)} ${unit}` : `${v} ${unit}`),
+})
+
+const weightOption = computed<EChartsOption>(() => ({
+  grid: { left: 44, right: 16, top: 12, bottom: 28 },
+  xAxis: {
+    type: 'value',
+    min: 0,
+    max: growthXMax.value,
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}月` },
+    axisLine: { lineStyle: { color: axisLineColor.value } },
+  },
+  yAxis: {
+    type: 'value',
+    scale: true,
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}kg` },
+    splitLine: { lineStyle: { color: splitLineColor.value } },
+  },
+  tooltip: growthTooltip('kg'),
+  series: [
+    { name: 'P97', type: 'line', data: whoSeries('weight', 'p97'), symbol: 'none', lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' }, itemStyle: { color: '#c4b6a6' } },
+    { name: 'P50', type: 'line', data: whoSeries('weight', 'p50'), symbol: 'none', lineStyle: { width: 1, color: '#a49482', type: 'dashed' }, itemStyle: { color: '#a49482' } },
+    { name: 'P3', type: 'line', data: whoSeries('weight', 'p3'), symbol: 'none', lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' }, itemStyle: { color: '#c4b6a6' } },
+    {
+      name: '宝宝体重',
+      type: 'line',
+      data: weightPoints.value.map((p) => [p.month, p.weight]),
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 7,
+      lineStyle: { width: 2.5, color: CHART_COLORS.feedAmount },
+      itemStyle: { color: CHART_COLORS.feedAmount },
+    },
+  ],
+}))
+
+const heightOption = computed<EChartsOption>(() => ({
+  grid: { left: 44, right: 16, top: 12, bottom: 28 },
+  xAxis: {
+    type: 'value',
+    min: 0,
+    max: growthXMax.value,
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}月` },
+    axisLine: { lineStyle: { color: axisLineColor.value } },
+  },
+  yAxis: {
+    type: 'value',
+    scale: true,
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}cm` },
+    splitLine: { lineStyle: { color: splitLineColor.value } },
+  },
+  tooltip: growthTooltip('cm'),
+  series: [
+    { name: 'P97', type: 'line', data: whoSeries('length', 'p97'), symbol: 'none', lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' }, itemStyle: { color: '#c4b6a6' } },
+    { name: 'P50', type: 'line', data: whoSeries('length', 'p50'), symbol: 'none', lineStyle: { width: 1, color: '#a49482', type: 'dashed' }, itemStyle: { color: '#a49482' } },
+    { name: 'P3', type: 'line', data: whoSeries('length', 'p3'), symbol: 'none', lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' }, itemStyle: { color: '#c4b6a6' } },
+    {
+      name: '宝宝身高',
+      type: 'line',
+      data: heightPoints.value.map((p) => [p.month, p.height]),
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 7,
+      lineStyle: { width: 2.5, color: CHART_COLORS.sleep },
+      itemStyle: { color: CHART_COLORS.sleep },
+    },
+  ],
+}))
 </script>
 
 <template>
@@ -189,6 +292,17 @@ const rangeLabel = computed(() => range.value.label)
     <ChartCard title="每日睡眠时长" :subtitle="rangeLabel" :option="sleepOption" />
     <ChartCard title="纸尿裤使用" :subtitle="`${rangeLabel} · 蓝色=尿湿 棕色=便便`" :option="diaperOption" />
     <ChartCard title="每日吸奶量" :subtitle="rangeLabel" :option="pumpOption" />
+
+    <!-- 成长曲线 -->
+    <p class="section-title">成长曲线</p>
+    <template v-if="hasBirthDate">
+      <ChartCard v-if="weightPoints.length > 0" title="体重曲线" :subtitle="`WHO 生长标准参考（虚线 P3/P50/P97）· ${activeBaby?.name ?? ''}`" :option="weightOption" />
+      <ChartCard v-else-if="hasGrowthData" title="体重曲线" subtitle="暂无体重记录，去「今日」页记录吧" :option="{ grid: { top: 40 }, xAxis: { type: 'value', axisLabel: { show: false } }, yAxis: { type: 'value', axisLabel: { show: false } }, series: [] }" />
+      <ChartCard v-if="heightPoints.length > 0" title="身高曲线" :subtitle="`WHO 生长标准参考（虚线 P3/P50/P97）· ${activeBaby?.name ?? ''}`" :option="heightOption" />
+      <ChartCard v-else-if="hasGrowthData" title="身高曲线" subtitle="暂无身高记录，去「今日」页记录吧" :option="{ grid: { top: 40 }, xAxis: { type: 'value', axisLabel: { show: false } }, yAxis: { type: 'value', axisLabel: { show: false } }, series: [] }" />
+      <div v-if="!hasGrowthData" class="card empty-inline">暂无成长记录，去「今日」页记录体重/身高后即可查看 WHO 生长曲线</div>
+    </template>
+    <div v-else class="card empty-inline">请先在「设置」中为 {{ activeBaby?.name ?? '宝宝' }} 设置出生日期，即可查看成长曲线（参照 WHO 生长标准）</div>
 
     <p class="note-text">亲喂时长因无法计量奶量，未计入奶量趋势；可在记录详情中查看每次亲喂时长。</p>
   </div>
@@ -333,6 +447,21 @@ const rangeLabel = computed(() => range.value.label)
   font-size: 12px;
   color: var(--text-muted);
   margin: 12px 4px 4px;
+  line-height: 1.6;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 18px 2px 10px;
+}
+
+.empty-inline {
+  text-align: center;
+  padding: 28px 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
   line-height: 1.6;
 }
 </style>

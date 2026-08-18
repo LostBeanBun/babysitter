@@ -11,7 +11,7 @@ import type { Baby } from '@/types'
 
 const babyStore = useBabyStore()
 
-const recordCounts = ref({ feedings: 0, diapers: 0, pumpings: 0, sleeps: 0 })
+const recordCounts = ref({ feedings: 0, diapers: 0, pumpings: 0, sleeps: 0, growths: 0 })
 const babyModal = ref<{ mode: 'add' | 'edit'; id?: number } | null>(null)
 const babyName = ref('')
 const babyBirthDate = ref('')
@@ -102,7 +102,7 @@ async function handleImportFile(e: Event) {
   importBusy.value = true
   try {
     const result = await importAllJson(file)
-    alert(`导入成功！宝宝 ${result.babies} 个，喂养 ${result.feedings} 条，纸尿裤 ${result.diapers} 条，吸奶 ${result.pumpings} 条，睡眠 ${result.sleeps} 条`)
+    alert(`导入成功！宝宝 ${result.babies} 个，喂养 ${result.feedings} 条，纸尿裤 ${result.diapers} 条，吸奶 ${result.pumpings} 条，睡眠 ${result.sleeps} 条，成长 ${result.growths} 条`)
     recordCounts.value = await countAllRecords()
   } catch {
     alert('导入失败：文件格式不正确')
@@ -119,7 +119,7 @@ async function confirmClearAll() {
     // 同步重置内存中的当前宝宝，避免残留旧 id 在后续导入时"巧合命中"
     babyStore.activeBabyId = null
     localStorage.removeItem('babysitter.activeBabyId')
-    recordCounts.value = { feedings: 0, diapers: 0, pumpings: 0, sleeps: 0 }
+    recordCounts.value = { feedings: 0, diapers: 0, pumpings: 0, sleeps: 0, growths: 0 }
     clearAllConfirm.value = false
   } finally {
     clearBusy.value = false
@@ -165,6 +165,7 @@ async function confirmClearAll() {
         <span>纸尿裤 {{ recordCounts.diapers }} 条</span>
         <span>吸奶 {{ recordCounts.pumpings }} 条</span>
         <span>睡眠 {{ recordCounts.sleeps }} 条</span>
+        <span>成长 {{ recordCounts.growths }} 条</span>
       </div>
       <button class="btn btn-primary btn-block" :disabled="activeBaby === undefined" @click="handleExportJson">
         <span class="btn-label">{{ activeBaby ? `导出 ${activeBaby.name} 的数据备份 (JSON)` : '请先选择宝宝' }}</span>

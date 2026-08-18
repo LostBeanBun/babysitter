@@ -1,5 +1,5 @@
 import { db, DB_VERSION } from '@/db'
-import type { ExportFile, ExportMeta, Feeding, DiaperChange, Pumping, Sleep, Baby } from '@/types'
+import type { ExportFile, ExportMeta, Feeding, DiaperChange, Pumping, Sleep, Baby, GrowthRecord } from '@/types'
 import { downloadBlob, formatDate, formatTime } from '@/utils/format'
 import { FEED_TYPE_LABELS, DIAPER_TYPE_LABELS, DIAPER_COLOR_LABELS, DIAPER_AMOUNT_LABELS, PUMP_SIDE_LABELS, SLEEP_TYPE_LABELS } from '@/constants'
 
@@ -17,21 +17,22 @@ function toCsv(rows: (string | number | undefined | null)[][]): string {
 
 /** 导出全量数据为 JSON 备份文件 */
 export async function exportAllJson(): Promise<void> {
-  const [babies, feedings, diapers, pumpings, sleeps] = await Promise.all([
+  const [babies, feedings, diapers, pumpings, sleeps, growths] = await Promise.all([
     db.babies.toArray(),
     db.feedings.toArray(),
     db.diapers.toArray(),
     db.pumpings.toArray(),
     db.sleeps.toArray(),
+    db.growths.toArray(),
   ])
   const meta: ExportMeta = { app: 'babysitter', version: DB_VERSION, exportedAt: new Date().toISOString() }
-  const payload: ExportFile = { meta, babies, feedings, diapers, pumpings, sleeps }
+  const payload: ExportFile = { meta, babies, feedings, diapers, pumpings, sleeps, growths }
   const filename = `宝宝日记-备份-${formatDate(Date.now())}.json`
   downloadBlob(JSON.stringify(payload, null, 2), filename, 'application/json;charset=utf-8')
 }
 
 /** 导入 JSON 备份（覆盖当前数据） */
-export async function importAllJson(file: File): Promise<{ babies: number; feedings: number; diapers: number; pumpings: number; sleeps: number }> {
+export async function importAllJson(file: File): Promise<{ babies: number; feedings: number; diapers: number; pumpings: number; sleeps: number; growths: number }> {
   const text = await file.text()
   let payload: ExportFile
   try {
@@ -47,18 +48,20 @@ export async function importAllJson(file: File): Promise<{ babies: number; feedi
   const diapers = (payload.diapers ?? []) as DiaperChange[]
   const pumpings = (payload.pumpings ?? []) as Pumping[]
   const sleeps = (payload.sleeps ?? []) as Sleep[]
+  const growths = (payload.growths ?? []) as GrowthRecord[]
 
   // 校验基本结构
-  const bad = [...feedings, ...diapers, ...pumpings, ...sleeps].some((r) => typeof r.babyId !== 'number')
+  const bad = [...feedings, ...diapers, ...pumpings, ...sleeps, ...growths].some((r) => typeof r.babyId !== 'number')
   if (bad) throw new Error('备份文件数据结构不完整')
 
-  await db.transaction('rw', db.babies, db.feedings, db.diapers, db.pumpings, db.sleeps, async () => {
+  await db.transaction('rw', [db.babies, db.feedings, db.diapers, db.pumpings, db.sleeps, db.growths], async () => {
     await Promise.all([
       db.babies.clear(),
       db.feedings.clear(),
       db.diapers.clear(),
       db.pumpings.clear(),
       db.sleeps.clear(),
+      db.growths.clear(),
     ])
     await Promise.all([
       db.babies.bulkAdd(babies),
@@ -66,18 +69,20 @@ export async function importAllJson(file: File): Promise<{ babies: number; feedi
       db.diapers.bulkAdd(diapers),
       db.pumpings.bulkAdd(pumpings),
       db.sleeps.bulkAdd(sleeps),
+      db.growths.bulkAdd(growths),
     ])
   })
-  return { babies: babies.length, feedings: feedings.length, diapers: diapers.length, pumpings: pumpings.length, sleeps: sleeps.length }
+  return { babies: babies.length, feedings: feedings.length, diapers: diapers.length, pumpings: pumpings.length, sleeps: sleeps.length, growths: growths.length }
 }
 
-/** 按宝宝导出 CSV（四类分别一个文件） */
+/** 按宝宝导出 CSV（五类分别一个文件） */
 export async function exportBabyCsvs(baby: Baby): Promise<void> {
-  const [feedings, diapers, pumpings, sleeps] = await Promise.all([
+  const [feedings, diapers, pumpings, sleeps, growths] = await Promise.all([
     db.feedings.where('babyId').equals(baby.id!).sortBy('startTime'),
     db.diapers.where('babyId').equals(baby.id!).sortBy('time'),
     db.pumpings.where('babyId').equals(baby.id!).sortBy('startTime'),
     db.sleeps.where('babyId').equals(baby.id!).sortBy('startTime'),
+    db.growths.where('babyId').equals(baby.id!).sortBy('date'),
   ])
   const stamp = formatDate(Date.now())
 
@@ -137,4 +142,16 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
     ]),
   ]
   downloadBlob('\ufeff' + toCsv(sleepRows), `${baby.name}-睡眠记录-${stamp}.csv`, 'text/csv;charset=utf-8')
+
+  // 成长记录
+  const growthRows: (string | number | undefined | null)[][] = [
+    ['日期', '体重(kg)', '身高(cm)', '备注'],
+    ...growths.map((g) => [
+      formatDate(g.date),
+      g.weight ?? '',
+      g.height ?? '',
+      g.notes ?? '',
+    ]),
+  ]
+  downloadBlob('\ufeff' + toCsv(growthRows), `${baby.name}-成长记录-${stamp}.csv`, 'text/csv;charset=utf-8')
 }
