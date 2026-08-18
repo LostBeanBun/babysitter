@@ -1,8 +1,11 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { db } from '@/db'
+import i18n from '@/i18n'
 import { useLiveQuery } from '@/composables/useLiveQuery'
 import { useBabyStore } from '@/stores/baby'
 import type { DiaperChange, DiaperType, DiaperColor, DiaperAmount } from '@/types'
+
+const t = i18n.global.t
 
 /** 纸尿裤记录 store */
 export const useDiaperStore = defineStore('diaper', () => {
@@ -27,7 +30,7 @@ export const useDiaperStore = defineStore('diaper', () => {
     notes?: string
   }): Promise<number> {
     const babyId = activeBabyId.value
-    if (babyId == null) throw new Error('未选择宝宝')
+    if (babyId == null) throw new Error(t('errors.noBaby'))
     const now = Date.now()
     const id = await db.diapers.add({
       babyId,
@@ -39,7 +42,7 @@ export const useDiaperStore = defineStore('diaper', () => {
       createdAt: now,
       updatedAt: now,
     })
-    if (id == null) throw new Error('新增纸尿裤记录失败')
+    if (id == null) throw new Error(t('errors.addDiaperFail'))
     return id
   }
 

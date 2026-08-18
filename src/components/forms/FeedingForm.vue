@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { FeedType } from '@/types'
 import { FEED_TYPE_LIST } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/format'
 import { useFeedingStore } from '@/stores/feeding'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   editing?: {
@@ -72,7 +75,7 @@ async function submit() {
   } else {
     const amt = Number(amount.value)
     if (!amount.value || isNaN(amt) || amt <= 0) {
-      alert('请输入有效的奶量（ml）')
+      alert(t('feed.invalidAmount'))
       return
     }
     await feedingStore.add({ type: type.value, startTime: start, amount: amt, notes: notes.value || undefined })
@@ -83,19 +86,21 @@ async function submit() {
 
 <template>
   <div class="feeding-form">
-    <p class="form-label">喂养类型</p>
+    <p class="form-label">{{ t('feed.typeLabel') }}</p>
     <div class="type-grid">
       <button
-        v-for="t in FEED_TYPE_LIST"
-        :key="t.value"
+        v-for="opt in FEED_TYPE_LIST"
+        :key="opt.value"
         type="button"
         class="type-btn"
-        :class="{ selected: type === t.value }"
-        :style="type === t.value ? { background: t.color + '22', borderColor: t.color, color: t.color } : undefined"
-        @click="type = t.value"
+        :class="{ selected: type === opt.value }"
+        :style="
+          type === opt.value ? { background: opt.color + '22', borderColor: opt.color, color: opt.color } : undefined
+        "
+        @click="type = opt.value"
       >
-        <span class="type-icon">{{ t.icon }}</span>
-        <span class="type-label">{{ t.label }}</span>
+        <span class="type-icon">{{ opt.icon }}</span>
+        <span class="type-label">{{ t(opt.label) }}</span>
       </button>
     </div>
 
@@ -103,21 +108,32 @@ async function submit() {
     <template v-if="isBreast">
       <div class="timer-box">
         <template v-if="!timerRunning && !props.editing">
-          <button type="button" class="btn btn-primary btn-lg timer-start" @click="startTimer">▶ 开始计时</button>
-          <p class="timer-hint">或直接在下方选择时间</p>
+          <button type="button" class="btn btn-primary btn-lg timer-start" @click="startTimer">
+            {{ t('feed.startTimer') }}
+          </button>
+          <p class="timer-hint">{{ t('feed.timerHint') }}</p>
         </template>
         <template v-else-if="timerRunning">
           <div class="timer-display">{{ formatDuration(elapsedMs) }}</div>
-          <button type="button" class="btn btn-soft btn-lg" @click="stopTimer">■ 结束计时</button>
+          <button type="button" class="btn btn-soft btn-lg" @click="stopTimer">{{ t('feed.stopTimer') }}</button>
         </template>
         <template v-else-if="props.editing">
           <div class="timer-done">
-            已记录时长：{{ props.editing.duration ? formatDuration(props.editing.duration) : '—' }}
+            {{
+              t('feed.recordedDuration', {
+                duration: props.editing.duration ? formatDuration(props.editing.duration) : '—',
+              })
+            }}
           </div>
         </template>
         <template v-else>
           <div class="timer-done">
-            已记录：{{ startTime.replace('T', ' ') }} 开始{{ endTime ? `，${endTime.replace('T', ' ')} 结束` : '' }}
+            {{
+              t('feed.recordedRange', {
+                start: startTime.replace('T', ' '),
+                end: endTime ? t('feed.endRange', { end: endTime.replace('T', ' ') }) : '',
+              })
+            }}
           </div>
         </template>
       </div>
@@ -126,13 +142,13 @@ async function submit() {
     <!-- 瓶喂奶量 -->
     <template v-else>
       <div class="form-field">
-        <label class="form-label">奶量（ml）</label>
+        <label class="form-label">{{ t('feed.amountLabel') }}</label>
         <input
           v-model="amount"
           type="number"
           min="0"
           step="5"
-          placeholder="例如 120"
+          :placeholder="t('feed.amountPlaceholder')"
           class="form-input"
           inputmode="decimal"
         />
@@ -141,24 +157,24 @@ async function submit() {
 
     <div class="time-row">
       <div class="form-field">
-        <label class="form-label">开始时间</label>
+        <label class="form-label">{{ t('feed.startLabel') }}</label>
         <input v-model="startTime" type="datetime-local" class="form-input" />
       </div>
       <div v-if="isBreast" class="form-field">
-        <label class="form-label">结束时间</label>
+        <label class="form-label">{{ t('feed.endLabel') }}</label>
         <input v-model="endTime" type="datetime-local" class="form-input" />
       </div>
     </div>
 
     <div class="form-field">
-      <label class="form-label">备注</label>
-      <input v-model="notes" type="text" placeholder="可选" class="form-input" />
+      <label class="form-label">{{ t('feed.notesLabel') }}</label>
+      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
     </div>
 
     <div class="form-actions">
-      <button type="button" class="btn btn-outline" @click="emit('cancelled')">取消</button>
+      <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>
       <button type="button" class="btn btn-primary" @click="submit">
-        {{ props.editing ? '保存修改' : '保存记录' }}
+        {{ props.editing ? t('common.saveEdit') : t('common.save') }}
       </button>
     </div>
   </div>

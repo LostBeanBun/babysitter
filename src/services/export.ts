@@ -1,4 +1,5 @@
 import { db, DB_VERSION } from '@/db'
+import i18n from '@/i18n'
 import type { ExportFile, ExportMeta, Feeding, DiaperChange, Pumping, Sleep, Baby, GrowthRecord } from '@/types'
 import { downloadBlob, formatDate, formatTime } from '@/utils/format'
 import {
@@ -10,6 +11,8 @@ import {
   SLEEP_TYPE_LABELS,
 } from '@/constants'
 
+const t = i18n.global.t
+
 /** CSV 转义：含逗号/引号/换行时包裹引号 */
 function csvEscape(v: string | number | undefined | null): string {
   if (v === undefined || v === null) return ''
@@ -20,6 +23,11 @@ function csvEscape(v: string | number | undefined | null): string {
 
 function toCsv(rows: (string | number | undefined | null)[][]): string {
   return rows.map((r) => r.map(csvEscape).join(',')).join('\r\n')
+}
+
+/** 读取 i18n 中的 CSV 表头数组 */
+function csvHeader(key: string): (string | number | undefined | null)[] {
+  return i18n.global.t(key) as unknown as (string | number | undefined | null)[]
 }
 
 /** 导出全量数据为 JSON 备份文件 */
@@ -34,7 +42,7 @@ export async function exportAllJson(): Promise<void> {
   ])
   const meta: ExportMeta = { app: 'babysitter', version: DB_VERSION, exportedAt: new Date().toISOString() }
   const payload: ExportFile = { meta, babies, feedings, diapers, pumpings, sleeps, growths }
-  const filename = `宝宝日记-备份-${formatDate(Date.now())}.json`
+  const filename = t('exportCsv.backupFileName', { app: t('app.name'), stamp: formatDate(Date.now()) })
   downloadBlob(JSON.stringify(payload, null, 2), filename, 'application/json;charset=utf-8')
 }
 
@@ -47,10 +55,10 @@ export async function importAllJson(
   try {
     payload = JSON.parse(text) as ExportFile
   } catch {
-    throw new Error('文件格式错误，不是有效的 JSON 备份文件')
+    throw new Error(t('exportCsv.invalidFile'))
   }
   if (!payload.meta || payload.meta.app !== 'babysitter') {
-    throw new Error('不是宝宝日记的备份文件')
+    throw new Error(t('exportCsv.notBackup'))
   }
   const babies = (payload.babies ?? []) as Baby[]
   const feedings = (payload.feedings ?? []) as Feeding[]
@@ -61,7 +69,7 @@ export async function importAllJson(
 
   // 校验基本结构
   const bad = [...feedings, ...diapers, ...pumpings, ...sleeps, ...growths].some((r) => typeof r.babyId !== 'number')
-  if (bad) throw new Error('备份文件数据结构不完整')
+  if (bad) throw new Error(t('exportCsv.incompleteData'))
 
   await db.transaction('rw', [db.babies, db.feedings, db.diapers, db.pumpings, db.sleeps, db.growths], async () => {
     await Promise.all([
@@ -104,65 +112,85 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
 
   // 喂养
   const feedRows: (string | number | undefined | null)[][] = [
-    ['日期', '时间', '类型', '奶量(ml)', '亲喂时长(分钟)', '备注'],
+    csvHeader('exportCsv.feeding'),
     ...feedings.map((f) => [
       formatDate(f.startTime),
       formatTime(f.startTime),
-      FEED_TYPE_LABELS[f.type],
+      t(FEED_TYPE_LABELS[f.type]),
       f.amount ?? '',
       f.duration ? Math.round(f.duration / 60000) : '',
       f.notes ?? '',
     ]),
   ]
-  downloadBlob('\ufeff' + toCsv(feedRows), `${baby.name}-喂养记录-${stamp}.csv`, 'text/csv;charset=utf-8')
+  downloadBlob(
+    '\ufeff' + toCsv(feedRows),
+    t('exportCsv.feedingFileName', { name: baby.name, stamp }),
+    'text/csv;charset=utf-8',
+  )
 
   // 纸尿裤
   const diaperRows: (string | number | undefined | null)[][] = [
-    ['日期', '时间', '类型', '颜色', '量', '备注'],
+    csvHeader('exportCsv.diaper'),
     ...diapers.map((d) => [
       formatDate(d.time),
       formatTime(d.time),
-      DIAPER_TYPE_LABELS[d.type],
-      d.color ? DIAPER_COLOR_LABELS[d.color] : '',
-      d.amount ? DIAPER_AMOUNT_LABELS[d.amount] : '',
+      t(DIAPER_TYPE_LABELS[d.type]),
+      d.color ? t(DIAPER_COLOR_LABELS[d.color]) : '',
+      d.amount ? t(DIAPER_AMOUNT_LABELS[d.amount]) : '',
       d.notes ?? '',
     ]),
   ]
-  downloadBlob('\ufeff' + toCsv(diaperRows), `${baby.name}-纸尿裤记录-${stamp}.csv`, 'text/csv;charset=utf-8')
+  downloadBlob(
+    '\ufeff' + toCsv(diaperRows),
+    t('exportCsv.diaperFileName', { name: baby.name, stamp }),
+    'text/csv;charset=utf-8',
+  )
 
   // 吸奶
   const pumpRows: (string | number | undefined | null)[][] = [
-    ['日期', '开始时间', '侧', '奶量(ml)', '时长(分钟)', '备注'],
+    csvHeader('exportCsv.pump'),
     ...pumpings.map((p) => [
       formatDate(p.startTime),
       formatTime(p.startTime),
-      PUMP_SIDE_LABELS[p.side],
+      t(PUMP_SIDE_LABELS[p.side]),
       p.amount ?? '',
       p.duration ? Math.round(p.duration / 60000) : '',
       p.notes ?? '',
     ]),
   ]
-  downloadBlob('\ufeff' + toCsv(pumpRows), `${baby.name}-吸奶记录-${stamp}.csv`, 'text/csv;charset=utf-8')
+  downloadBlob(
+    '\ufeff' + toCsv(pumpRows),
+    t('exportCsv.pumpFileName', { name: baby.name, stamp }),
+    'text/csv;charset=utf-8',
+  )
 
   // 睡眠
   const sleepRows: (string | number | undefined | null)[][] = [
-    ['开始日期', '开始时间', '结束日期', '结束时间', '类型', '时长(分钟)', '备注'],
+    csvHeader('exportCsv.sleep'),
     ...sleeps.map((s) => [
       formatDate(s.startTime),
       formatTime(s.startTime),
       formatDate(s.endTime),
       formatTime(s.endTime),
-      SLEEP_TYPE_LABELS[s.type],
+      t(SLEEP_TYPE_LABELS[s.type]),
       Math.round((s.endTime - s.startTime) / 60000),
       s.notes ?? '',
     ]),
   ]
-  downloadBlob('\ufeff' + toCsv(sleepRows), `${baby.name}-睡眠记录-${stamp}.csv`, 'text/csv;charset=utf-8')
+  downloadBlob(
+    '\ufeff' + toCsv(sleepRows),
+    t('exportCsv.sleepFileName', { name: baby.name, stamp }),
+    'text/csv;charset=utf-8',
+  )
 
   // 成长记录
   const growthRows: (string | number | undefined | null)[][] = [
-    ['日期', '体重(kg)', '身高(cm)', '备注'],
+    csvHeader('exportCsv.growth'),
     ...growths.map((g) => [formatDate(g.date), g.weight ?? '', g.height ?? '', g.notes ?? '']),
   ]
-  downloadBlob('\ufeff' + toCsv(growthRows), `${baby.name}-成长记录-${stamp}.csv`, 'text/csv;charset=utf-8')
+  downloadBlob(
+    '\ufeff' + toCsv(growthRows),
+    t('exportCsv.growthFileName', { name: baby.name, stamp }),
+    'text/csv;charset=utf-8',
+  )
 }

@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
 import { usePumpingStore } from '@/stores/pumping'
@@ -61,6 +62,8 @@ const diaperStore = useDiaperStore()
 const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
 const growthStore = useGrowthStore()
+
+const { t } = useI18n()
 
 // 类型筛选
 const filter = ref<'all' | 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth'>('all')
@@ -154,13 +157,15 @@ const editPayload = computed(() => {
 })
 
 const filters = [
-  { key: 'all' as const, label: '全部' },
-  { key: 'feeding' as const, label: '喂养' },
-  { key: 'diaper' as const, label: '纸尿裤' },
-  { key: 'pumping' as const, label: '吸奶' },
-  { key: 'sleep' as const, label: '睡眠' },
-  { key: 'growth' as const, label: '成长' },
+  { key: 'all' as const, labelKey: 'log.filters.all' },
+  { key: 'feeding' as const, labelKey: 'log.filters.feeding' },
+  { key: 'diaper' as const, labelKey: 'log.filters.diaper' },
+  { key: 'pumping' as const, labelKey: 'log.filters.pumping' },
+  { key: 'sleep' as const, labelKey: 'log.filters.sleep' },
+  { key: 'growth' as const, labelKey: 'log.filters.growth' },
 ]
+
+const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter.value)?.labelKey ?? 'log.filters.all'))
 </script>
 
 <template>
@@ -168,9 +173,9 @@ const filters = [
     <PageHeader />
 
     <div class="filter-select-row">
-      <label class="filter-select-label" for="filter-select">记录类型</label>
+      <label class="filter-select-label" for="filter-select">{{ t('log.filterLabel') }}</label>
       <select id="filter-select" v-model="filter" class="form-input filter-select">
-        <option v-for="f in filters" :key="f.key" :value="f.key">{{ f.label }}</option>
+        <option v-for="f in filters" :key="f.key" :value="f.key">{{ t(f.labelKey) }}</option>
       </select>
     </div>
 
@@ -187,14 +192,14 @@ const filters = [
         @delete="onDelete"
       />
       <div v-else class="empty-inline">
-        <p>暂无{{ filter === 'all' ? '' : filters.find((f) => f.key === filter)?.label }}记录</p>
-        <p class="empty-hint">回到「今日」页开始记录吧</p>
+        <p>{{ t('log.empty', { type: filter === 'all' ? '' : currentFilterLabel }) }}</p>
+        <p class="empty-hint">{{ t('log.emptyHint') }}</p>
       </div>
     </div>
 
     <BaseModal
       :show="modalState !== null"
-      :title="modalState?.editing ? '编辑记录' : '添加记录'"
+      :title="modalState?.editing ? t('log.editTitle') : t('log.addTitle')"
       @close="modalState = null"
     >
       <FeedingForm
@@ -229,11 +234,11 @@ const filters = [
       />
     </BaseModal>
 
-    <BaseModal :show="confirmDelete !== null" title="删除记录" @close="confirmDelete = null">
-      <p class="confirm-text">确定要删除这条记录吗？此操作不可撤销。</p>
+    <BaseModal :show="confirmDelete !== null" :title="t('common.deleteRecord')" @close="confirmDelete = null">
+      <p class="confirm-text">{{ t('log.deleteSimple') }}</p>
       <div class="confirm-actions">
-        <button class="btn btn-outline" @click="confirmDelete = null">取消</button>
-        <button class="btn btn-danger-soft" @click="confirmDeleteAction">确认删除</button>
+        <button class="btn btn-outline" @click="confirmDelete = null">{{ t('common.cancel') }}</button>
+        <button class="btn btn-danger-soft" @click="confirmDeleteAction">{{ t('log.confirmDelete') }}</button>
       </div>
     </BaseModal>
   </div>

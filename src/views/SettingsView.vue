@@ -1,16 +1,19 @@
 ﻿<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
 import { exportAllJson, exportBabyCsvs, importAllJson } from '@/services/export'
 import { BABY_AVATARS } from '@/constants'
 import { setTheme, themeMode, type ThemeMode } from '@/composables/useTheme'
+import { setLocale } from '@/i18n'
 import { FEED_REMINDER_KEY } from '@/utils/feedingGuide'
 import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { Baby } from '@/types'
 
 const babyStore = useBabyStore()
+const { t, locale } = useI18n()
 
 const recordCounts = ref({ feedings: 0, diapers: 0, pumpings: 0, sleeps: 0, growths: 0 })
 const babyModal = ref<{ mode: 'add' | 'edit'; id?: number } | null>(null)
@@ -41,11 +44,20 @@ async function toggleFeedReminder() {
   }
 }
 
-const THEME_OPTIONS: { value: ThemeMode; label: string; icon: string }[] = [
-  { value: 'system', label: '跟随系统', icon: '🖥️' },
-  { value: 'light', label: '浅色', icon: '☀️' },
-  { value: 'dark', label: '深色', icon: '🌙' },
+const THEME_OPTIONS: { value: ThemeMode; labelKey: string; icon: string }[] = [
+  { value: 'system', labelKey: 'theme.followSystem', icon: '🖥️' },
+  { value: 'light', labelKey: 'theme.light', icon: '☀️' },
+  { value: 'dark', labelKey: 'theme.dark', icon: '🌙' },
 ]
+
+const LOCALE_OPTIONS = [
+  { value: 'zh-CN' as const, labelKey: 'language.zh' },
+  { value: 'en-US' as const, labelKey: 'language.en' },
+]
+
+function changeLocale(l: 'zh-CN' | 'en-US') {
+  setLocale(l)
+}
 
 onMounted(async () => {
   recordCounts.value = await countAllRecords()
@@ -95,17 +107,17 @@ async function confirmDeleteBaby() {
 }
 
 function babyAge(b: Baby): string {
-  if (!b.birthDate) return '未设置生日'
+  if (!b.birthDate) return t('settings.noBirthDate')
   const diff = Date.now() - new Date(b.birthDate + 'T00:00:00').getTime()
-  if (diff < 0) return '生日未到'
+  if (diff < 0) return t('settings.birthdayUpcoming')
   const months = Math.floor(diff / (1000 * 60 * 60 * 24 * 30.44))
   if (months < 1) {
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    return `${days} 天`
+    return t('settings.ageDays', { n: days })
   }
-  if (months < 12) return `${months} 个月`
+  if (months < 12) return t('settings.ageMonths', { n: months })
   const years = Math.floor(months / 12)
-  return `${years} 岁 ${months % 12} 个月`
+  return t('settings.ageYears', { years, months: months % 12 })
 }
 
 async function handleExportJson() {
@@ -126,11 +138,18 @@ async function handleImportFile(e: Event) {
   try {
     const result = await importAllJson(file)
     alert(
-      `导入成功！宝宝 ${result.babies} 个，喂养 ${result.feedings} 条，纸尿裤 ${result.diapers} 条，吸奶 ${result.pumpings} 条，睡眠 ${result.sleeps} 条，成长 ${result.growths} 条`,
+      t('settings.importSuccess', {
+        babies: result.babies,
+        feedings: result.feedings,
+        diapers: result.diapers,
+        pumpings: result.pumpings,
+        sleeps: result.sleeps,
+        growths: result.growths,
+      }),
     )
     recordCounts.value = await countAllRecords()
   } catch {
-    alert('导入失败：文件格式不正确')
+    alert(t('settings.importFailed'))
   } finally {
     importBusy.value = false
     if (importFileRef.value) importFileRef.value.value = ''
@@ -157,7 +176,7 @@ async function confirmClearAll() {
     <PageHeader />
 
     <!-- 宝宝管理 -->
-    <p class="section-title">宝宝</p>
+    <p class="section-title">{{ t('settings.babyManage') }}</p>
     <div class="card">
       <div class="baby-list">
         <div
@@ -169,65 +188,87 @@ async function confirmClearAll() {
         >
           <div class="baby-avatar" :style="{ background: b.avatarColor }">{{ b.avatar ?? b.name[0] }}</div>
           <div class="baby-info">
-            <p class="baby-name">{{ b.name }}{{ b.id === babyStore.activeBabyId ? '（当前）' : '' }}</p>
+            <p class="baby-name">{{ b.name }}{{ b.id === babyStore.activeBabyId ? t('common.current') : '' }}</p>
             <p class="baby-meta">{{ babyAge(b) }}</p>
           </div>
           <div class="baby-actions">
-            <button class="icon-btn" title="编辑" @click.stop="openEditBaby(b)">✏️</button>
-            <button class="icon-btn" title="删除" @click.stop="deleteBabyConfirm = b">🗑️</button>
+            <button class="icon-btn" :title="t('common.edit')" @click.stop="openEditBaby(b)">✏️</button>
+            <button class="icon-btn" :title="t('common.delete')" @click.stop="deleteBabyConfirm = b">🗑️</button>
           </div>
         </div>
       </div>
-      <button class="btn btn-outline btn-block" @click="openAddBaby">+ 添加宝宝</button>
+      <button class="btn btn-outline btn-block" @click="openAddBaby">+ {{ t('settings.addBaby') }}</button>
     </div>
 
     <!-- 数据管理 -->
-    <p class="section-title">数据管理</p>
+    <p class="section-title">{{ t('settings.dataManage') }}</p>
     <div class="card">
-      <p class="data-tip">数据保存在本地浏览器（IndexedDB），不会上传到任何服务器。</p>
+      <p class="data-tip">{{ t('settings.dataTip') }}</p>
       <div class="data-counts">
-        <span>喂养 {{ recordCounts.feedings }} 条</span>
-        <span>纸尿裤 {{ recordCounts.diapers }} 条</span>
-        <span>吸奶 {{ recordCounts.pumpings }} 条</span>
-        <span>睡眠 {{ recordCounts.sleeps }} 条</span>
-        <span>成长 {{ recordCounts.growths }} 条</span>
+        <span>{{ t('log.filters.feeding') }} {{ t('common.records', { n: recordCounts.feedings }) }}</span>
+        <span>{{ t('log.filters.diaper') }} {{ t('common.records', { n: recordCounts.diapers }) }}</span>
+        <span>{{ t('log.filters.pumping') }} {{ t('common.records', { n: recordCounts.pumpings }) }}</span>
+        <span>{{ t('log.filters.sleep') }} {{ t('common.records', { n: recordCounts.sleeps }) }}</span>
+        <span>{{ t('log.filters.growth') }} {{ t('common.records', { n: recordCounts.growths }) }}</span>
       </div>
       <button class="btn btn-primary btn-block" :disabled="activeBaby === undefined" @click="handleExportJson">
-        <span class="btn-label">{{ activeBaby ? `导出 ${activeBaby.name} 的数据备份 (JSON)` : '请先选择宝宝' }}</span>
+        <span class="btn-label">{{
+          activeBaby ? t('settings.exportBabyJson', { name: activeBaby.name }) : t('common.noBaby')
+        }}</span>
       </button>
-      <button class="btn btn-outline btn-block" @click="handleExportCsv">导出全部数据 (CSV 表格)</button>
+      <button class="btn btn-outline btn-block" @click="handleExportCsv">{{ t('settings.exportAllCsv') }}</button>
       <button class="btn btn-outline btn-block" :disabled="importBusy" @click="importFileRef?.click()">
-        {{ importBusy ? '导入中…' : '导入 JSON 备份' }}
+        {{ importBusy ? t('common.importing') : t('common.importJson') }}
       </button>
       <input ref="importFileRef" type="file" accept="application/json,.json" hidden @change="handleImportFile" />
-      <p v-if="exportSuccess" class="export-ok">✓ 已导出备份文件</p>
-      <button class="btn btn-danger-soft btn-block" @click="clearAllConfirm = true">清空全部数据</button>
+      <p v-if="exportSuccess" class="export-ok">{{ t('settings.exportOk') }}</p>
+      <button class="btn btn-danger-soft btn-block" @click="clearAllConfirm = true">
+        {{ t('settings.clearAll') }}
+      </button>
     </div>
 
     <!-- 外观 -->
-    <p class="section-title">外观</p>
+    <p class="section-title">{{ t('theme.title') }}</p>
     <div class="card">
       <div class="theme-options">
         <button
-          v-for="t in THEME_OPTIONS"
-          :key="t.value"
+          v-for="opt in THEME_OPTIONS"
+          :key="opt.value"
           class="theme-option"
-          :class="{ active: themeMode === t.value }"
-          @click="setTheme(t.value)"
+          :class="{ active: themeMode === opt.value }"
+          @click="setTheme(opt.value)"
         >
-          <span class="theme-icon">{{ t.icon }}</span>
-          <span class="theme-label">{{ t.label }}</span>
+          <span class="theme-icon">{{ opt.icon }}</span>
+          <span class="theme-label">{{ t(opt.labelKey) }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 语言 -->
+    <p class="section-title">{{ t('language.title') }}</p>
+    <div class="card">
+      <p class="data-tip">{{ t('language.hint') }}</p>
+      <div class="theme-options lang-options">
+        <button
+          v-for="opt in LOCALE_OPTIONS"
+          :key="opt.value"
+          class="theme-option"
+          :class="{ active: locale === opt.value }"
+          @click="changeLocale(opt.value)"
+        >
+          <span class="theme-icon">{{ opt.value === 'zh-CN' ? '🇨🇳' : '🇺🇸' }}</span>
+          <span class="theme-label">{{ t(opt.labelKey) }}</span>
         </button>
       </div>
     </div>
 
     <!-- 喂奶提醒 -->
-    <p class="section-title">喂奶提醒</p>
+    <p class="section-title">{{ t('settings.feedReminderTitle') }}</p>
     <div class="card">
       <div class="reminder-row">
         <div class="reminder-info">
-          <p class="reminder-title">🍼 喂奶间隔提醒</p>
-          <p class="reminder-sub">超过建议间隔时，在今日页提示并发送浏览器通知</p>
+          <p class="reminder-title">{{ t('settings.reminderTitle') }}</p>
+          <p class="reminder-sub">{{ t('settings.reminderSub') }}</p>
         </div>
         <button
           class="switch"
@@ -239,37 +280,34 @@ async function confirmClearAll() {
           <span class="switch-knob"></span>
         </button>
       </div>
-      <p class="reminder-hint">
-        按宝宝月龄自动给出建议间隔：0-1月 约2.5h · 1-3月 约3h · 3-6月 约3.5h · 6-9月 约4h · 9-12月 约4.5h · 12月以上
-        约5h
-      </p>
+      <p class="reminder-hint">{{ t('settings.reminderHint') }}</p>
     </div>
 
     <!-- 关于 -->
-    <p class="section-title">关于</p>
+    <p class="section-title">{{ t('settings.about') }}</p>
     <div class="card">
-      <p class="about-text">温馨简约的宝宝喂养记录工具</p>
-      <p class="about-text">支持喂养（亲喂/瓶喂/配方奶）、纸尿裤、吸奶、睡眠记录</p>
-      <p class="about-text">支持趋势统计与周期对比、数据导出导入</p>
-      <p class="about-text muted">v1.0.0 · 纯前端 · 数据本地存储</p>
+      <p class="about-text">{{ t('settings.aboutText1') }}</p>
+      <p class="about-text">{{ t('settings.aboutText2') }}</p>
+      <p class="about-text">{{ t('settings.aboutText3') }}</p>
+      <p class="about-text muted">{{ t('settings.aboutMuted') }}</p>
     </div>
 
     <!-- 宝宝编辑弹窗 -->
     <BaseModal
       :show="babyModal !== null"
-      :title="babyModal?.mode === 'edit' ? '编辑宝宝' : '添加宝宝'"
+      :title="babyModal?.mode === 'edit' ? t('settings.editBaby') : t('settings.addBaby')"
       @close="babyModal = null"
     >
       <div class="form-field">
-        <label class="form-label">宝宝名字 *</label>
-        <input v-model="babyName" type="text" placeholder="例如：小糯米" class="form-input" />
+        <label class="form-label">{{ t('settings.babyName') }} *</label>
+        <input v-model="babyName" type="text" :placeholder="t('settings.babyNamePh')" class="form-input" />
       </div>
       <div class="form-field">
-        <label class="form-label">出生日期（可选）</label>
+        <label class="form-label">{{ t('settings.birthDate') }}</label>
         <input v-model="babyBirthDate" type="date" class="form-input" />
       </div>
       <div class="form-field">
-        <label class="form-label">头像</label>
+        <label class="form-label">{{ t('settings.avatarLabel') }}</label>
         <div class="avatar-picker">
           <button
             v-for="a in BABY_AVATARS"
@@ -284,28 +322,34 @@ async function confirmClearAll() {
         </div>
       </div>
       <div class="form-actions">
-        <button class="btn btn-outline" @click="babyModal = null">取消</button>
-        <button class="btn btn-primary" :disabled="!babyName.trim()" @click="saveBaby">保存</button>
+        <button class="btn btn-outline" @click="babyModal = null">{{ t('common.cancel') }}</button>
+        <button class="btn btn-primary" :disabled="!babyName.trim()" @click="saveBaby">
+          {{ t('settings.saveBaby') }}
+        </button>
       </div>
     </BaseModal>
 
     <!-- 删除宝宝确认 -->
-    <BaseModal :show="deleteBabyConfirm !== null" title="删除宝宝" @close="deleteBabyConfirm = null">
-      <p class="confirm-text">
-        确定删除「{{ deleteBabyConfirm?.name }}」吗？<br />该宝宝的全部记录也会一并删除，此操作不可撤销。
-      </p>
+    <BaseModal
+      :show="deleteBabyConfirm !== null"
+      :title="t('settings.deleteBabyTitle')"
+      @close="deleteBabyConfirm = null"
+    >
+      <p class="confirm-text">{{ t('settings.deleteBabyText', { name: deleteBabyConfirm?.name ?? '' }) }}</p>
       <div class="form-actions">
-        <button class="btn btn-outline" @click="deleteBabyConfirm = null">取消</button>
-        <button class="btn btn-danger-soft" @click="confirmDeleteBaby">确认删除</button>
+        <button class="btn btn-outline" @click="deleteBabyConfirm = null">{{ t('common.cancel') }}</button>
+        <button class="btn btn-danger-soft" @click="confirmDeleteBaby">{{ t('log.confirmDelete') }}</button>
       </div>
     </BaseModal>
 
     <!-- 清空数据确认 -->
-    <BaseModal :show="clearAllConfirm" title="清空全部数据" @close="clearAllConfirm = false">
-      <p class="confirm-text">将删除所有宝宝及其全部记录，此操作不可撤销。确定继续吗？</p>
+    <BaseModal :show="clearAllConfirm" :title="t('settings.clearConfirmTitle')" @close="clearAllConfirm = false">
+      <p class="confirm-text">{{ t('settings.clearConfirmText') }}</p>
       <div class="form-actions">
-        <button class="btn btn-outline" @click="clearAllConfirm = false">取消</button>
-        <button class="btn btn-danger-soft" :disabled="clearBusy" @click="confirmClearAll">确认清空</button>
+        <button class="btn btn-outline" @click="clearAllConfirm = false">{{ t('common.cancel') }}</button>
+        <button class="btn btn-danger-soft" :disabled="clearBusy" @click="confirmClearAll">
+          {{ t('settings.confirmClear') }}
+        </button>
       </div>
     </BaseModal>
   </div>
@@ -576,6 +620,12 @@ async function confirmClearAll() {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+}
+
+/* 语言选项两列展示，限宽避免过宽 */
+.lang-options {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 320px;
 }
 
 .theme-option {

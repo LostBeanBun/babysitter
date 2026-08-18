@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Feeding, DiaperChange, Pumping, Sleep, GrowthRecord } from '@/types'
 import {
   FEED_TYPE_LABELS,
@@ -10,6 +11,8 @@ import {
   SLEEP_TYPE_LABELS,
 } from '@/constants'
 import { formatTime, formatDuration, formatAmount } from '@/utils/format'
+
+const { t, locale } = useI18n()
 
 export interface TimelineEntry {
   id: number
@@ -43,14 +46,14 @@ const entries = computed<TimelineEntry[]>(() => {
     const detailParts: string[] = []
     if (f.amount != null) detailParts.push(formatAmount(f.amount))
     if (f.duration) detailParts.push(formatDuration(f.duration))
-    const detail = detailParts.length ? detailParts.join(' · ') : '已记录'
+    const detail = detailParts.length ? detailParts.join(' · ') : t('common.recorded')
     list.push({
       id: f.id!,
       kind: 'feeding',
       time: f.startTime,
       icon: f.type.startsWith('breast') ? '🤱' : '🍼',
       color,
-      title: FEED_TYPE_LABELS[f.type],
+      title: t(FEED_TYPE_LABELS[f.type]),
       detail,
       duration: f.duration,
       raw: f,
@@ -58,17 +61,17 @@ const entries = computed<TimelineEntry[]>(() => {
   }
 
   for (const d of props.diapers) {
-    const detailParts: string[] = [DIAPER_TYPE_LABELS[d.type]]
-    if (d.color) detailParts.push(DIAPER_COLOR_LABELS[d.color])
-    if (d.amount) detailParts.push(DIAPER_AMOUNT_LABELS[d.amount])
+    const detailParts: string[] = [t(DIAPER_TYPE_LABELS[d.type])]
+    if (d.color) detailParts.push(t(DIAPER_COLOR_LABELS[d.color]))
+    if (d.amount) detailParts.push(t(DIAPER_AMOUNT_LABELS[d.amount]))
     list.push({
       id: d.id!,
       kind: 'diaper',
       time: d.time,
       icon: d.type === 'wet' ? '💧' : d.type === 'dirty' ? '💩' : '🧷',
       color: '#9A8FC8',
-      title: DIAPER_TYPE_LABELS[d.type],
-      detail: detailParts.slice(1).join(' · ') || '已更换',
+      title: t(DIAPER_TYPE_LABELS[d.type]),
+      detail: detailParts.slice(1).join(' · ') || t('common.changed'),
       raw: d,
     })
   }
@@ -83,8 +86,8 @@ const entries = computed<TimelineEntry[]>(() => {
       time: p.startTime,
       icon: '🎀',
       color: '#D8A8C8',
-      title: `吸奶·${PUMP_SIDE_LABELS[p.side]}`,
-      detail: detailParts.join(' · ') || '已记录',
+      title: t('timeline.pumpTitle', { side: t(PUMP_SIDE_LABELS[p.side]) }),
+      detail: detailParts.join(' · ') || t('common.recorded'),
       duration: p.duration,
       raw: p,
     })
@@ -98,7 +101,7 @@ const entries = computed<TimelineEntry[]>(() => {
       time: s.startTime,
       icon: s.type === 'night' ? '🌙' : '😴',
       color: '#8FAED8',
-      title: SLEEP_TYPE_LABELS[s.type],
+      title: t(SLEEP_TYPE_LABELS[s.type]),
       detail: `${formatTime(s.startTime)} - ${formatTime(s.endTime)}`,
       duration: dur,
       raw: s,
@@ -107,16 +110,16 @@ const entries = computed<TimelineEntry[]>(() => {
 
   for (const g of props.growths ?? []) {
     const detailParts: string[] = []
-    if (g.weight != null) detailParts.push(`体重 ${g.weight} kg`)
-    if (g.height != null) detailParts.push(`身高 ${g.height} cm`)
+    if (g.weight != null) detailParts.push(t('timeline.weight', { value: g.weight }))
+    if (g.height != null) detailParts.push(t('timeline.height', { value: g.height }))
     list.push({
       id: g.id!,
       kind: 'growth',
       time: g.date,
       icon: '📏',
       color: '#8FBF9F',
-      title: '成长记录',
-      detail: detailParts.join(' · ') || '已记录',
+      title: t('growth.title'),
+      detail: detailParts.join(' · ') || t('common.recorded'),
       raw: g,
     })
   }
@@ -128,8 +131,9 @@ const entries = computed<TimelineEntry[]>(() => {
 const groupedEntries = computed(() => {
   if (!props.grouped) return null
   const groups = new Map<string, TimelineEntry[]>()
+  const localeTag = locale.value.startsWith('zh') ? 'zh-CN' : 'en-US'
   for (const e of entries.value) {
-    const day = new Date(e.time).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
+    const day = new Date(e.time).toLocaleDateString(localeTag, { month: 'long', day: 'numeric', weekday: 'short' })
     if (!groups.has(day)) groups.set(day, [])
     groups.get(day)!.push(e)
   }
@@ -151,7 +155,7 @@ const groupedEntries = computed(() => {
           </div>
           <p class="tl-detail">{{ e.detail }}</p>
         </div>
-        <button class="tl-delete" aria-label="删除" @click.stop="emit('delete', e)">✕</button>
+        <button class="tl-delete" :aria-label="t('timeline.deleted')" @click.stop="emit('delete', e)">✕</button>
       </div>
     </template>
 
@@ -169,7 +173,7 @@ const groupedEntries = computed(() => {
             </div>
             <p class="tl-detail">{{ e.detail }}</p>
           </div>
-          <button class="tl-delete" aria-label="删除" @click.stop="emit('delete', e)">✕</button>
+          <button class="tl-delete" :aria-label="t('timeline.deleted')" @click.stop="emit('delete', e)">✕</button>
         </div>
       </div>
     </template>

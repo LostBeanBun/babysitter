@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useGrowthStore } from '@/stores/growth'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   editing?: {
@@ -24,21 +27,21 @@ const notes = ref(props.editing?.notes ?? '')
 async function submit() {
   const d = fromDateTimeLocal(date.value + 'T00:00:00')
   if (d == null || isNaN(d)) {
-    alert('请选择测量日期')
+    alert(t('growth.invalidDate'))
     return
   }
   const w = weight.value ? Number(weight.value) : undefined
   const h = height.value ? Number(height.value) : undefined
   if (w !== undefined && (isNaN(w) || w <= 0)) {
-    alert('请输入有效的体重（kg）')
+    alert(t('growth.invalidWeight'))
     return
   }
   if (h !== undefined && (isNaN(h) || h <= 0)) {
-    alert('请输入有效的身高（cm）')
+    alert(t('growth.invalidHeight'))
     return
   }
   if (w === undefined && h === undefined) {
-    alert('请至少填写体重或身高')
+    alert(t('growth.invalidEmpty'))
     return
   }
 
@@ -59,45 +62,45 @@ async function submit() {
 <template>
   <div class="growth-form">
     <div class="form-field">
-      <label class="form-label">测量日期</label>
+      <label class="form-label">{{ t('growth.dateLabel') }}</label>
       <input v-model="date" type="date" class="form-input" />
     </div>
 
     <div class="form-field">
-      <label class="form-label">体重（kg）</label>
+      <label class="form-label">{{ t('growth.weightLabel') }}</label>
       <input
         v-model="weight"
         type="number"
         min="0"
         step="0.1"
-        placeholder="例如 7.5"
+        :placeholder="t('growth.weightPlaceholder')"
         class="form-input"
         inputmode="decimal"
       />
     </div>
 
     <div class="form-field">
-      <label class="form-label">身高（cm）</label>
+      <label class="form-label">{{ t('growth.heightLabel') }}</label>
       <input
         v-model="height"
         type="number"
         min="0"
         step="0.5"
-        placeholder="例如 68"
+        :placeholder="t('growth.heightPlaceholder')"
         class="form-input"
         inputmode="decimal"
       />
     </div>
 
     <div class="form-field">
-      <label class="form-label">备注</label>
-      <input v-model="notes" type="text" placeholder="可选" class="form-input" />
+      <label class="form-label">{{ t('growth.notesLabel') }}</label>
+      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
     </div>
 
     <div class="form-actions">
-      <button type="button" class="btn btn-outline" @click="emit('cancelled')">取消</button>
+      <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>
       <button type="button" class="btn btn-primary" @click="submit">
-        {{ props.editing ? '保存修改' : '保存记录' }}
+        {{ props.editing ? t('common.saveEdit') : t('common.save') }}
       </button>
     </div>
   </div>

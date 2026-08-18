@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { APP_TABS } from '@/router/tabs'
 
 const route = useRoute()
 const babyStore = useBabyStore()
+const { t } = useI18n()
 
 /** 无宝宝（引导页）时不显示底部导航 */
 const showTabbar = computed(() => babyStore.babies.length > 0)
@@ -23,7 +25,7 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
       <svg viewBox="0 0 24 24" fill="currentColor" class="tabbar-icon" aria-hidden="true">
         <path :d="tab.icon" />
       </svg>
-      <span class="tabbar-label">{{ tab.label }}</span>
+      <span class="tabbar-label">{{ t(tab.label) }}</span>
     </RouterLink>
   </nav>
 </template>

@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { isDark, toggleTheme } from '@/composables/useTheme'
 
 const babyStore = useBabyStore()
+const { t } = useI18n()
 </script>
 
 <template>
@@ -10,9 +12,9 @@ const babyStore = useBabyStore()
     <div class="header-left">
       <h1 class="header-title">
         <span v-if="babyStore.activeBaby?.avatar" class="header-avatar">{{ babyStore.activeBaby.avatar }}</span>
-        {{ babyStore.activeBaby?.name ?? '宝宝日记' }}
+        {{ babyStore.activeBaby?.name ?? t('app.name') }}
       </h1>
-      <p v-if="babyStore.activeBaby" class="header-sub">记录美好时光</p>
+      <p v-if="babyStore.activeBaby" class="header-sub">{{ t('app.tagline') }}</p>
     </div>
     <div class="header-right">
       <slot name="right" />
@@ -20,8 +22,8 @@ const babyStore = useBabyStore()
       <button
         type="button"
         class="theme-toggle"
-        :title="isDark ? '切换为浅色' : '切换为深色'"
-        :aria-label="isDark ? '切换为浅色' : '切换为深色'"
+        :title="isDark ? t('theme.toLight') : t('theme.toDark')"
+        :aria-label="isDark ? t('theme.toLight') : t('theme.toDark')"
         @click="toggleTheme"
       >
         <svg v-if="isDark" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">

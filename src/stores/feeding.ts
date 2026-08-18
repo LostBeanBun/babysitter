@@ -1,8 +1,11 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { db } from '@/db'
+import i18n from '@/i18n'
 import { useLiveQuery } from '@/composables/useLiveQuery'
 import { useBabyStore } from '@/stores/baby'
 import type { Feeding, FeedType } from '@/types'
+
+const t = i18n.global.t
 
 /** 喂养记录 store */
 export const useFeedingStore = defineStore('feeding', () => {
@@ -28,7 +31,7 @@ export const useFeedingStore = defineStore('feeding', () => {
     notes?: string
   }): Promise<number> {
     const babyId = activeBabyId.value
-    if (babyId == null) throw new Error('未选择宝宝')
+    if (babyId == null) throw new Error(t('errors.noBaby'))
     const now = Date.now()
     const duration = data.endTime && data.endTime > data.startTime ? data.endTime - data.startTime : undefined
     const id = await db.feedings.add({
@@ -42,7 +45,7 @@ export const useFeedingStore = defineStore('feeding', () => {
       createdAt: now,
       updatedAt: now,
     })
-    if (id == null) throw new Error('新增喂养记录失败')
+    if (id == null) throw new Error(t('errors.addFeedFail'))
     return id
   }
 

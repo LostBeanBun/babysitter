@@ -1,4 +1,5 @@
 /** 通用工具函数 */
+import i18n from '@/i18n'
 
 /** 补零 */
 export function pad2(n: number): string {
@@ -23,15 +24,16 @@ export function startOfDay(ts: number): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 }
 
-/** 格式化时长：秒/分钟 → "X小时Y分钟" / "Y分钟" */
+/** 格式化时长：秒/分钟 → "X小时Y分" / "Y分钟"（跟随当前界面语言） */
 export function formatDuration(ms: number): string {
-  if (!ms || ms < 0) return '0分钟'
+  const t = i18n.global.t
+  if (!ms || ms < 0) return t('duration.zero')
   const totalMin = Math.round(ms / 60000)
-  if (totalMin < 1) return `${Math.max(1, Math.round(ms / 1000))}秒`
-  if (totalMin < 60) return `${totalMin}分钟`
+  if (totalMin < 1) return `${Math.max(1, Math.round(ms / 1000))}${t('duration.second')}`
+  if (totalMin < 60) return `${totalMin}${t('duration.minute')}`
   const h = Math.floor(totalMin / 60)
   const m = totalMin % 60
-  return m === 0 ? `${h}小时` : `${h}小时${m}分`
+  return m === 0 ? `${h}${t('duration.hour')}` : `${h}${t('duration.hour')}${m}${t('duration.minShort')}`
 }
 
 /** 格式化奶量为 "120 ml" */

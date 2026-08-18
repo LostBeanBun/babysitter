@@ -1,8 +1,11 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { db } from '@/db'
+import i18n from '@/i18n'
 import { useLiveQuery } from '@/composables/useLiveQuery'
 import { useBabyStore } from '@/stores/baby'
 import type { Pumping, PumpSide } from '@/types'
+
+const t = i18n.global.t
 
 /** 吸奶记录 store */
 export const usePumpingStore = defineStore('pumping', () => {
@@ -27,7 +30,7 @@ export const usePumpingStore = defineStore('pumping', () => {
     notes?: string
   }): Promise<number> {
     const babyId = activeBabyId.value
-    if (babyId == null) throw new Error('未选择宝宝')
+    if (babyId == null) throw new Error(t('errors.noBaby'))
     const now = Date.now()
     const duration = data.endTime && data.endTime > data.startTime ? data.endTime - data.startTime : undefined
     const id = await db.pumpings.add({
@@ -41,7 +44,7 @@ export const usePumpingStore = defineStore('pumping', () => {
       createdAt: now,
       updatedAt: now,
     })
-    if (id == null) throw new Error('新增吸奶记录失败')
+    if (id == null) throw new Error(t('errors.addPumpFail'))
     return id
   }
 

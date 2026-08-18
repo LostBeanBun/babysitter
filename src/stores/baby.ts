@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { db, clearBabyData } from '@/db'
+import i18n from '@/i18n'
 import { useLiveQuery } from '@/composables/useLiveQuery'
 import type { Baby } from '@/types'
 import { AVATAR_COLORS } from '@/constants'
 
+const t = i18n.global.t
 const ACTIVE_BABY_KEY = 'babysitter.activeBabyId'
 
 /** 宝宝资料 store：管理宝宝列表、当前宝宝选择 */
@@ -62,7 +64,7 @@ export const useBabyStore = defineStore('baby', () => {
       avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
       createdAt: Date.now(),
     })
-    if (id == null) throw new Error('新增宝宝失败')
+    if (id == null) throw new Error(t('errors.addBabyFail'))
     selectBaby(id)
     return id
   }

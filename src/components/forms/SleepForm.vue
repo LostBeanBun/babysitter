@@ -1,9 +1,12 @@
 ﻿<script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { SleepType } from '@/types'
 import { SLEEP_TYPE_LABELS } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/format'
 import { useSleepStore } from '@/stores/sleep'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   editing?: { id: number; type: SleepType; startTime: number; endTime: number; notes?: string }
@@ -49,11 +52,11 @@ async function submit() {
   const start = fromDateTimeLocal(startTime.value)
   const end = fromDateTimeLocal(endTime.value)
   if (!start || !end) {
-    alert('请填写完整的开始和结束时间')
+    alert(t('sleep.invalidRange'))
     return
   }
   if (end <= start) {
-    alert('结束时间需晚于开始时间')
+    alert(t('sleep.invalidOrder'))
     return
   }
   if (props.editing) {
@@ -72,7 +75,7 @@ async function submit() {
 
 <template>
   <div class="sleep-form">
-    <p class="form-label">睡眠类型</p>
+    <p class="form-label">{{ t('sleep.typeLabel') }}</p>
     <div class="type-row">
       <button
         v-for="(label, key) in SLEEP_TYPE_LABELS"
@@ -83,46 +86,50 @@ async function submit() {
         @click="type = key"
       >
         <span class="type-icon">{{ key === 'night' ? '🌙' : '😴' }}</span>
-        <span class="type-label">{{ label }}</span>
+        <span class="type-label">{{ t(label) }}</span>
       </button>
     </div>
 
     <div class="timer-box">
       <template v-if="!timerRunning && !props.editing">
         <button type="button" class="btn btn-primary btn-lg timer-start" @click="startTimer">
-          ▶ 开始计时（宝宝已入睡）
+          {{ t('sleep.startTimer') }}
         </button>
-        <p class="timer-hint">醒来时点击结束</p>
+        <p class="timer-hint">{{ t('sleep.timerHint') }}</p>
       </template>
       <template v-else-if="timerRunning">
         <div class="timer-display">{{ formatDuration(elapsedMs) }}</div>
-        <button type="button" class="btn btn-soft btn-lg" @click="stopTimer">■ 宝宝醒了</button>
+        <button type="button" class="btn btn-soft btn-lg" @click="stopTimer">{{ t('sleep.stopTimer') }}</button>
       </template>
       <template v-else-if="props.editing">
-        <div class="timer-done">已记录时长：{{ formatDuration(props.editing.endTime - props.editing.startTime) }}</div>
+        <div class="timer-done">
+          {{
+            t('sleep.recordedDuration', { duration: formatDuration(props.editing.endTime - props.editing.startTime) })
+          }}
+        </div>
       </template>
     </div>
 
     <div class="time-row">
       <div class="form-field">
-        <label class="form-label">开始时间</label>
+        <label class="form-label">{{ t('sleep.startLabel') }}</label>
         <input v-model="startTime" type="datetime-local" class="form-input" />
       </div>
       <div class="form-field">
-        <label class="form-label">结束时间</label>
+        <label class="form-label">{{ t('sleep.endLabel') }}</label>
         <input v-model="endTime" type="datetime-local" class="form-input" />
       </div>
     </div>
 
     <div class="form-field">
-      <label class="form-label">备注</label>
-      <input v-model="notes" type="text" placeholder="可选" class="form-input" />
+      <label class="form-label">{{ t('sleep.notesLabel') }}</label>
+      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
     </div>
 
     <div class="form-actions">
-      <button type="button" class="btn btn-outline" @click="emit('cancelled')">取消</button>
+      <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>
       <button type="button" class="btn btn-primary" @click="submit">
-        {{ props.editing ? '保存修改' : '保存记录' }}
+        {{ props.editing ? t('common.saveEdit') : t('common.save') }}
       </button>
     </div>
   </div>

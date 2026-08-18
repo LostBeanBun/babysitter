@@ -1,8 +1,11 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { db } from '@/db'
+import i18n from '@/i18n'
 import { useLiveQuery } from '@/composables/useLiveQuery'
 import { useBabyStore } from '@/stores/baby'
 import type { Sleep, SleepType } from '@/types'
+
+const t = i18n.global.t
 
 /** 睡眠记录 store */
 export const useSleepStore = defineStore('sleep', () => {
@@ -21,8 +24,8 @@ export const useSleepStore = defineStore('sleep', () => {
 
   async function add(data: { type: SleepType; startTime: number; endTime: number; notes?: string }): Promise<number> {
     const babyId = activeBabyId.value
-    if (babyId == null) throw new Error('未选择宝宝')
-    if (data.endTime <= data.startTime) throw new Error('结束时间需晚于开始时间')
+    if (babyId == null) throw new Error(t('errors.noBaby'))
+    if (data.endTime <= data.startTime) throw new Error(t('errors.sleepOrder'))
     const now = Date.now()
     const id = await db.sleeps.add({
       babyId,
@@ -33,7 +36,7 @@ export const useSleepStore = defineStore('sleep', () => {
       createdAt: now,
       updatedAt: now,
     })
-    if (id == null) throw new Error('新增睡眠记录失败')
+    if (id == null) throw new Error(t('errors.addSleepFail'))
     return id
   }
 

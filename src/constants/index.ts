@@ -1,43 +1,43 @@
 import type { FeedType, DiaperType, DiaperColor, DiaperAmount, PumpSide, SleepType } from '@/types'
 
-/** 喂养类型中文标签 */
+/** 喂养类型标签（i18n key，配合 t() 使用） */
 export const FEED_TYPE_LABELS: Record<FeedType, string> = {
-  breast_left: '左侧亲喂',
-  breast_right: '右侧亲喂',
-  breast_both: '双侧亲喂',
-  bottle_breastmilk: '瓶喂母乳',
-  bottle_formula: '配方奶',
+  breast_left: 'feed.types.breast_left',
+  breast_right: 'feed.types.breast_right',
+  breast_both: 'feed.types.breast_both',
+  bottle_breastmilk: 'feed.types.bottle_breastmilk',
+  bottle_formula: 'feed.types.bottle_formula',
 }
 
 export const FEED_TYPE_LIST: { value: FeedType; label: string; icon: string; color: string }[] = [
-  { value: 'breast_left', label: '左侧亲喂', icon: '🤱', color: '#F2A28C' },
-  { value: 'breast_right', label: '右侧亲喂', icon: '🤱', color: '#F2A28C' },
-  { value: 'breast_both', label: '双侧亲喂', icon: '🤱', color: '#E8906C' },
-  { value: 'bottle_breastmilk', label: '瓶喂母乳', icon: '🍼', color: '#8FB9D8' },
-  { value: 'bottle_formula', label: '配方奶', icon: '🥛', color: '#C4A8E0' },
+  { value: 'breast_left', label: 'feed.types.breast_left', icon: '🤱', color: '#F2A28C' },
+  { value: 'breast_right', label: 'feed.types.breast_right', icon: '🤱', color: '#F2A28C' },
+  { value: 'breast_both', label: 'feed.types.breast_both', icon: '🤱', color: '#E8906C' },
+  { value: 'bottle_breastmilk', label: 'feed.types.bottle_breastmilk', icon: '🍼', color: '#8FB9D8' },
+  { value: 'bottle_formula', label: 'feed.types.bottle_formula', icon: '🥛', color: '#C4A8E0' },
 ]
 
 /** 纸尿裤类型 */
 export const DIAPER_TYPE_LABELS: Record<DiaperType, string> = {
-  wet: '尿湿',
-  dirty: '便便',
-  both: '尿+便',
+  wet: 'diaper.types.wet',
+  dirty: 'diaper.types.dirty',
+  both: 'diaper.types.both',
 }
 
 export const DIAPER_TYPE_LIST: { value: DiaperType; label: string; icon: string; color: string }[] = [
-  { value: 'wet', label: '尿湿', icon: '💧', color: '#8FB9D8' },
-  { value: 'dirty', label: '便便', icon: '💩', color: '#B58B62' },
-  { value: 'both', label: '尿+便', icon: '🧷', color: '#9A8FC8' },
+  { value: 'wet', label: 'diaper.types.wet', icon: '💧', color: '#8FB9D8' },
+  { value: 'dirty', label: 'diaper.types.dirty', icon: '💩', color: '#B58B62' },
+  { value: 'both', label: 'diaper.types.both', icon: '🧷', color: '#9A8FC8' },
 ]
 
 /** 便便颜色 */
 export const DIAPER_COLOR_LABELS: Record<DiaperColor, string> = {
-  yellow: '黄色',
-  brown: '棕色',
-  green: '绿色',
-  black: '黑色',
-  red: '红色',
-  other: '其他',
+  yellow: 'diaper.colors.yellow',
+  brown: 'diaper.colors.brown',
+  green: 'diaper.colors.green',
+  black: 'diaper.colors.black',
+  red: 'diaper.colors.red',
+  other: 'diaper.colors.other',
 }
 
 export const DIAPER_COLOR_DOTS: Record<DiaperColor, string> = {
@@ -51,28 +51,28 @@ export const DIAPER_COLOR_DOTS: Record<DiaperColor, string> = {
 
 /** 便便量 */
 export const DIAPER_AMOUNT_LABELS: Record<DiaperAmount, string> = {
-  small: '少量',
-  medium: '适中',
-  large: '大量',
+  small: 'diaper.amounts.small',
+  medium: 'diaper.amounts.medium',
+  large: 'diaper.amounts.large',
 }
 
 /** 吸奶侧 */
 export const PUMP_SIDE_LABELS: Record<PumpSide, string> = {
-  left: '左侧',
-  right: '右侧',
-  both: '双侧',
+  left: 'pump.sides.left',
+  right: 'pump.sides.right',
+  both: 'pump.sides.both',
 }
 
 export const PUMP_SIDE_LIST: { value: PumpSide; label: string; icon: string }[] = [
-  { value: 'left', label: '左侧', icon: '⬅️' },
-  { value: 'right', label: '右侧', icon: '➡️' },
-  { value: 'both', label: '双侧', icon: '↔️' },
+  { value: 'left', label: 'pump.sides.left', icon: '⬅️' },
+  { value: 'right', label: 'pump.sides.right', icon: '➡️' },
+  { value: 'both', label: 'pump.sides.both', icon: '↔️' },
 ]
 
 /** 睡眠类型 */
 export const SLEEP_TYPE_LABELS: Record<SleepType, string> = {
-  nap: '小睡',
-  night: '夜间睡眠',
+  nap: 'sleep.types.nap',
+  night: 'sleep.types.night',
 }
 
 /** 主题色（统计图表统一使用） */

@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
@@ -75,6 +76,8 @@ const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
 const growthStore = useGrowthStore()
 
+const { t, locale } = useI18n()
+
 const now = ref(Date.now())
 setInterval(() => (now.value = Date.now()), 60_000)
 
@@ -135,12 +138,12 @@ const lastFeeding = computed(() => {
   return sorted[0]
 })
 const lastFeedingLabel = computed(() => {
-  if (!lastFeeding.value) return '暂无'
+  if (!lastFeeding.value) return t('common.none')
   const mins = Math.round((now.value - lastFeeding.value.startTime) / 60000)
-  if (mins < 60) return `${mins} 分钟前`
+  if (mins < 60) return t('dashboard.lastFeedMin', { n: mins })
   const h = Math.floor(mins / 60)
   const m = mins % 60
-  return m === 0 ? `${h} 小时前` : `${h} 小时${m} 分前`
+  return m === 0 ? t('dashboard.lastFeedHour', { n: h }) : t('dashboard.lastFeedHourMin', { n: h, m })
 })
 
 // —— 喂奶间隔分析与提醒 ——
@@ -156,8 +159,11 @@ watch(now, () => {
   if (!overdue.value || !sinceMs.value) return
   if (Date.now() - lastNotifiedAt < 5 * 60_000) return
   if (!('Notification' in window) || Notification.permission !== 'granted') return
-  new Notification('🍼 该喂奶啦', {
-    body: `距上次喂养已 ${formatDuration(sinceMs.value)}，超过建议间隔（${recommendedIntervalLabel(activeBaby.value)}）`,
+  new Notification(t('feed.reminderTitle'), {
+    body: t('feed.notificationBody', {
+      duration: formatDuration(sinceMs.value),
+      label: recommendedIntervalLabel(activeBaby.value),
+    }),
     tag: 'feed-reminder',
   })
   lastNotifiedAt = Date.now()
@@ -188,18 +194,18 @@ async function saveSleepFeed() {
   const start = fromDateTimeLocal(sfStart.value)
   const end = fromDateTimeLocal(sfSleepEnd.value)
   if (start == null || isNaN(start)) {
-    alert('请选择开始时间')
+    alert(t('dashboard.selectStart'))
     return
   }
   if (end == null || isNaN(end) || end <= start) {
-    alert('睡眠结束时间需晚于开始时间')
+    alert(t('dashboard.sleepEndAfter'))
     return
   }
   let amount: number | undefined
   if (sfType.value === 'bottle_formula' || sfType.value === 'bottle_breastmilk') {
     amount = sfAmount.value ? Number(sfAmount.value) : undefined
     if (amount !== undefined && (isNaN(amount) || amount <= 0)) {
-      alert('请输入有效的奶量（ml）')
+      alert(t('dashboard.invalidAmount'))
       return
     }
   }
@@ -221,15 +227,18 @@ const summaryCopied = ref(false)
 
 function generateSummary() {
   const d = new Date(now.value)
-  const dateLabel = `${d.getMonth() + 1}月${d.getDate()}日`
+  const dateLabel = new Intl.DateTimeFormat(locale.value, { month: 'long', day: 'numeric' }).format(d)
   const pumpTotal = todayPumpings.value.reduce((s, p) => s + (p.amount ?? 0), 0)
+  const feedAmountPart =
+    totalMilk.value > 0 ? t('dashboard.summaryFeedAmount', { amount: formatAmount(totalMilk.value) }) : ''
+  const pumpAmountPart = pumpTotal > 0 ? t('dashboard.summaryPumpAmount', { amount: formatAmount(pumpTotal) }) : ''
   const lines = [
-    `📋 ${activeBaby.value?.name ?? '宝宝'}的一天 · ${dateLabel}`,
-    `🍼 喂养 ${feedCount.value} 次${totalMilk.value > 0 ? `（奶量 ${formatAmount(totalMilk.value)}）` : ''}`,
-    `😴 睡眠 ${formatDuration(sleepTotal.value)}`,
-    `🧷 纸尿裤 ${todayDiapers.value.length} 次`,
-    `🎀 吸奶 ${todayPumpings.value.length} 次${pumpTotal > 0 ? `（${formatAmount(pumpTotal)}）` : ''}`,
-    `📏 成长记录 ${todayGrowths.value.length} 条`,
+    t('dashboard.daySummary', { name: activeBaby.value?.name ?? t('common.baby'), date: dateLabel }),
+    t('dashboard.summaryFeed', { n: feedCount.value, amount: feedAmountPart }),
+    t('dashboard.summarySleep', { duration: formatDuration(sleepTotal.value) }),
+    t('dashboard.summaryDiaper', { n: todayDiapers.value.length }),
+    t('dashboard.summaryPump', { n: todayPumpings.value.length, amount: pumpAmountPart }),
+    t('dashboard.summaryGrowth', { n: todayGrowths.value.length }),
   ]
   dailySummary.value = lines.join('\n')
   summaryCopied.value = false
@@ -242,7 +251,7 @@ async function copySummary() {
     summaryCopied.value = true
     setTimeout(() => (summaryCopied.value = false), 2000)
   } catch {
-    alert('复制失败，请长按文本手动复制')
+    alert(t('dashboard.copyFailed'))
   }
 }
 
@@ -325,7 +334,7 @@ const editPayload = computed(() => {
     <PageHeader>
       <template #right>
         <span class="date-badge">{{
-          new Date(now).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
+          new Date(now).toLocaleDateString(locale, { month: 'long', day: 'numeric', weekday: 'short' })
         }}</span>
       </template>
     </PageHeader>
@@ -333,10 +342,12 @@ const editPayload = computed(() => {
     <!-- 首次使用引导 -->
     <div v-if="!hasBaby" class="welcome">
       <div class="welcome-icon">👶</div>
-      <h2 class="welcome-title">欢迎使用宝宝日记</h2>
-      <p class="welcome-text">记录宝宝的每一次喂养、睡眠与成长瞬间。<br />数据完全保存在本地，隐私安全。</p>
-      <button class="btn btn-primary btn-lg welcome-btn" @click="openOnboarding">开始使用</button>
-      <button class="btn btn-outline welcome-btn" @click="$router.push('/settings')">已有数据？前往设置导入</button>
+      <h2 class="welcome-title">{{ t('dashboard.welcomeTitle') }}</h2>
+      <p class="welcome-text">{{ t('dashboard.welcomeText1') }}<br />{{ t('dashboard.welcomeText2') }}</p>
+      <button class="btn btn-primary btn-lg welcome-btn" @click="openOnboarding">{{ t('dashboard.startBtn') }}</button>
+      <button class="btn btn-outline welcome-btn" @click="$router.push('/settings')">
+        {{ t('dashboard.importHint') }}
+      </button>
     </div>
 
     <template v-else>
@@ -344,27 +355,42 @@ const editPayload = computed(() => {
       <div v-if="overdue" class="feed-reminder-banner">
         <span class="fr-icon">🍼</span>
         <div class="fr-text">
-          <p class="fr-title">距上次喂养已 {{ formatDuration(sinceMs ?? 0) }}</p>
-          <p class="fr-sub">已超过建议间隔（{{ recommendedIntervalLabel(activeBaby) }}），记得喂奶哦</p>
+          <p class="fr-title">{{ t('feed.sinceLast', { duration: formatDuration(sinceMs ?? 0) }) }}</p>
+          <p class="fr-sub">{{ t('feed.reminderSub', { label: recommendedIntervalLabel(activeBaby) }) }}</p>
         </div>
       </div>
 
       <!-- 今日汇总 -->
       <div class="stats-grid">
         <StatCard
-          label="最近喂养"
+          :label="t('dashboard.statLastFeed')"
           :value="lastFeedingLabel"
-          :sub="lastFeeding ? `建议 ${recommendedIntervalLabel(activeBaby)}` : undefined"
+          :sub="lastFeeding ? t('feed.suggested', { label: recommendedIntervalLabel(activeBaby) }) : undefined"
           icon="🍼"
           color="#E8906C"
         />
-        <StatCard label="今日奶量" :value="formatAmount(totalMilk) || '0 ml'" icon="🥛" color="#C4A8E0" />
-        <StatCard label="今日喂养" :value="`${feedCount} 次`" icon="🍽️" color="#F2A28C" />
-        <StatCard label="今日睡眠" :value="formatDuration(sleepTotal)" icon="😴" color="#8FAED8" />
-        <StatCard label="今日尿布" :value="`${todayDiapers.length} 次`" icon="🧷" color="#9A8FC8" />
         <StatCard
-          label="今日吸奶"
-          :value="`${todayPumpings.length} 次`"
+          :label="t('dashboard.statMilk')"
+          :value="formatAmount(totalMilk) || '0 ml'"
+          icon="🥛"
+          color="#C4A8E0"
+        />
+        <StatCard
+          :label="t('dashboard.statFeedCount')"
+          :value="t('common.times', { n: feedCount })"
+          icon="🍽️"
+          color="#F2A28C"
+        />
+        <StatCard :label="t('dashboard.statSleep')" :value="formatDuration(sleepTotal)" icon="😴" color="#8FAED8" />
+        <StatCard
+          :label="t('dashboard.statDiaper')"
+          :value="t('common.times', { n: todayDiapers.length })"
+          icon="🧷"
+          color="#9A8FC8"
+        />
+        <StatCard
+          :label="t('dashboard.statPump')"
+          :value="t('common.times', { n: todayPumpings.length })"
           :sub="formatAmount(todayPumpings.reduce((s, p) => s + (p.amount ?? 0), 0)) || undefined"
           icon="🎀"
           color="#D8A8C8"
@@ -372,38 +398,38 @@ const editPayload = computed(() => {
       </div>
 
       <!-- 快捷记录 -->
-      <p class="section-title">快速记录</p>
+      <p class="section-title">{{ t('dashboard.quickRecord') }}</p>
       <div class="quick-actions">
         <button class="quick-btn feed" @click="openAdd('feeding')">
           <span class="quick-icon">🍼</span>
-          <span class="quick-label">喂养</span>
+          <span class="quick-label">{{ t('log.filters.feeding') }}</span>
         </button>
         <button class="quick-btn diaper" @click="openAdd('diaper')">
           <span class="quick-icon">🧷</span>
-          <span class="quick-label">纸尿裤</span>
+          <span class="quick-label">{{ t('log.filters.diaper') }}</span>
         </button>
         <button class="quick-btn pump" @click="openAdd('pumping')">
           <span class="quick-icon">🎀</span>
-          <span class="quick-label">吸奶</span>
+          <span class="quick-label">{{ t('log.filters.pumping') }}</span>
         </button>
         <button class="quick-btn sleep" @click="openAdd('sleep')">
           <span class="quick-icon">😴</span>
-          <span class="quick-label">睡眠</span>
+          <span class="quick-label">{{ t('log.filters.sleep') }}</span>
         </button>
         <button class="quick-btn growth" @click="openAdd('growth')">
           <span class="quick-icon">📏</span>
-          <span class="quick-label">成长</span>
+          <span class="quick-label">{{ t('log.filters.growth') }}</span>
         </button>
       </div>
 
       <!-- 喂奶间隔分析 -->
       <div v-if="avgGapMs != null" class="interval-card card">
         <div class="interval-item">
-          <p class="interval-label">实际平均间隔</p>
+          <p class="interval-label">{{ t('dashboard.avgInterval') }}</p>
           <p class="interval-value">{{ formatDuration(avgGapMs) }}</p>
         </div>
         <div class="interval-item">
-          <p class="interval-label">建议间隔{{ activeBaby?.birthDate ? '（按月龄）' : '' }}</p>
+          <p class="interval-label">{{ activeBaby?.birthDate ? t('feed.intervalByAge') : t('feed.intervalLabel') }}</p>
           <p class="interval-value">{{ recommendedIntervalLabel(activeBaby) }}</p>
         </div>
       </div>
@@ -411,13 +437,13 @@ const editPayload = computed(() => {
       <!-- 奶睡一键 -->
       <button class="btn btn-outline sleep-feed-btn" @click="sleepFeedOpen = true">
         <span class="sf-btn-icon">🍼😴</span>
-        <span>奶睡一键记录（喂奶 + 睡眠）</span>
+        <span>{{ t('dashboard.sleepFeedButton') }}</span>
       </button>
 
       <!-- 今日记录 -->
       <div class="section-row">
-        <p class="section-title">今日记录</p>
-        <button class="btn btn-sm btn-outline" @click="generateSummary">📋 今日小结</button>
+        <p class="section-title">{{ t('dashboard.todayRecords') }}</p>
+        <button class="btn btn-sm btn-outline" @click="generateSummary">{{ t('dashboard.summaryButton') }}</button>
       </div>
       <div class="card">
         <TimelineList
@@ -438,14 +464,14 @@ const editPayload = computed(() => {
           @delete="onDelete"
         />
         <div v-else class="empty-inline">
-          <p>今天还没有记录，点击上方按钮开始吧</p>
+          <p>{{ t('dashboard.noRecords') }}</p>
         </div>
       </div>
 
       <!-- 记录弹窗 -->
       <BaseModal
         :show="modalState !== null"
-        :title="modalState?.editing ? '编辑记录' : '添加记录'"
+        :title="modalState?.editing ? t('log.editTitle') : t('log.addTitle')"
         @close="modalState = null"
       >
         <FeedingForm
@@ -481,93 +507,99 @@ const editPayload = computed(() => {
       </BaseModal>
 
       <!-- 删除确认 -->
-      <BaseModal :show="confirmDelete !== null" title="删除记录" @close="confirmDelete = null">
+      <BaseModal :show="confirmDelete !== null" :title="t('common.deleteRecord')" @close="confirmDelete = null">
         <p class="confirm-text">
-          确定要删除这条{{
-            confirmDelete?.kind === 'feeding'
-              ? '喂养'
-              : confirmDelete?.kind === 'diaper'
-                ? '纸尿裤'
-                : confirmDelete?.kind === 'pumping'
-                  ? '吸奶'
-                  : confirmDelete?.kind === 'sleep'
-                    ? '睡眠'
-                    : '成长'
-          }}记录吗？此操作不可撤销。
+          {{
+            t('log.deleteConfirm', {
+              kind: t(
+                confirmDelete?.kind === 'feeding'
+                  ? 'log.filters.feeding'
+                  : confirmDelete?.kind === 'diaper'
+                    ? 'log.filters.diaper'
+                    : confirmDelete?.kind === 'pumping'
+                      ? 'log.filters.pumping'
+                      : confirmDelete?.kind === 'sleep'
+                        ? 'log.filters.sleep'
+                        : 'log.filters.growth',
+              ),
+            })
+          }}
         </p>
         <div class="confirm-actions">
-          <button class="btn btn-outline" @click="confirmDelete = null">取消</button>
-          <button class="btn btn-danger-soft" @click="confirmDeleteAction">确认删除</button>
+          <button class="btn btn-outline" @click="confirmDelete = null">{{ t('common.cancel') }}</button>
+          <button class="btn btn-danger-soft" @click="confirmDeleteAction">{{ t('log.confirmDelete') }}</button>
         </div>
       </BaseModal>
     </template>
 
     <!-- 奶睡组合弹窗 -->
-    <BaseModal :show="sleepFeedOpen" title="奶睡一键记录" @close="sleepFeedOpen = false">
+    <BaseModal :show="sleepFeedOpen" :title="t('dashboard.sleepFeedTitle')" @close="sleepFeedOpen = false">
       <div class="form-field">
-        <label class="form-label">喂养类型</label>
+        <label class="form-label">{{ t('feed.typeLabel') }}</label>
         <select v-model="sfType" class="form-input">
-          <option v-for="c in FEED_TYPE_CHOICES" :key="c.value" :value="c.value">{{ c.label }}</option>
+          <option v-for="c in FEED_TYPE_CHOICES" :key="c.value" :value="c.value">{{ t(c.label) }}</option>
         </select>
       </div>
       <div v-if="sfType === 'bottle_formula' || sfType === 'bottle_breastmilk'" class="form-field">
-        <label class="form-label">奶量（ml）</label>
+        <label class="form-label">{{ t('dashboard.sleepFeedAmount') }}</label>
         <input
           v-model="sfAmount"
           type="number"
           min="0"
           step="5"
-          placeholder="例如 120"
+          :placeholder="t('dashboard.sleepFeedAmountPh')"
           class="form-input"
           inputmode="numeric"
         />
       </div>
       <div class="form-field">
-        <label class="form-label">开始时间</label>
+        <label class="form-label">{{ t('feed.startLabel') }}</label>
         <input v-model="sfStart" type="datetime-local" class="form-input" />
       </div>
       <div class="form-field">
-        <label class="form-label">睡眠类型</label>
+        <label class="form-label">{{ t('sleep.typeLabel') }}</label>
         <select v-model="sfSleepType" class="form-input">
-          <option value="nap">小睡</option>
-          <option value="night">夜间睡眠</option>
+          <option value="nap">{{ t('sleep.types.nap') }}</option>
+          <option value="night">{{ t('sleep.types.night') }}</option>
         </select>
       </div>
       <div class="form-field">
-        <label class="form-label">睡眠结束时间</label>
+        <label class="form-label">{{ t('sleep.endLabel') }}</label>
         <input v-model="sfSleepEnd" type="datetime-local" class="form-input" />
       </div>
       <div class="form-field">
-        <label class="form-label">备注（可选）</label>
-        <input v-model="sfNotes" type="text" placeholder="例如：奶睡 2 小时" class="form-input" />
+        <label class="form-label">{{ t('sleep.notesLabel') }}（{{ t('common.optional') }}）</label>
+        <input v-model="sfNotes" type="text" :placeholder="t('dashboard.sleepFeedNotesPh')" class="form-input" />
       </div>
       <div class="form-actions">
-        <button class="btn btn-outline" @click="sleepFeedOpen = false">取消</button>
-        <button class="btn btn-primary" @click="saveSleepFeed">一键记录</button>
+        <button class="btn btn-outline" @click="sleepFeedOpen = false">{{ t('common.cancel') }}</button>
+        <button class="btn btn-primary" @click="saveSleepFeed">{{ t('dashboard.oneTapRecord') }}</button>
       </div>
     </BaseModal>
 
     <!-- 今日小结弹窗 -->
-    <BaseModal :show="summaryOpen" title="今日小结" @close="summaryOpen = false">
+    <BaseModal :show="summaryOpen" :title="t('dashboard.summaryTitle')" @close="summaryOpen = false">
       <pre class="summary-text">{{ dailySummary }}</pre>
       <div class="form-actions">
-        <button class="btn btn-outline" @click="summaryOpen = false">关闭</button>
-        <button class="btn btn-primary" @click="copySummary">{{ summaryCopied ? '✓ 已复制' : '复制分享' }}</button>
+        <button class="btn btn-outline" @click="summaryOpen = false">{{ t('common.close') }}</button>
+        <button class="btn btn-primary" @click="copySummary">
+          {{ summaryCopied ? t('common.copied') : t('dashboard.summaryCopy') }}
+        </button>
       </div>
     </BaseModal>
 
     <!-- 首次引导添加宝宝弹窗 -->
-    <BaseModal :show="onboardingOpen" title="添加宝宝" @close="onboardingOpen = false">
+    <BaseModal :show="onboardingOpen" :title="t('settings.addBaby')" @close="onboardingOpen = false">
       <div class="form-field">
-        <label class="form-label">宝宝名字 *</label>
-        <input v-model="onboardName" type="text" placeholder="例如：小糯米" class="form-input" />
+        <label class="form-label">{{ t('settings.babyName') }} *</label>
+        <input v-model="onboardName" type="text" :placeholder="t('dashboard.onboardingNamePh')" class="form-input" />
       </div>
       <div class="form-field">
-        <label class="form-label">出生日期（可选）</label>
+        <label class="form-label">{{ t('settings.birthDate') }}</label>
         <input v-model="onboardBirthDate" type="date" class="form-input" />
       </div>
       <div class="form-field">
-        <label class="form-label">头像</label>
+        <label class="form-label">{{ t('settings.avatarLabel') }}</label>
         <div class="avatar-picker">
           <button
             v-for="a in BABY_AVATARS"
@@ -582,7 +614,7 @@ const editPayload = computed(() => {
         </div>
       </div>
       <button class="btn btn-primary btn-block btn-lg" :disabled="!onboardName.trim()" @click="onOnboarded">
-        开始记录
+        {{ t('common.start') }}
       </button>
     </BaseModal>
   </div>
@@ -616,6 +648,10 @@ const editPayload = computed(() => {
 .welcome-btn {
   min-width: 220px;
   margin-bottom: 10px;
+}
+
+.welcome-btn + .welcome-btn {
+  margin-left: 12px;
 }
 
 .date-badge {

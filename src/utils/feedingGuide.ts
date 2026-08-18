@@ -1,5 +1,8 @@
 import type { Baby } from '@/types'
 import { ageInMonths } from '@/constants/whoGrowth'
+import i18n from '@/i18n'
+
+const t = i18n.global.t
 
 /** 按月龄返回推荐喂奶间隔（毫秒），参考常见育儿指南 */
 export function recommendedIntervalMs(baby?: Baby): number {
@@ -16,7 +19,7 @@ export function recommendedIntervalMs(baby?: Baby): number {
 export function recommendedIntervalLabel(baby?: Baby): string {
   const ms = recommendedIntervalMs(baby)
   const h = ms / 3600_000
-  return h === Math.floor(h) ? `约 ${h} 小时` : `约 ${h} 小时`
+  return t('feed.aboutHours', { h })
 }
 
 /** 最近 N 次喂养的平均间隔（毫秒），不足 2 次返回 null */

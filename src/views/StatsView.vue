@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { EChartsOption } from 'echarts'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ChartCard from '@/components/charts/ChartCard.vue'
@@ -28,6 +29,8 @@ const diaperStore = useDiaperStore()
 const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
 const growthStore = useGrowthStore()
+
+const { t } = useI18n()
 
 // 图表配色跟随主题
 const axisColor = computed(() => (isDark.value ? '#b9ab9e' : '#8c7b72'))
@@ -102,7 +105,7 @@ const milkOption = computed<EChartsOption>(() => ({
   },
   series: [
     {
-      name: '奶量(ml)',
+      name: t('stats.series.milk'),
       type: 'line',
       smooth: true,
       symbol: 'circle',
@@ -142,7 +145,7 @@ const sleepOption = computed<EChartsOption>(() => ({
   },
   series: [
     {
-      name: '睡眠(小时)',
+      name: t('stats.series.sleep'),
       type: 'bar',
       barMaxWidth: 22,
       data: days.value.map((d) => +(d.sleepMs / 3600_000).toFixed(1)),
@@ -166,7 +169,7 @@ const diaperOption = computed<EChartsOption>(() => ({
   },
   series: [
     {
-      name: '尿湿(次)',
+      name: t('stats.series.wet'),
       type: 'bar',
       stack: 'diaper',
       barMaxWidth: 22,
@@ -174,7 +177,7 @@ const diaperOption = computed<EChartsOption>(() => ({
       itemStyle: { color: '#8FB9D8' },
     },
     {
-      name: '便便(次)',
+      name: t('stats.series.dirty'),
       type: 'bar',
       stack: 'diaper',
       barMaxWidth: 22,
@@ -199,7 +202,7 @@ const pumpOption = computed<EChartsOption>(() => ({
   },
   series: [
     {
-      name: '吸奶(ml)',
+      name: t('stats.series.pump'),
       type: 'line',
       smooth: true,
       symbol: 'circle',
@@ -235,10 +238,10 @@ function formatComparisonValue(c: ComparisonResult, value: number): string {
   ) {
     return `${Math.round(value)} ml`
   }
-  return `${Math.round(value)} 次`
+  return t('common.times', { n: Math.round(value) })
 }
 
-const rangeLabel = computed(() => range.value.label)
+const rangeLabel = computed(() => t(range.value.label))
 
 // —— 区间汇总（周报/月报）——
 const summaryDays = computed(() => Math.max(1, currentAgg.value.dayCount))
@@ -250,17 +253,41 @@ const summaryItems = computed(() => {
   const agg = currentAgg.value
   const days = summaryDays.value
   return [
-    { label: '喂养次数', value: `${agg.feedCount} 次`, sub: `日均 ${(agg.feedCount / days).toFixed(1)} 次` },
     {
-      label: '总奶量',
-      value: formatAmount(agg.totalMilkAmount),
-      sub: `日均 ${formatAmount(agg.totalMilkAmount / days)}`,
+      label: t('stats.summary.feedCount'),
+      value: t('common.times', { n: agg.feedCount }),
+      sub: t('common.daily', { value: t('common.times', { n: (agg.feedCount / days).toFixed(1) }) }),
     },
-    { label: '亲喂次数', value: `${agg.breastCount} 次`, sub: `日均 ${(agg.breastCount / days).toFixed(1)} 次` },
-    { label: '睡眠时长', value: formatDuration(agg.sleepMs), sub: `日均 ${formatDuration(agg.sleepMs / days)}` },
-    { label: '纸尿裤', value: `${agg.diaperCount} 次`, sub: `日均 ${(agg.diaperCount / days).toFixed(1)} 次` },
-    { label: '吸奶量', value: formatAmount(agg.pumpAmount), sub: `日均 ${formatAmount(agg.pumpAmount / days)}` },
-    { label: '成长记录', value: `${rangeGrowthCount.value} 条`, sub: rangeLabel.value },
+    {
+      label: t('stats.summary.totalMilk'),
+      value: formatAmount(agg.totalMilkAmount),
+      sub: t('common.daily', { value: formatAmount(agg.totalMilkAmount / days) }),
+    },
+    {
+      label: t('stats.summary.breastCount'),
+      value: t('common.times', { n: agg.breastCount }),
+      sub: t('common.daily', { value: t('common.times', { n: (agg.breastCount / days).toFixed(1) }) }),
+    },
+    {
+      label: t('stats.summary.sleepMs'),
+      value: formatDuration(agg.sleepMs),
+      sub: t('common.daily', { value: formatDuration(agg.sleepMs / days) }),
+    },
+    {
+      label: t('stats.summary.diaper'),
+      value: t('common.times', { n: agg.diaperCount }),
+      sub: t('common.daily', { value: t('common.times', { n: (agg.diaperCount / days).toFixed(1) }) }),
+    },
+    {
+      label: t('stats.summary.pumpAmount'),
+      value: formatAmount(agg.pumpAmount),
+      sub: t('common.daily', { value: formatAmount(agg.pumpAmount / days) }),
+    },
+    {
+      label: t('stats.summary.growthRecords'),
+      value: t('common.records', { n: rangeGrowthCount.value }),
+      sub: rangeLabel.value,
+    },
   ]
 })
 
@@ -307,7 +334,7 @@ const weightOption = computed<EChartsOption>(() => ({
     type: 'value',
     min: 0,
     max: growthXMax.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}月` },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}${t('duration.monthShort')}` },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
@@ -343,7 +370,7 @@ const weightOption = computed<EChartsOption>(() => ({
       itemStyle: { color: '#c4b6a6' },
     },
     {
-      name: '宝宝体重',
+      name: t('stats.babyWeight'),
       type: 'line',
       data: weightPoints.value.map((p) => [p.month, p.weight]),
       smooth: true,
@@ -361,7 +388,7 @@ const heightOption = computed<EChartsOption>(() => ({
     type: 'value',
     min: 0,
     max: growthXMax.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}月` },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}${t('duration.monthShort')}` },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
@@ -397,7 +424,7 @@ const heightOption = computed<EChartsOption>(() => ({
       itemStyle: { color: '#c4b6a6' },
     },
     {
-      name: '宝宝身高',
+      name: t('stats.babyHeight'),
       type: 'line',
       data: heightPoints.value.map((p) => [p.month, p.height]),
       smooth: true,
@@ -416,9 +443,9 @@ const heightOption = computed<EChartsOption>(() => ({
 
     <!-- 时间范围 -->
     <div class="range-select-row">
-      <label class="range-select-label" for="range-select">时间范围</label>
+      <label class="range-select-label" for="range-select">{{ t('stats.rangeLabel') }}</label>
       <select id="range-select" v-model="rangeKey" class="form-input range-select">
-        <option v-for="p in RANGE_PRESETS" :key="p.key" :value="p.key">{{ p.label }}</option>
+        <option v-for="p in RANGE_PRESETS" :key="p.key" :value="p.key">{{ t(p.label) }}</option>
       </select>
     </div>
 
@@ -432,7 +459,7 @@ const heightOption = computed<EChartsOption>(() => ({
           :aria-selected="overviewTab === 'compare'"
           @click="overviewTab = 'compare'"
         >
-          与上一周期对比
+          {{ t('stats.compareTitle') }}
         </button>
         <button
           class="overview-tab"
@@ -441,15 +468,15 @@ const heightOption = computed<EChartsOption>(() => ({
           :aria-selected="overviewTab === 'summary'"
           @click="overviewTab = 'summary'"
         >
-          {{ rangeLabel }}汇总
+          {{ t('stats.summaryTitle', { range: rangeLabel }) }}
         </button>
       </div>
 
       <div v-if="overviewTab === 'compare'" class="overview-body">
-        <span class="overview-sub">{{ rangeLabel }} vs 上一周期（等长）</span>
+        <span class="overview-sub">{{ t('stats.compareSub', { range: rangeLabel }) }}</span>
         <div class="compare-grid">
           <div v-for="c in comparisons" :key="c.key" class="compare-item">
-            <p class="compare-label">{{ c.label }}</p>
+            <p class="compare-label">{{ t(c.label) }}</p>
             <p class="compare-value">{{ formatComparisonValue(c, c.current) }}</p>
             <div class="compare-change-row">
               <span class="compare-change" :class="c.change === null ? 'none' : c.change >= 0 ? 'up' : 'down'">
@@ -464,7 +491,7 @@ const heightOption = computed<EChartsOption>(() => ({
       </div>
 
       <div v-else class="overview-body">
-        <span class="overview-sub">共 {{ summaryDays }} 天 · 每日均值参考</span>
+        <span class="overview-sub">{{ t('stats.summarySub', { n: summaryDays }) }}</span>
         <div class="summary-grid">
           <div v-for="s in summaryItems" :key="s.label" class="summary-item">
             <p class="summary-label">{{ s.label }}</p>
@@ -476,24 +503,32 @@ const heightOption = computed<EChartsOption>(() => ({
     </div>
 
     <!-- 趋势图 -->
-    <ChartCard title="每日奶量趋势" :subtitle="`${rangeLabel} · 瓶喂母乳 + 配方奶`" :option="milkOption" />
-    <ChartCard title="每日睡眠时长" :subtitle="rangeLabel" :option="sleepOption" />
-    <ChartCard title="纸尿裤使用" :subtitle="`${rangeLabel} · 蓝色=尿湿 棕色=便便`" :option="diaperOption" />
-    <ChartCard title="每日吸奶量" :subtitle="rangeLabel" :option="pumpOption" />
+    <ChartCard
+      :title="t('stats.charts.milkTitle')"
+      :subtitle="`${rangeLabel} · ${t('stats.charts.milkSub')}`"
+      :option="milkOption"
+    />
+    <ChartCard :title="t('stats.charts.sleepTitle')" :subtitle="rangeLabel" :option="sleepOption" />
+    <ChartCard
+      :title="t('stats.charts.diaperTitle')"
+      :subtitle="`${rangeLabel} · ${t('stats.charts.diaperSub')}`"
+      :option="diaperOption"
+    />
+    <ChartCard :title="t('stats.charts.pumpTitle')" :subtitle="rangeLabel" :option="pumpOption" />
 
     <!-- 成长曲线 -->
-    <p class="section-title">成长曲线</p>
+    <p class="section-title">{{ t('stats.growthSection') }}</p>
     <template v-if="hasBirthDate">
       <ChartCard
         v-if="weightPoints.length > 0"
-        title="体重曲线"
-        :subtitle="`WHO 生长标准参考（虚线 P3/P50/P97）· ${activeBaby?.name ?? ''}`"
+        :title="t('stats.growthTitle')"
+        :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
         :option="weightOption"
       />
       <ChartCard
         v-else-if="hasGrowthData"
-        title="体重曲线"
-        subtitle="暂无体重记录，去「今日」页记录吧"
+        :title="t('stats.growthTitle')"
+        :subtitle="t('stats.growthEmpty')"
         :option="{
           grid: { top: 40 },
           xAxis: { type: 'value', axisLabel: { show: false } },
@@ -503,14 +538,14 @@ const heightOption = computed<EChartsOption>(() => ({
       />
       <ChartCard
         v-if="heightPoints.length > 0"
-        title="身高曲线"
-        :subtitle="`WHO 生长标准参考（虚线 P3/P50/P97）· ${activeBaby?.name ?? ''}`"
+        :title="t('stats.heightTitle')"
+        :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
         :option="heightOption"
       />
       <ChartCard
         v-else-if="hasGrowthData"
-        title="身高曲线"
-        subtitle="暂无身高记录，去「今日」页记录吧"
+        :title="t('stats.heightTitle')"
+        :subtitle="t('stats.heightEmpty')"
         :option="{
           grid: { top: 40 },
           xAxis: { type: 'value', axisLabel: { show: false } },
@@ -519,14 +554,14 @@ const heightOption = computed<EChartsOption>(() => ({
         }"
       />
       <div v-if="!hasGrowthData" class="card empty-inline">
-        暂无成长记录，去「今日」页记录体重/身高后即可查看 WHO 生长曲线
+        {{ t('stats.growthEmptyBoth') }}
       </div>
     </template>
     <div v-else class="card empty-inline">
-      请先在「设置」中为 {{ activeBaby?.name ?? '宝宝' }} 设置出生日期，即可查看成长曲线（参照 WHO 生长标准）
+      {{ t('stats.growthCta', { name: activeBaby?.name ?? t('common.baby') }) }}
     </div>
 
-    <p class="note-text">亲喂时长因无法计量奶量，未计入奶量趋势；可在记录详情中查看每次亲喂时长。</p>
+    <p class="note-text">{{ t('stats.noteText') }}</p>
   </div>
 </template>
 

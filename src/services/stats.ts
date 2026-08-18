@@ -206,23 +206,48 @@ export interface ComparisonResult {
   dailyAvg: number
 }
 
-/** 比较两个区间各指标 */
+/** 比较两个区间各指标（label 为 i18n key） */
 export function compareRanges(current: RangeAggregate, previous: RangeAggregate): ComparisonResult[] {
   const items: { key: string; label: string; current: number; previous: number }[] = [
-    { key: 'totalMilkAmount', label: '总奶量', current: current.totalMilkAmount, previous: previous.totalMilkAmount },
+    {
+      key: 'totalMilkAmount',
+      label: 'stats.compare.totalMilk',
+      current: current.totalMilkAmount,
+      previous: previous.totalMilkAmount,
+    },
     {
       key: 'breastMilkAmount',
-      label: '瓶喂母乳量',
+      label: 'stats.compare.bottleMilk',
       current: current.breastMilkAmount,
       previous: previous.breastMilkAmount,
     },
-    { key: 'formulaAmount', label: '配方奶量', current: current.formulaAmount, previous: previous.formulaAmount },
-    { key: 'feedCount', label: '喂养次数', current: current.feedCount, previous: previous.feedCount },
-    { key: 'breastCount', label: '亲喂次数', current: current.breastCount, previous: previous.breastCount },
-    { key: 'sleepMs', label: '睡眠时长', current: current.sleepMs, previous: previous.sleepMs },
-    { key: 'diaperCount', label: '纸尿裤次数', current: current.diaperCount, previous: previous.diaperCount },
-    { key: 'pumpAmount', label: '吸奶量', current: current.pumpAmount, previous: previous.pumpAmount },
-    { key: 'pumpCount', label: '吸奶次数', current: current.pumpCount, previous: previous.pumpCount },
+    {
+      key: 'formulaAmount',
+      label: 'stats.compare.formula',
+      current: current.formulaAmount,
+      previous: previous.formulaAmount,
+    },
+    { key: 'feedCount', label: 'stats.compare.feedCount', current: current.feedCount, previous: previous.feedCount },
+    {
+      key: 'breastCount',
+      label: 'stats.compare.breastCount',
+      current: current.breastCount,
+      previous: previous.breastCount,
+    },
+    { key: 'sleepMs', label: 'stats.compare.sleepMs', current: current.sleepMs, previous: previous.sleepMs },
+    {
+      key: 'diaperCount',
+      label: 'stats.compare.diaperCount',
+      current: current.diaperCount,
+      previous: previous.diaperCount,
+    },
+    {
+      key: 'pumpAmount',
+      label: 'stats.compare.pumpAmount',
+      current: current.pumpAmount,
+      previous: previous.pumpAmount,
+    },
+    { key: 'pumpCount', label: 'stats.compare.pumpCount', current: current.pumpCount, previous: previous.pumpCount },
   ]
 
   return items.map((item) => {
@@ -251,7 +276,7 @@ export interface RangePreset {
 export const RANGE_PRESETS: RangePreset[] = [
   {
     key: 'today',
-    label: '今天',
+    label: 'stats.periods.today',
     getRange: (now) => {
       const s = startOfDay(now)
       return [s, s + MS_PER_DAY]
@@ -259,7 +284,7 @@ export const RANGE_PRESETS: RangePreset[] = [
   },
   {
     key: '7d',
-    label: '近7天',
+    label: 'stats.periods.week7',
     getRange: (now) => {
       const s = startOfDay(now) - 6 * MS_PER_DAY
       return [s, startOfDay(now) + MS_PER_DAY]
@@ -267,7 +292,7 @@ export const RANGE_PRESETS: RangePreset[] = [
   },
   {
     key: '14d',
-    label: '近14天',
+    label: 'stats.periods.week14',
     getRange: (now) => {
       const s = startOfDay(now) - 13 * MS_PER_DAY
       return [s, startOfDay(now) + MS_PER_DAY]
@@ -275,7 +300,7 @@ export const RANGE_PRESETS: RangePreset[] = [
   },
   {
     key: '30d',
-    label: '近30天',
+    label: 'stats.periods.week30',
     getRange: (now) => {
       const s = startOfDay(now) - 29 * MS_PER_DAY
       return [s, startOfDay(now) + MS_PER_DAY]
@@ -283,7 +308,7 @@ export const RANGE_PRESETS: RangePreset[] = [
   },
   {
     key: 'month',
-    label: '本月',
+    label: 'stats.periods.month',
     getRange: (now) => {
       const d = new Date(now)
       const s = new Date(d.getFullYear(), d.getMonth(), 1).getTime()
@@ -293,7 +318,7 @@ export const RANGE_PRESETS: RangePreset[] = [
   },
   {
     key: 'all',
-    label: '全部',
+    label: 'stats.periods.all',
     getRange: () => [0, Number.MAX_SAFE_INTEGER],
   },
 ]
@@ -312,6 +337,6 @@ export function getComparisonRange(
     current: [start, end],
     previous: [previousStart, start],
     currentLabel: preset.label,
-    previousLabel: '上一周期',
+    previousLabel: 'stats.previous',
   }
 }

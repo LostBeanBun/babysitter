@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 defineProps<{
   show: boolean
   title?: string
 }>()
 const emit = defineEmits<{ close: [] }>()
+const { t } = useI18n()
 </script>
 
 <template>
@@ -13,7 +16,7 @@ const emit = defineEmits<{ close: [] }>()
         <div class="modal-panel">
           <div v-if="title" class="modal-header">
             <h3 class="modal-title">{{ title }}</h3>
-            <button class="modal-close" aria-label="关闭" @click="emit('close')">✕</button>
+            <button class="modal-close" :aria-label="t('common.close')" @click="emit('close')">✕</button>
           </div>
           <slot />
         </div>

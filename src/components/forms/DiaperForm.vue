@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { DiaperType, DiaperColor, DiaperAmount } from '@/types'
 import { DIAPER_TYPE_LIST, DIAPER_COLOR_LABELS, DIAPER_COLOR_DOTS, DIAPER_AMOUNT_LABELS } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useDiaperStore } from '@/stores/diaper'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   editing?: { id: number; type: DiaperType; time: number; color?: DiaperColor; amount?: DiaperAmount; notes?: string }
@@ -43,24 +46,26 @@ async function submit() {
 
 <template>
   <div class="diaper-form">
-    <p class="form-label">更换类型</p>
+    <p class="form-label">{{ t('diaper.typeLabel') }}</p>
     <div class="type-grid">
       <button
-        v-for="t in DIAPER_TYPE_LIST"
-        :key="t.value"
+        v-for="opt in DIAPER_TYPE_LIST"
+        :key="opt.value"
         type="button"
         class="type-btn"
-        :class="{ selected: type === t.value }"
-        :style="type === t.value ? { background: t.color + '22', borderColor: t.color, color: t.color } : undefined"
-        @click="type = t.value"
+        :class="{ selected: type === opt.value }"
+        :style="
+          type === opt.value ? { background: opt.color + '22', borderColor: opt.color, color: opt.color } : undefined
+        "
+        @click="type = opt.value"
       >
-        <span class="type-icon">{{ t.icon }}</span>
-        <span class="type-label">{{ t.label }}</span>
+        <span class="type-icon">{{ opt.icon }}</span>
+        <span class="type-label">{{ t(opt.label) }}</span>
       </button>
     </div>
 
     <div class="form-field">
-      <label class="form-label">便便颜色</label>
+      <label class="form-label">{{ t('diaper.colorLabel') }}</label>
       <div class="color-row">
         <button
           v-for="(label, key) in DIAPER_COLOR_LABELS"
@@ -71,13 +76,13 @@ async function submit() {
           @click="color = color === key ? '' : key"
         >
           <span class="color-dot" :style="{ background: DIAPER_COLOR_DOTS[key] }"></span>
-          <span class="color-label">{{ label }}</span>
+          <span class="color-label">{{ t(label) }}</span>
         </button>
       </div>
     </div>
 
     <div class="form-field">
-      <label class="form-label">量</label>
+      <label class="form-label">{{ t('diaper.amountLabel') }}</label>
       <div class="amount-row">
         <button
           v-for="(label, key) in DIAPER_AMOUNT_LABELS"
@@ -87,25 +92,25 @@ async function submit() {
           :class="{ selected: amount === key }"
           @click="amount = amount === key ? '' : key"
         >
-          {{ label }}
+          {{ t(label) }}
         </button>
       </div>
     </div>
 
     <div class="form-field">
-      <label class="form-label">时间</label>
+      <label class="form-label">{{ t('diaper.timeLabel') }}</label>
       <input v-model="time" type="datetime-local" class="form-input" />
     </div>
 
     <div class="form-field">
-      <label class="form-label">备注</label>
-      <input v-model="notes" type="text" placeholder="可选" class="form-input" />
+      <label class="form-label">{{ t('diaper.notesLabel') }}</label>
+      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
     </div>
 
     <div class="form-actions">
-      <button type="button" class="btn btn-outline" @click="emit('cancelled')">取消</button>
+      <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>
       <button type="button" class="btn btn-primary" @click="submit">
-        {{ props.editing ? '保存修改' : '保存记录' }}
+        {{ props.editing ? t('common.saveEdit') : t('common.save') }}
       </button>
     </div>
   </div>

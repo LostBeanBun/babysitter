@@ -1,9 +1,12 @@
 ﻿<script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { PumpSide } from '@/types'
 import { PUMP_SIDE_LIST } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/format'
 import { usePumpingStore } from '@/stores/pumping'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   editing?: {
@@ -57,7 +60,7 @@ async function submit() {
   const end = endTime.value ? fromDateTimeLocal(endTime.value) : undefined
   const amt = amount.value ? Number(amount.value) : undefined
   if (amount.value && (isNaN(amt as number) || (amt as number) <= 0)) {
-    alert('请输入有效的吸奶量（ml）')
+    alert(t('pump.invalidAmount'))
     return
   }
   if (props.editing) {
@@ -84,7 +87,7 @@ async function submit() {
 
 <template>
   <div class="pump-form">
-    <p class="form-label">吸奶侧</p>
+    <p class="form-label">{{ t('pump.sideLabel') }}</p>
     <div class="type-grid">
       <button
         v-for="s in PUMP_SIDE_LIST"
@@ -95,34 +98,40 @@ async function submit() {
         @click="side = s.value"
       >
         <span class="type-icon">{{ s.icon }}</span>
-        <span class="type-label">{{ s.label }}</span>
+        <span class="type-label">{{ t(s.label) }}</span>
       </button>
     </div>
 
     <div class="timer-box">
       <template v-if="!timerRunning && !props.editing">
-        <button type="button" class="btn btn-primary btn-lg timer-start" @click="startTimer">▶ 开始吸奶计时</button>
-        <p class="timer-hint">或直接在下方选择时间</p>
+        <button type="button" class="btn btn-primary btn-lg timer-start" @click="startTimer">
+          {{ t('pump.startTimer') }}
+        </button>
+        <p class="timer-hint">{{ t('pump.timerHint') }}</p>
       </template>
       <template v-else-if="timerRunning">
         <div class="timer-display">{{ formatDuration(elapsedMs) }}</div>
-        <button type="button" class="btn btn-soft btn-lg" @click="stopTimer">■ 结束计时</button>
+        <button type="button" class="btn btn-soft btn-lg" @click="stopTimer">{{ t('pump.stopTimer') }}</button>
       </template>
       <template v-else-if="props.editing">
         <div class="timer-done">
-          已记录时长：{{ props.editing.duration ? formatDuration(props.editing.duration) : '—' }}
+          {{
+            t('pump.recordedDuration', {
+              duration: props.editing.duration ? formatDuration(props.editing.duration) : '—',
+            })
+          }}
         </div>
       </template>
     </div>
 
     <div class="form-field">
-      <label class="form-label">吸奶量（ml）</label>
+      <label class="form-label">{{ t('pump.amountLabel') }}</label>
       <input
         v-model="amount"
         type="number"
         min="0"
         step="5"
-        placeholder="例如 80"
+        :placeholder="t('pump.amountPlaceholder')"
         class="form-input"
         inputmode="decimal"
       />
@@ -130,24 +139,24 @@ async function submit() {
 
     <div class="time-row">
       <div class="form-field">
-        <label class="form-label">开始时间</label>
+        <label class="form-label">{{ t('pump.startLabel') }}</label>
         <input v-model="startTime" type="datetime-local" class="form-input" />
       </div>
       <div class="form-field">
-        <label class="form-label">结束时间</label>
+        <label class="form-label">{{ t('pump.endLabel') }}</label>
         <input v-model="endTime" type="datetime-local" class="form-input" />
       </div>
     </div>
 
     <div class="form-field">
-      <label class="form-label">备注</label>
-      <input v-model="notes" type="text" placeholder="可选" class="form-input" />
+      <label class="form-label">{{ t('pump.notesLabel') }}</label>
+      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
     </div>
 
     <div class="form-actions">
-      <button type="button" class="btn btn-outline" @click="emit('cancelled')">取消</button>
+      <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>
       <button type="button" class="btn btn-primary" @click="submit">
-        {{ props.editing ? '保存修改' : '保存记录' }}
+        {{ props.editing ? t('common.saveEdit') : t('common.save') }}
       </button>
     </div>
   </div>

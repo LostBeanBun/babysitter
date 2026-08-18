@@ -1,8 +1,11 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { db } from '@/db'
+import i18n from '@/i18n'
 import { useLiveQuery } from '@/composables/useLiveQuery'
 import { useBabyStore } from '@/stores/baby'
 import type { GrowthRecord } from '@/types'
+
+const t = i18n.global.t
 
 /** 成长记录 store（体重/身高） */
 export const useGrowthStore = defineStore('growth', () => {
@@ -22,7 +25,7 @@ export const useGrowthStore = defineStore('growth', () => {
   /** 新增成长记录 */
   async function add(data: { date: number; weight?: number; height?: number; notes?: string }): Promise<number> {
     const babyId = activeBabyId.value
-    if (babyId == null) throw new Error('未选择宝宝')
+    if (babyId == null) throw new Error(t('errors.noBaby'))
     const now = Date.now()
     const id = await db.growths.add({
       babyId,
@@ -33,7 +36,7 @@ export const useGrowthStore = defineStore('growth', () => {
       createdAt: now,
       updatedAt: now,
     })
-    if (id == null) throw new Error('新增成长记录失败')
+    if (id == null) throw new Error(t('errors.addGrowthFail'))
     return id
   }
 
