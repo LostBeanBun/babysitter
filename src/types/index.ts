@@ -1,10 +1,13 @@
 /** 全局类型定义 */
 
+/** 宝宝性别 */
+export type BabyGender = 'boy' | 'girl'
+
 /** 宝宝资料 */
 export interface Baby {
   id?: number
   name: string
-  gender?: 'boy' | 'girl'
+  gender?: BabyGender
   /** 出生日期 YYYY-MM-DD */
   birthDate?: string
   /** 出生体重 kg */
@@ -97,6 +100,21 @@ export interface Sleep {
   updatedAt: number
 }
 
+/** 成长记录（体重/身高测量） */
+export interface GrowthRecord {
+  id?: number
+  babyId: number
+  /** 测量日期（当天 0 点毫秒时间戳） */
+  date: number
+  /** 体重 kg */
+  weight?: number
+  /** 身高 cm */
+  height?: number
+  notes?: string
+  createdAt: number
+  updatedAt: number
+}
+
 /** 导出文件的元信息 */
 export interface ExportMeta {
   app: 'babysitter'
@@ -111,4 +129,5 @@ export interface ExportFile {
   diapers: DiaperChange[]
   pumpings: Pumping[]
   sleeps: Sleep[]
+  growths?: GrowthRecord[]
 }
