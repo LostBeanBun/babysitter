@@ -298,10 +298,21 @@ const editPayload = computed(() => {
   gap: 10px;
 }
 
+/* 统一卡片高度：网格内不受全局 .card + .card 相邻外边距规则影响，
+   避免同一行卡片因 margin-top 差异导致高度参差不齐 */
+.stats-grid .stat-card {
+  margin: 0;
+  min-height: 88px;
+}
+
 /* 小屏下统计卡更紧凑，避免长数值溢出 */
 @media (max-width: 400px) {
   .stats-grid {
     gap: 8px;
+  }
+
+  .stats-grid .stat-card {
+    min-height: 84px;
   }
 
   .welcome {
