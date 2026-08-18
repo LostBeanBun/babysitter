@@ -1,0 +1,377 @@
+﻿<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useBabyStore } from '@/stores/baby'
+import { countAllRecords, clearAllData } from '@/db'
+import { exportAllJson, exportBabyCsvs, importAllJson } from '@/services/export'
+import PageHeader from '@/components/common/PageHeader.vue'
+import Modal from '@/components/common/Modal.vue'
+import type { Baby } from '@/types'
+
+const babyStore = useBabyStore()
+
+const recordCounts = ref({ feedings: 0, diapers: 0, pumpings: 0, sleeps: 0 })
+const babyModal = ref<{ mode: 'add' | 'edit'; id?: number } | null>(null)
+const babyName = ref('')
+const babyBirthDate = ref('')
+const deleteBabyConfirm = ref<Baby | null>(null)
+const exportSuccess = ref(false)
+const importBusy = ref(false)
+const importFileRef = ref<HTMLInputElement | null>(null)
+const clearAllConfirm = ref(false)
+const clearBusy = ref(false)
+
+const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
+
+onMounted(async () => {
+  recordCounts.value = await countAllRecords()
+})
+
+function openAddBaby() {
+  babyName.value = ''
+  babyBirthDate.value = ''
+  babyModal.value = { mode: 'add' }
+}
+
+function openEditBaby(b: Baby) {
+  babyName.value = b.name
+  babyBirthDate.value = b.birthDate ?? ''
+  babyModal.value = { mode: 'edit', id: b.id }
+}
+
+async function saveBaby() {
+  const name = babyName.value.trim()
+  if (!name) return
+  if (babyModal.value?.mode === 'edit' && babyModal.value.id != null) {
+    await babyStore.updateBaby(babyModal.value.id, {
+      name,
+      birthDate: babyBirthDate.value || undefined,
+    })
+  } else {
+    await babyStore.addBaby(name, undefined, babyBirthDate.value || undefined)
+  }
+  babyModal.value = null
+}
+
+async function confirmDeleteBaby() {
+  const id = deleteBabyConfirm.value?.id
+  if (id == null) return
+  await babyStore.deleteBaby(id)
+  deleteBabyConfirm.value = null
+}
+
+function babyAge(b: Baby): string {
+  if (!b.birthDate) return '未设置生日'
+  const diff = Date.now() - new Date(b.birthDate + 'T00:00:00').getTime()
+  if (diff < 0) return '生日未到'
+  const months = Math.floor(diff / (1000 * 60 * 60 * 24 * 30.44))
+  if (months < 1) {
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    return `${days} 天`
+  }
+  if (months < 12) return `${months} 个月`
+  const years = Math.floor(months / 12)
+  return `${years} 岁 ${months % 12} 个月`
+}
+
+async function handleExportJson() {
+  await exportAllJson()
+  exportSuccess.value = true
+  setTimeout(() => (exportSuccess.value = false), 3000)
+}
+
+async function handleExportCsv() {
+  if (activeBaby.value) await exportBabyCsvs(activeBaby.value)
+}
+
+async function handleImportFile(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  importBusy.value = true
+  try {
+    const result = await importAllJson(file)
+    alert(`导入成功！宝宝 ${result.babies} 个，喂养 ${result.feedings} 条，纸尿裤 ${result.diapers} 条，吸奶 ${result.pumpings} 条，睡眠 ${result.sleeps} 条`)
+    recordCounts.value = await countAllRecords()
+  } catch {
+    alert('导入失败：文件格式不正确')
+  } finally {
+    importBusy.value = false
+    if (importFileRef.value) importFileRef.value.value = ''
+  }
+}
+
+async function confirmClearAll() {
+  clearBusy.value = true
+  try {
+    await clearAllData()
+    localStorage.removeItem('babysitter.activeBabyId')
+    recordCounts.value = { feedings: 0, diapers: 0, pumpings: 0, sleeps: 0 }
+    clearAllConfirm.value = false
+  } finally {
+    clearBusy.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="page settings-page">
+    <PageHeader />
+
+    <!-- 宝宝管理 -->
+    <p class="section-title">宝宝</p>
+    <div class="card">
+      <div class="baby-list">
+        <div
+          v-for="b in babyStore.babies"
+          :key="b.id"
+          class="baby-item"
+          :class="{ active: b.id === babyStore.activeBabyId }"
+          @click="b.id != null && babyStore.selectBaby(b.id)"
+        >
+          <div class="baby-avatar" :style="{ background: b.avatarColor }">{{ b.name[0] }}</div>
+          <div class="baby-info">
+            <p class="baby-name">{{ b.name }}{{ b.id === babyStore.activeBabyId ? '（当前）' : '' }}</p>
+            <p class="baby-meta">{{ babyAge(b) }}</p>
+          </div>
+          <div class="baby-actions">
+            <button class="icon-btn" title="编辑" @click.stop="openEditBaby(b)">✏️</button>
+            <button class="icon-btn" title="删除" @click.stop="deleteBabyConfirm = b">🗑️</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-block" @click="openAddBaby">+ 添加宝宝</button>
+    </div>
+
+    <!-- 数据管理 -->
+    <p class="section-title">数据管理</p>
+    <div class="card">
+      <p class="data-tip">数据保存在本地浏览器（IndexedDB），不会上传到任何服务器。</p>
+      <div class="data-counts">
+        <span>喂养 {{ recordCounts.feedings }} 条</span>
+        <span>纸尿裤 {{ recordCounts.diapers }} 条</span>
+        <span>吸奶 {{ recordCounts.pumpings }} 条</span>
+        <span>睡眠 {{ recordCounts.sleeps }} 条</span>
+      </div>
+      <button class="btn btn-primary btn-block" :disabled="activeBaby === undefined" @click="handleExportJson">
+        <span class="btn-label">{{ activeBaby ? `导出 ${activeBaby.name} 的数据备份 (JSON)` : '请先选择宝宝' }}</span>
+      </button>
+      <button class="btn btn-outline btn-block" @click="handleExportCsv">导出全部数据 (CSV 表格)</button>
+      <button class="btn btn-outline btn-block" :disabled="importBusy" @click="importFileRef?.click()">
+        {{ importBusy ? '导入中…' : '导入 JSON 备份' }}
+      </button>
+      <input ref="importFileRef" type="file" accept="application/json,.json" hidden @change="handleImportFile" />
+      <p v-if="exportSuccess" class="export-ok">✓ 已导出备份文件</p>
+      <button class="btn btn-danger-soft btn-block" @click="clearAllConfirm = true">清空全部数据</button>
+    </div>
+
+    <!-- 关于 -->
+    <p class="section-title">关于</p>
+    <div class="card">
+      <p class="about-text">温馨简约的宝宝喂养记录工具</p>
+      <p class="about-text">支持喂养（亲喂/瓶喂/配方奶）、纸尿裤、吸奶、睡眠记录</p>
+      <p class="about-text">支持趋势统计与周期对比、数据导出导入</p>
+      <p class="about-text muted">v1.0.0 · 纯前端 · 数据本地存储</p>
+    </div>
+
+    <!-- 宝宝编辑弹窗 -->
+    <Modal :show="babyModal !== null" :title="babyModal?.mode === 'edit' ? '编辑宝宝' : '添加宝宝'" @close="babyModal = null">
+      <div class="form-field">
+        <label class="form-label">宝宝名字 *</label>
+        <input v-model="babyName" type="text" placeholder="例如：小糯米" class="form-input" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">出生日期（可选）</label>
+        <input v-model="babyBirthDate" type="date" class="form-input" />
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" @click="babyModal = null">取消</button>
+        <button class="btn btn-primary" :disabled="!babyName.trim()" @click="saveBaby">保存</button>
+      </div>
+    </Modal>
+
+    <!-- 删除宝宝确认 -->
+    <Modal :show="deleteBabyConfirm !== null" title="删除宝宝" @close="deleteBabyConfirm = null">
+      <p class="confirm-text">确定删除「{{ deleteBabyConfirm?.name }}」吗？<br />该宝宝的全部记录也会一并删除，此操作不可撤销。</p>
+      <div class="form-actions">
+        <button class="btn btn-outline" @click="deleteBabyConfirm = null">取消</button>
+        <button class="btn btn-danger-soft" @click="confirmDeleteBaby">确认删除</button>
+      </div>
+    </Modal>
+
+    <!-- 清空数据确认 -->
+    <Modal :show="clearAllConfirm" title="清空全部数据" @close="clearAllConfirm = false">
+      <p class="confirm-text">将删除所有宝宝及其全部记录，此操作不可撤销。确定继续吗？</p>
+      <div class="form-actions">
+        <button class="btn btn-outline" @click="clearAllConfirm = false">取消</button>
+        <button class="btn btn-danger-soft" :disabled="clearBusy" @click="confirmClearAll">确认清空</button>
+      </div>
+    </Modal>
+  </div>
+</template>
+
+<style scoped>
+.baby-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.baby-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+@media (max-width: 400px) {
+  .baby-item {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .baby-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+  }
+
+  .baby-actions {
+    gap: 4px;
+  }
+}
+
+.baby-item.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.baby-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.baby-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.baby-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.baby-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.baby-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  font-size: 17px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease;
+}
+
+.icon-btn:active {
+  background: var(--surface-2);
+}
+
+.data-tip {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.data-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.data-counts span {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.btn-block {
+  margin-top: 10px;
+}
+
+.btn-block .btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.export-ok {
+  font-size: 12px;
+  color: #7fae6c;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.about-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.about-text.muted {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.confirm-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.7;
+  margin-bottom: 18px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.form-actions .btn {
+  flex: 1;
+}
+</style>

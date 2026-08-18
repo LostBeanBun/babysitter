@@ -1,0 +1,367 @@
+:root {
+  /* 温馨暖色主题 */
+  --bg: #fdf6ef;
+  --bg-soft: #f7ede2;
+  --surface: #ffffff;
+  --surface-2: #fbf3ea;
+  --border: #f0e2d4;
+  --text: #4a3a33;
+  --text-secondary: #8c7b72;
+  --text-muted: #b5a49a;
+
+  --primary: #e8906c;
+  --primary-soft: #fdf0ea;
+  --primary-dark: #d97a52;
+  --accent-green: #8fbf9f;
+  --accent-blue: #8faed8;
+  --accent-yellow: #e8c46a;
+  --accent-purple: #b8a0d0;
+
+  --danger: #d96a5a;
+  --danger-soft: #fdeeea;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 1px 3px rgba(74, 58, 51, 0.06);
+  --shadow: 0 4px 16px rgba(74, 58, 51, 0.08);
+  --shadow-lg: 0 12px 32px rgba(74, 58, 51, 0.12);
+
+  --tabbar-height: 64px;
+  --header-height: 56px;
+
+  /* iOS 安全区 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  /* 防止 iOS 横竖屏切换时字体自动缩放 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+  -webkit-touch-callout: none;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  /* 确保触摸目标不小于 44px（移动端） */
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+/* 图标类小按钮允许更紧凑，但仍保证可点区域 */
+button.icon-btn,
+button.modal-close,
+button.tl-delete,
+button.filter-chip,
+button.range-chip {
+  min-height: 0;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 16px; /* 防 iOS 聚焦时自动放大 */
+  color: inherit;
+}
+
+/* 通用容器 */
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: calc(var(--header-height) + var(--safe-top) + 12px) 16px calc(var(--tabbar-height) + var(--safe-bottom) + 24px);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* 卡片 */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+
+.card + .card {
+  margin-top: 12px;
+}
+
+/* 区块标题 */
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 20px 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 按钮 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: transform 0.12s ease, opacity 0.12s ease, background 0.12s ease;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-soft {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.btn-danger-soft {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-lg {
+  padding: 14px 20px;
+  font-size: 16px;
+  border-radius: 14px;
+}
+
+/* 表单 */
+.form-field {
+  margin-bottom: 14px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--primary);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+/* 徽章 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.empty-state .empty-icon {
+  font-size: 44px;
+  margin-bottom: 10px;
+}
+
+/* 弹窗遮罩 */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(74, 58, 51, 0.4);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .modal-mask {
+    align-items: center;
+  }
+}
+
+.modal-panel {
+  background: var(--surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  width: 100%;
+  max-width: 640px;
+  max-height: 88vh;
+  max-height: 88dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 20px calc(20px + var(--safe-bottom));
+  animation: slideUp 0.22s ease;
+}
+
+@media (min-width: 640px) {
+  .modal-panel {
+    border-radius: var(--radius-lg);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 数字滚轮/大按钮组 */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+/* ===== 小屏适配（≤ 400px） ===== */
+@media (max-width: 400px) {
+  .page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .form-actions,
+  .confirm-actions {
+    flex-direction: column;
+  }
+
+  .form-actions .btn,
+  .confirm-actions .btn {
+    width: 100%;
+  }
+}
+
+/* ===== 超窄屏（≤ 340px） ===== */
+@media (max-width: 340px) {
+  :root {
+    --tabbar-height: 58px;
+    --header-height: 52px;
+  }
+}
+
+/* 动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 简单实用：无滚动条干扰 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}

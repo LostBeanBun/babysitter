@@ -1,0 +1,332 @@
+﻿<script setup lang="ts">
+import { computed, ref } from 'vue'
+import type { EChartsOption } from 'echarts'
+import PageHeader from '@/components/common/PageHeader.vue'
+import ChartCard from '@/components/charts/ChartCard.vue'
+import { useFeedingStore } from '@/stores/feeding'
+import { useDiaperStore } from '@/stores/diaper'
+import { usePumpingStore } from '@/stores/pumping'
+import { useSleepStore } from '@/stores/sleep'
+import { buildDailySeries, aggregateRange, compareRanges, RANGE_PRESETS, type DayAggregate, type ComparisonResult } from '@/services/stats'
+import { CHART_COLORS } from '@/constants'
+import { formatDuration, formatPercentChange } from '@/utils/format'
+
+const feedingStore = useFeedingStore()
+const diaperStore = useDiaperStore()
+const pumpingStore = usePumpingStore()
+const sleepStore = useSleepStore()
+
+const now = ref(Date.now())
+setInterval(() => (now.value = Date.now()), 60_000)
+
+// 时间范围选择
+const rangeKey = ref('7d')
+const range = computed(() => RANGE_PRESETS.find((p) => p.key === rangeKey.value)!)
+const rangeStart = computed(() => range.value.getRange(now.value)[0])
+const rangeEnd = computed(() => range.value.getRange(now.value)[1])
+
+// 每日序列（趋势图数据）
+const days = computed<DayAggregate[]>(() =>
+  buildDailySeries(
+    feedingStore.feedings,
+    diaperStore.diapers,
+    pumpingStore.pumpings,
+    sleepStore.sleeps,
+    rangeStart.value,
+    rangeEnd.value,
+  ),
+)
+
+// 当前区间 vs 上一等长区间（对比）
+const previousStart = computed(() => rangeStart.value - (rangeEnd.value - rangeStart.value))
+const currentAgg = computed(() =>
+  aggregateRange(feedingStore.feedings, diaperStore.diapers, pumpingStore.pumpings, sleepStore.sleeps, rangeStart.value, rangeEnd.value),
+)
+const previousAgg = computed(() =>
+  aggregateRange(feedingStore.feedings, diaperStore.diapers, pumpingStore.pumpings, sleepStore.sleeps, previousStart.value, rangeStart.value),
+)
+const comparisons = computed<ComparisonResult[]>(() => compareRanges(currentAgg.value, previousAgg.value))
+
+// 格式化轴标签
+const xLabels = computed(() => days.value.map((d) => d.date.slice(5).replace('-', '/')))
+const yFormatter = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v))
+
+// —— 趋势图配置 ——
+const milkOption = computed<EChartsOption>(() => ({
+  grid: { left: 44, right: 16, top: 12, bottom: 28 },
+  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: '#8c7b72', fontSize: 10 }, axisLine: { lineStyle: { color: '#f0e2d4' } } },
+  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter }, splitLine: { lineStyle: { color: '#f5ece2' } } },
+  series: [
+    {
+      name: '奶量(ml)',
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 5,
+      data: days.value.map((d) => d.totalMilkAmount),
+      lineStyle: { width: 2.5, color: CHART_COLORS.feedAmount },
+      itemStyle: { color: CHART_COLORS.feedAmount },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(232,144,108,0.25)' }, { offset: 1, color: 'rgba(232,144,108,0.02)' }] } },
+    },
+  ],
+}))
+
+const sleepOption = computed<EChartsOption>(() => ({
+  grid: { left: 44, right: 16, top: 12, bottom: 28 },
+  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: '#8c7b72', fontSize: 10 }, axisLine: { lineStyle: { color: '#f0e2d4' } } },
+  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10 }, splitLine: { lineStyle: { color: '#f5ece2' } } },
+  series: [
+    {
+      name: '睡眠(小时)',
+      type: 'bar',
+      barMaxWidth: 22,
+      data: days.value.map((d) => +(d.sleepMs / 3600_000).toFixed(1)),
+      itemStyle: { color: CHART_COLORS.sleep, borderRadius: [4, 4, 0, 0] },
+    },
+  ],
+}))
+
+const diaperOption = computed<EChartsOption>(() => ({
+  grid: { left: 44, right: 16, top: 12, bottom: 28 },
+  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: '#8c7b72', fontSize: 10 }, axisLine: { lineStyle: { color: '#f0e2d4' } } },
+  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10 }, splitLine: { lineStyle: { color: '#f5ece2' } } },
+  series: [
+    {
+      name: '尿湿(次)',
+      type: 'bar',
+      stack: 'diaper',
+      barMaxWidth: 22,
+      data: days.value.map((d) => d.wetCount),
+      itemStyle: { color: '#8FB9D8' },
+    },
+    {
+      name: '便便(次)',
+      type: 'bar',
+      stack: 'diaper',
+      barMaxWidth: 22,
+      data: days.value.map((d) => d.dirtyCount),
+      itemStyle: { color: '#B58B62' },
+    },
+  ],
+}))
+
+const pumpOption = computed<EChartsOption>(() => ({
+  grid: { left: 44, right: 16, top: 12, bottom: 28 },
+  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: '#8c7b72', fontSize: 10 }, axisLine: { lineStyle: { color: '#f0e2d4' } } },
+  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter }, splitLine: { lineStyle: { color: '#f5ece2' } } },
+  series: [
+    {
+      name: '吸奶(ml)',
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 5,
+      data: days.value.map((d) => d.pumpAmount),
+      lineStyle: { width: 2.5, color: CHART_COLORS.pump },
+      itemStyle: { color: CHART_COLORS.pump },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(216,168,200,0.25)' }, { offset: 1, color: 'rgba(216,168,200,0.02)' }] } },
+    },
+  ],
+}))
+
+// 对比面板格式化
+function formatComparisonValue(c: ComparisonResult): string {
+  if (c.key === 'sleepMs') return formatDuration(c.current)
+  if (c.key === 'totalMilkAmount' || c.key === 'breastMilkAmount' || c.key === 'formulaAmount' || c.key === 'pumpAmount') {
+    return `${Math.round(c.current)} ml`
+  }
+  return `${Math.round(c.current)} 次`
+}
+
+const rangeLabel = computed(() => range.value.label)
+</script>
+
+<template>
+  <div class="page stats-page">
+    <PageHeader />
+
+    <!-- 时间范围 -->
+    <div class="range-row">
+      <button
+        v-for="p in RANGE_PRESETS"
+        :key="p.key"
+        class="range-chip"
+        :class="{ active: rangeKey === p.key }"
+        @click="rangeKey = p.key"
+      >
+        {{ p.label }}
+      </button>
+    </div>
+
+    <!-- 对比面板 -->
+    <div class="card compare-card">
+      <div class="compare-head">
+        <h3 class="compare-title">与上一周期对比</h3>
+        <span class="compare-sub">{{ rangeLabel }} vs 上一周期（等长）</span>
+      </div>
+      <div class="compare-grid">
+        <div v-for="c in comparisons" :key="c.key" class="compare-item">
+          <p class="compare-label">{{ c.label }}</p>
+          <p class="compare-value">{{ formatComparisonValue(c) }}</p>
+          <div class="compare-change-row">
+            <span class="compare-change" :class="c.change === null ? 'none' : c.change >= 0 ? 'up' : 'down'">
+              {{ c.change === null ? '—' : formatPercentChange(c.change) }}
+            </span>
+            <span class="compare-prev">{{ Math.round(c.previous) }} → {{ Math.round(c.current) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 趋势图 -->
+    <ChartCard title="每日奶量趋势" :subtitle="`${rangeLabel} · 瓶喂母乳 + 配方奶`" :option="milkOption" />
+    <ChartCard title="每日睡眠时长" :subtitle="rangeLabel" :option="sleepOption" />
+    <ChartCard title="纸尿裤使用" :subtitle="`${rangeLabel} · 蓝色=尿湿 棕色=便便`" :option="diaperOption" />
+    <ChartCard title="每日吸奶量" :subtitle="rangeLabel" :option="pumpOption" />
+
+    <p class="note-text">亲喂时长因无法计量奶量，未计入奶量趋势；可在记录详情中查看每次亲喂时长。</p>
+  </div>
+</template>
+
+<style scoped>
+.range-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.range-chip {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all 0.12s ease;
+}
+
+.range-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.compare-card {
+  margin-bottom: 12px;
+}
+
+.compare-head {
+  margin-bottom: 12px;
+}
+
+.compare-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.compare-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: block;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 400px) {
+  .compare-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+.compare-item {
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.compare-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compare-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.compare-change-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin-top: 4px;
+}
+
+.compare-change {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.compare-change.up {
+  color: #d97a52;
+}
+
+.compare-change.down {
+  color: #7fae6c;
+}
+
+.compare-change.none {
+  color: var(--text-muted);
+}
+
+.compare-prev {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+@media (max-width: 400px) {
+  .compare-item {
+    padding: 8px 4px;
+  }
+
+  .compare-value {
+    font-size: 13px;
+  }
+
+  .compare-prev {
+    font-size: 9px;
+  }
+}
+
+.note-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 12px 4px 4px;
+  line-height: 1.6;
+}
+</style>
