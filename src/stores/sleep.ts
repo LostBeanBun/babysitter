@@ -19,12 +19,7 @@ export const useSleepStore = defineStore('sleep', () => {
     [activeBabyId],
   )
 
-  async function add(data: {
-    type: SleepType
-    startTime: number
-    endTime: number
-    notes?: string
-  }): Promise<number> {
+  async function add(data: { type: SleepType; startTime: number; endTime: number; notes?: string }): Promise<number> {
     const babyId = activeBabyId.value
     if (babyId == null) throw new Error('未选择宝宝')
     if (data.endTime <= data.startTime) throw new Error('结束时间需晚于开始时间')

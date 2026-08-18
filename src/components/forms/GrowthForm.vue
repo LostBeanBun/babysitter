@@ -65,12 +65,28 @@ async function submit() {
 
     <div class="form-field">
       <label class="form-label">体重（kg）</label>
-      <input v-model="weight" type="number" min="0" step="0.1" placeholder="例如 7.5" class="form-input" inputmode="decimal" />
+      <input
+        v-model="weight"
+        type="number"
+        min="0"
+        step="0.1"
+        placeholder="例如 7.5"
+        class="form-input"
+        inputmode="decimal"
+      />
     </div>
 
     <div class="form-field">
       <label class="form-label">身高（cm）</label>
-      <input v-model="height" type="number" min="0" step="0.5" placeholder="例如 68" class="form-input" inputmode="decimal" />
+      <input
+        v-model="height"
+        type="number"
+        min="0"
+        step="0.5"
+        placeholder="例如 68"
+        class="form-input"
+        inputmode="decimal"
+      />
     </div>
 
     <div class="form-field">
@@ -80,7 +96,9 @@ async function submit() {
 
     <div class="form-actions">
       <button type="button" class="btn btn-outline" @click="emit('cancelled')">取消</button>
-      <button type="button" class="btn btn-primary" @click="submit">{{ props.editing ? '保存修改' : '保存记录' }}</button>
+      <button type="button" class="btn btn-primary" @click="submit">
+        {{ props.editing ? '保存修改' : '保存记录' }}
+      </button>
     </div>
   </div>
 </template>

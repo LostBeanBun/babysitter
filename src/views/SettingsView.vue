@@ -7,7 +7,7 @@ import { BABY_AVATARS } from '@/constants'
 import { setTheme, themeMode, type ThemeMode } from '@/composables/useTheme'
 import { FEED_REMINDER_KEY } from '@/utils/feedingGuide'
 import PageHeader from '@/components/common/PageHeader.vue'
-import Modal from '@/components/common/Modal.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import type { Baby } from '@/types'
 
 const babyStore = useBabyStore()
@@ -75,7 +75,14 @@ async function saveBaby() {
       avatar: babyAvatar.value || undefined,
     })
   } else {
-    await babyStore.addBaby(name, undefined, babyBirthDate.value || undefined, undefined, undefined, babyAvatar.value || undefined)
+    await babyStore.addBaby(
+      name,
+      undefined,
+      babyBirthDate.value || undefined,
+      undefined,
+      undefined,
+      babyAvatar.value || undefined,
+    )
   }
   babyModal.value = null
 }
@@ -118,7 +125,9 @@ async function handleImportFile(e: Event) {
   importBusy.value = true
   try {
     const result = await importAllJson(file)
-    alert(`导入成功！宝宝 ${result.babies} 个，喂养 ${result.feedings} 条，纸尿裤 ${result.diapers} 条，吸奶 ${result.pumpings} 条，睡眠 ${result.sleeps} 条，成长 ${result.growths} 条`)
+    alert(
+      `导入成功！宝宝 ${result.babies} 个，喂养 ${result.feedings} 条，纸尿裤 ${result.diapers} 条，吸奶 ${result.pumpings} 条，睡眠 ${result.sleeps} 条，成长 ${result.growths} 条`,
+    )
     recordCounts.value = await countAllRecords()
   } catch {
     alert('导入失败：文件格式不正确')
@@ -220,12 +229,19 @@ async function confirmClearAll() {
           <p class="reminder-title">🍼 喂奶间隔提醒</p>
           <p class="reminder-sub">超过建议间隔时，在今日页提示并发送浏览器通知</p>
         </div>
-        <button class="switch" :class="{ on: feedReminder }" role="switch" :aria-checked="feedReminder" @click="toggleFeedReminder">
+        <button
+          class="switch"
+          :class="{ on: feedReminder }"
+          role="switch"
+          :aria-checked="feedReminder"
+          @click="toggleFeedReminder"
+        >
           <span class="switch-knob"></span>
         </button>
       </div>
       <p class="reminder-hint">
-        按宝宝月龄自动给出建议间隔：0-1月 约2.5h · 1-3月 约3h · 3-6月 约3.5h · 6-9月 约4h · 9-12月 约4.5h · 12月以上 约5h
+        按宝宝月龄自动给出建议间隔：0-1月 约2.5h · 1-3月 约3h · 3-6月 约3.5h · 6-9月 约4h · 9-12月 约4.5h · 12月以上
+        约5h
       </p>
     </div>
 
@@ -239,7 +255,11 @@ async function confirmClearAll() {
     </div>
 
     <!-- 宝宝编辑弹窗 -->
-    <Modal :show="babyModal !== null" :title="babyModal?.mode === 'edit' ? '编辑宝宝' : '添加宝宝'" @close="babyModal = null">
+    <BaseModal
+      :show="babyModal !== null"
+      :title="babyModal?.mode === 'edit' ? '编辑宝宝' : '添加宝宝'"
+      @close="babyModal = null"
+    >
       <div class="form-field">
         <label class="form-label">宝宝名字 *</label>
         <input v-model="babyName" type="text" placeholder="例如：小糯米" class="form-input" />
@@ -267,25 +287,27 @@ async function confirmClearAll() {
         <button class="btn btn-outline" @click="babyModal = null">取消</button>
         <button class="btn btn-primary" :disabled="!babyName.trim()" @click="saveBaby">保存</button>
       </div>
-    </Modal>
+    </BaseModal>
 
     <!-- 删除宝宝确认 -->
-    <Modal :show="deleteBabyConfirm !== null" title="删除宝宝" @close="deleteBabyConfirm = null">
-      <p class="confirm-text">确定删除「{{ deleteBabyConfirm?.name }}」吗？<br />该宝宝的全部记录也会一并删除，此操作不可撤销。</p>
+    <BaseModal :show="deleteBabyConfirm !== null" title="删除宝宝" @close="deleteBabyConfirm = null">
+      <p class="confirm-text">
+        确定删除「{{ deleteBabyConfirm?.name }}」吗？<br />该宝宝的全部记录也会一并删除，此操作不可撤销。
+      </p>
       <div class="form-actions">
         <button class="btn btn-outline" @click="deleteBabyConfirm = null">取消</button>
         <button class="btn btn-danger-soft" @click="confirmDeleteBaby">确认删除</button>
       </div>
-    </Modal>
+    </BaseModal>
 
     <!-- 清空数据确认 -->
-    <Modal :show="clearAllConfirm" title="清空全部数据" @close="clearAllConfirm = false">
+    <BaseModal :show="clearAllConfirm" title="清空全部数据" @close="clearAllConfirm = false">
       <p class="confirm-text">将删除所有宝宝及其全部记录，此操作不可撤销。确定继续吗？</p>
       <div class="form-actions">
         <button class="btn btn-outline" @click="clearAllConfirm = false">取消</button>
         <button class="btn btn-danger-soft" :disabled="clearBusy" @click="confirmClearAll">确认清空</button>
       </div>
-    </Modal>
+    </BaseModal>
   </div>
 </template>
 

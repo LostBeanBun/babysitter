@@ -210,7 +210,12 @@ export interface ComparisonResult {
 export function compareRanges(current: RangeAggregate, previous: RangeAggregate): ComparisonResult[] {
   const items: { key: string; label: string; current: number; previous: number }[] = [
     { key: 'totalMilkAmount', label: '总奶量', current: current.totalMilkAmount, previous: previous.totalMilkAmount },
-    { key: 'breastMilkAmount', label: '瓶喂母乳量', current: current.breastMilkAmount, previous: previous.breastMilkAmount },
+    {
+      key: 'breastMilkAmount',
+      label: '瓶喂母乳量',
+      current: current.breastMilkAmount,
+      previous: previous.breastMilkAmount,
+    },
     { key: 'formulaAmount', label: '配方奶量', current: current.formulaAmount, previous: previous.formulaAmount },
     { key: 'feedCount', label: '喂养次数', current: current.feedCount, previous: previous.feedCount },
     { key: 'breastCount', label: '亲喂次数', current: current.breastCount, previous: previous.breastCount },
@@ -222,11 +227,7 @@ export function compareRanges(current: RangeAggregate, previous: RangeAggregate)
 
   return items.map((item) => {
     const change =
-      item.previous === 0
-        ? item.current === 0
-          ? null
-          : null
-        : ((item.current - item.previous) / item.previous) * 100
+      item.previous === 0 ? (item.current === 0 ? null : null) : ((item.current - item.previous) / item.previous) * 100
     const dailyAvg = current.dayCount > 0 ? item.current / current.dayCount : 0
     return {
       key: item.key,
@@ -298,7 +299,10 @@ export const RANGE_PRESETS: RangePreset[] = [
 ]
 
 /** 对比预设：当前区间 vs 前一个等长区间 */
-export function getComparisonRange(presetKey: string, now: number): { current: [number, number]; previous: [number, number]; currentLabel: string; previousLabel: string } | null {
+export function getComparisonRange(
+  presetKey: string,
+  now: number,
+): { current: [number, number]; previous: [number, number]; currentLabel: string; previousLabel: string } | null {
   const preset = RANGE_PRESETS.find((p) => p.key === presetKey)
   if (!preset) return null
   const [start, end] = preset.getRange(now)

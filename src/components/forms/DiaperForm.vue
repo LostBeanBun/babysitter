@@ -104,7 +104,9 @@ async function submit() {
 
     <div class="form-actions">
       <button type="button" class="btn btn-outline" @click="emit('cancelled')">取消</button>
-      <button type="button" class="btn btn-primary" @click="submit">{{ props.editing ? '保存修改' : '保存记录' }}</button>
+      <button type="button" class="btn btn-primary" @click="submit">
+        {{ props.editing ? '保存修改' : '保存记录' }}
+      </button>
     </div>
   </div>
 </template>

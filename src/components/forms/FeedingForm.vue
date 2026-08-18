@@ -111,10 +111,14 @@ async function submit() {
           <button type="button" class="btn btn-soft btn-lg" @click="stopTimer">■ 结束计时</button>
         </template>
         <template v-else-if="props.editing">
-          <div class="timer-done">已记录时长：{{ props.editing.duration ? formatDuration(props.editing.duration) : '—' }}</div>
+          <div class="timer-done">
+            已记录时长：{{ props.editing.duration ? formatDuration(props.editing.duration) : '—' }}
+          </div>
         </template>
         <template v-else>
-          <div class="timer-done">已记录：{{ startTime.replace('T', ' ') }} 开始{{ endTime ? `，${endTime.replace('T', ' ')} 结束` : '' }}</div>
+          <div class="timer-done">
+            已记录：{{ startTime.replace('T', ' ') }} 开始{{ endTime ? `，${endTime.replace('T', ' ')} 结束` : '' }}
+          </div>
         </template>
       </div>
     </template>
@@ -123,7 +127,15 @@ async function submit() {
     <template v-else>
       <div class="form-field">
         <label class="form-label">奶量（ml）</label>
-        <input v-model="amount" type="number" min="0" step="5" placeholder="例如 120" class="form-input" inputmode="decimal" />
+        <input
+          v-model="amount"
+          type="number"
+          min="0"
+          step="5"
+          placeholder="例如 120"
+          class="form-input"
+          inputmode="decimal"
+        />
       </div>
     </template>
 
@@ -145,7 +157,9 @@ async function submit() {
 
     <div class="form-actions">
       <button type="button" class="btn btn-outline" @click="emit('cancelled')">取消</button>
-      <button type="button" class="btn btn-primary" @click="submit">{{ props.editing ? '保存修改' : '保存记录' }}</button>
+      <button type="button" class="btn btn-primary" @click="submit">
+        {{ props.editing ? '保存修改' : '保存记录' }}
+      </button>
     </div>
   </div>
 </template>

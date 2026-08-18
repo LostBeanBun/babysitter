@@ -15,7 +15,9 @@ const sleepStore = useSleepStore()
 const type = ref<SleepType>(props.editing?.type ?? 'nap')
 const notes = ref(props.editing?.notes ?? '')
 const startTime = ref(toDateTimeLocal(props.editing?.startTime ?? Date.now()))
-const endTime = ref(props.editing?.endTime ? toDateTimeLocal(props.editing.endTime) : toDateTimeLocal(Date.now() + 3600_000))
+const endTime = ref(
+  props.editing?.endTime ? toDateTimeLocal(props.editing.endTime) : toDateTimeLocal(Date.now() + 3600_000),
+)
 
 const timerRunning = ref(false)
 const timerStartTs = ref(0)
@@ -55,7 +57,12 @@ async function submit() {
     return
   }
   if (props.editing) {
-    await sleepStore.update(props.editing.id, { type: type.value, startTime: start, endTime: end, notes: notes.value || undefined })
+    await sleepStore.update(props.editing.id, {
+      type: type.value,
+      startTime: start,
+      endTime: end,
+      notes: notes.value || undefined,
+    })
   } else {
     await sleepStore.add({ type: type.value, startTime: start, endTime: end, notes: notes.value || undefined })
   }
@@ -82,7 +89,9 @@ async function submit() {
 
     <div class="timer-box">
       <template v-if="!timerRunning && !props.editing">
-        <button type="button" class="btn btn-primary btn-lg timer-start" @click="startTimer">▶ 开始计时（宝宝已入睡）</button>
+        <button type="button" class="btn btn-primary btn-lg timer-start" @click="startTimer">
+          ▶ 开始计时（宝宝已入睡）
+        </button>
         <p class="timer-hint">醒来时点击结束</p>
       </template>
       <template v-else-if="timerRunning">
@@ -112,7 +121,9 @@ async function submit() {
 
     <div class="form-actions">
       <button type="button" class="btn btn-outline" @click="emit('cancelled')">取消</button>
-      <button type="button" class="btn btn-primary" @click="submit">{{ props.editing ? '保存修改' : '保存记录' }}</button>
+      <button type="button" class="btn btn-primary" @click="submit">
+        {{ props.editing ? '保存修改' : '保存记录' }}
+      </button>
     </div>
   </div>
 </template>

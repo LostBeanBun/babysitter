@@ -73,6 +73,12 @@ export async function countAllRecords(): Promise<{
 }
 
 /** 便捷：按宝宝 + 时间范围查询（半开区间 [start, end)） */
-export function queryByRange<T>(table: Table<T, unknown>, babyId: number, field: 'startTime' | 'time', start: number, end: number) {
+export function queryByRange<T>(
+  table: Table<T, unknown>,
+  babyId: number,
+  field: 'startTime' | 'time',
+  start: number,
+  end: number,
+) {
   return table.where(`[babyId+${field}]`).between([babyId, start], [babyId, end], true, false).toArray() as Promise<T[]>
 }

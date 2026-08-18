@@ -6,18 +6,53 @@ import { usePumpingStore } from '@/stores/pumping'
 import { useSleepStore } from '@/stores/sleep'
 import { useGrowthStore } from '@/stores/growth'
 import PageHeader from '@/components/common/PageHeader.vue'
-import Timeline, { type TimelineEntry } from '@/components/timeline/Timeline.vue'
-import Modal from '@/components/common/Modal.vue'
+import TimelineList, { type TimelineEntry } from '@/components/timeline/TimelineList.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import FeedingForm from '@/components/forms/FeedingForm.vue'
 import DiaperForm from '@/components/forms/DiaperForm.vue'
 import PumpingForm from '@/components/forms/PumpingForm.vue'
 import SleepForm from '@/components/forms/SleepForm.vue'
 import GrowthForm from '@/components/forms/GrowthForm.vue'
-import type { Feeding, DiaperChange, Pumping, Sleep, GrowthRecord, FeedType, DiaperType, DiaperColor, DiaperAmount, PumpSide, SleepType } from '@/types'
+import type {
+  Feeding,
+  DiaperChange,
+  Pumping,
+  Sleep,
+  GrowthRecord,
+  FeedType,
+  DiaperType,
+  DiaperColor,
+  DiaperAmount,
+  PumpSide,
+  SleepType,
+} from '@/types'
 
-type FeedingFormProps = { id: number; type: FeedType; startTime: number; endTime?: number; duration?: number; amount?: number; notes?: string }
-type DiaperFormProps = { id: number; type: DiaperType; time: number; color?: DiaperColor; amount?: DiaperAmount; notes?: string }
-type PumpingFormProps = { id: number; side: PumpSide; startTime: number; endTime?: number; duration?: number; amount?: number; notes?: string }
+type FeedingFormProps = {
+  id: number
+  type: FeedType
+  startTime: number
+  endTime?: number
+  duration?: number
+  amount?: number
+  notes?: string
+}
+type DiaperFormProps = {
+  id: number
+  type: DiaperType
+  time: number
+  color?: DiaperColor
+  amount?: DiaperAmount
+  notes?: string
+}
+type PumpingFormProps = {
+  id: number
+  side: PumpSide
+  startTime: number
+  endTime?: number
+  duration?: number
+  amount?: number
+  notes?: string
+}
 type SleepFormProps = { id: number; type: SleepType; startTime: number; endTime: number; notes?: string }
 type GrowthFormProps = { id: number; date: number; weight?: number; height?: number; notes?: string }
 
@@ -30,18 +65,30 @@ const growthStore = useGrowthStore()
 // 类型筛选
 const filter = ref<'all' | 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth'>('all')
 
-const filteredFeedings = computed(() => (filter.value === 'all' || filter.value === 'feeding' ? feedingStore.feedings : []))
+const filteredFeedings = computed(() =>
+  filter.value === 'all' || filter.value === 'feeding' ? feedingStore.feedings : [],
+)
 const filteredDiapers = computed(() => (filter.value === 'all' || filter.value === 'diaper' ? diaperStore.diapers : []))
-const filteredPumpings = computed(() => (filter.value === 'all' || filter.value === 'pumping' ? pumpingStore.pumpings : []))
+const filteredPumpings = computed(() =>
+  filter.value === 'all' || filter.value === 'pumping' ? pumpingStore.pumpings : [],
+)
 const filteredSleeps = computed(() => (filter.value === 'all' || filter.value === 'sleep' ? sleepStore.sleeps : []))
 const filteredGrowths = computed(() => (filter.value === 'all' || filter.value === 'growth' ? growthStore.growths : []))
 
-const hasAny = computed(() =>
-  filteredFeedings.value.length + filteredDiapers.value.length + filteredPumpings.value.length + filteredSleeps.value.length + filteredGrowths.value.length > 0,
+const hasAny = computed(
+  () =>
+    filteredFeedings.value.length +
+      filteredDiapers.value.length +
+      filteredPumpings.value.length +
+      filteredSleeps.value.length +
+      filteredGrowths.value.length >
+    0,
 )
 
 // 弹窗
-const modalState = ref<{ kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth'; editing?: TimelineEntry } | null>(null)
+const modalState = ref<{ kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth'; editing?: TimelineEntry } | null>(
+  null,
+)
 const confirmDelete = ref<TimelineEntry | null>(null)
 
 function onEdit(entry: TimelineEntry) {
@@ -72,7 +119,15 @@ const editPayload = computed(() => {
   if (!e) return undefined
   if (e.kind === 'feeding') {
     const f = e.raw as Feeding
-    return { id: e.id, type: f.type, startTime: f.startTime, endTime: f.endTime, duration: f.duration, amount: f.amount, notes: f.notes }
+    return {
+      id: e.id,
+      type: f.type,
+      startTime: f.startTime,
+      endTime: f.endTime,
+      duration: f.duration,
+      amount: f.amount,
+      notes: f.notes,
+    }
   }
   if (e.kind === 'diaper') {
     const d = e.raw as DiaperChange
@@ -80,7 +135,15 @@ const editPayload = computed(() => {
   }
   if (e.kind === 'pumping') {
     const p = e.raw as Pumping
-    return { id: e.id, side: p.side, startTime: p.startTime, endTime: p.endTime, duration: p.duration, amount: p.amount, notes: p.notes }
+    return {
+      id: e.id,
+      side: p.side,
+      startTime: p.startTime,
+      endTime: p.endTime,
+      duration: p.duration,
+      amount: p.amount,
+      notes: p.notes,
+    }
   }
   if (e.kind === 'sleep') {
     const s = e.raw as Sleep
@@ -112,7 +175,7 @@ const filters = [
     </div>
 
     <div class="card">
-      <Timeline
+      <TimelineList
         v-if="hasAny"
         :feedings="filteredFeedings"
         :diapers="filteredDiapers"
@@ -129,7 +192,11 @@ const filters = [
       </div>
     </div>
 
-    <Modal :show="modalState !== null" :title="modalState?.editing ? '编辑记录' : '添加记录'" @close="modalState = null">
+    <BaseModal
+      :show="modalState !== null"
+      :title="modalState?.editing ? '编辑记录' : '添加记录'"
+      @close="modalState = null"
+    >
       <FeedingForm
         v-if="modalState?.kind === 'feeding'"
         :editing="modalState?.editing ? (editPayload as FeedingFormProps) : undefined"
@@ -160,15 +227,15 @@ const filters = [
         @saved="onSaved"
         @cancelled="modalState = null"
       />
-    </Modal>
+    </BaseModal>
 
-    <Modal :show="confirmDelete !== null" title="删除记录" @close="confirmDelete = null">
+    <BaseModal :show="confirmDelete !== null" title="删除记录" @close="confirmDelete = null">
       <p class="confirm-text">确定要删除这条记录吗？此操作不可撤销。</p>
       <div class="confirm-actions">
         <button class="btn btn-outline" @click="confirmDelete = null">取消</button>
         <button class="btn btn-danger-soft" @click="confirmDeleteAction">确认删除</button>
       </div>
-    </Modal>
+    </BaseModal>
   </div>
 </template>
 

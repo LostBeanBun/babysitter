@@ -92,16 +92,7 @@ export const MS_PER_HOUR = 3600_000
 export const MS_PER_DAY = 24 * MS_PER_HOUR
 
 /** 宝宝头像配色 */
-export const AVATAR_COLORS = [
-  '#F2A28C',
-  '#8FB9D8',
-  '#8FBF9F',
-  '#C4A8E0',
-  '#E8C46A',
-  '#D8A8C8',
-  '#9A8FC8',
-  '#7FB3A6',
-]
+export const AVATAR_COLORS = ['#F2A28C', '#8FB9D8', '#8FBF9F', '#C4A8E0', '#E8C46A', '#D8A8C8', '#9A8FC8', '#7FB3A6']
 
 /** 宝宝头像 emoji 选择（含 12 生肖） */
 export const BABY_AVATARS = [

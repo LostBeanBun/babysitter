@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Feeding, DiaperChange, Pumping, Sleep, GrowthRecord } from '@/types'
-import { FEED_TYPE_LABELS, DIAPER_TYPE_LABELS, DIAPER_COLOR_LABELS, DIAPER_AMOUNT_LABELS, PUMP_SIDE_LABELS, SLEEP_TYPE_LABELS } from '@/constants'
+import {
+  FEED_TYPE_LABELS,
+  DIAPER_TYPE_LABELS,
+  DIAPER_COLOR_LABELS,
+  DIAPER_AMOUNT_LABELS,
+  PUMP_SIDE_LABELS,
+  SLEEP_TYPE_LABELS,
+} from '@/constants'
 import { formatTime, formatDuration, formatAmount } from '@/utils/format'
 
 export interface TimelineEntry {
@@ -254,7 +261,9 @@ const groupedEntries = computed(() => {
   color: var(--text-muted);
   font-size: 13px;
   opacity: 0;
-  transition: opacity 0.12s ease, background 0.12s ease;
+  transition:
+    opacity 0.12s ease,
+    background 0.12s ease;
   flex-shrink: 0;
 }
 

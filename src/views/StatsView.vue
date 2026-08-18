@@ -9,7 +9,14 @@ import { useDiaperStore } from '@/stores/diaper'
 import { usePumpingStore } from '@/stores/pumping'
 import { useSleepStore } from '@/stores/sleep'
 import { useGrowthStore } from '@/stores/growth'
-import { buildDailySeries, aggregateRange, compareRanges, RANGE_PRESETS, type DayAggregate, type ComparisonResult } from '@/services/stats'
+import {
+  buildDailySeries,
+  aggregateRange,
+  compareRanges,
+  RANGE_PRESETS,
+  type DayAggregate,
+  type ComparisonResult,
+} from '@/services/stats'
 import { CHART_COLORS } from '@/constants'
 import { whoData, ageInMonths } from '@/constants/whoGrowth'
 import { formatDuration, formatPercentChange, formatAmount } from '@/utils/format'
@@ -54,10 +61,24 @@ const days = computed<DayAggregate[]>(() =>
 // 当前区间 vs 上一等长区间（对比）
 const previousStart = computed(() => rangeStart.value - (rangeEnd.value - rangeStart.value))
 const currentAgg = computed(() =>
-  aggregateRange(feedingStore.feedings, diaperStore.diapers, pumpingStore.pumpings, sleepStore.sleeps, rangeStart.value, rangeEnd.value),
+  aggregateRange(
+    feedingStore.feedings,
+    diaperStore.diapers,
+    pumpingStore.pumpings,
+    sleepStore.sleeps,
+    rangeStart.value,
+    rangeEnd.value,
+  ),
 )
 const previousAgg = computed(() =>
-  aggregateRange(feedingStore.feedings, diaperStore.diapers, pumpingStore.pumpings, sleepStore.sleeps, previousStart.value, rangeStart.value),
+  aggregateRange(
+    feedingStore.feedings,
+    diaperStore.diapers,
+    pumpingStore.pumpings,
+    sleepStore.sleeps,
+    previousStart.value,
+    rangeStart.value,
+  ),
 )
 const comparisons = computed<ComparisonResult[]>(() => compareRanges(currentAgg.value, previousAgg.value))
 
@@ -68,8 +89,17 @@ const yFormatter = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Str
 // —— 趋势图配置 ——
 const milkOption = computed<EChartsOption>(() => ({
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: axisColor.value, fontSize: 10 }, axisLine: { lineStyle: { color: axisLineColor.value } } },
-  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter }, splitLine: { lineStyle: { color: splitLineColor.value } } },
+  xAxis: {
+    type: 'category',
+    data: xLabels.value,
+    axisLabel: { color: axisColor.value, fontSize: 10 },
+    axisLine: { lineStyle: { color: axisLineColor.value } },
+  },
+  yAxis: {
+    type: 'value',
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter },
+    splitLine: { lineStyle: { color: splitLineColor.value } },
+  },
   series: [
     {
       name: '奶量(ml)',
@@ -80,15 +110,36 @@ const milkOption = computed<EChartsOption>(() => ({
       data: days.value.map((d) => d.totalMilkAmount),
       lineStyle: { width: 2.5, color: CHART_COLORS.feedAmount },
       itemStyle: { color: CHART_COLORS.feedAmount },
-      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(232,144,108,0.25)' }, { offset: 1, color: 'rgba(232,144,108,0.02)' }] } },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(232,144,108,0.25)' },
+            { offset: 1, color: 'rgba(232,144,108,0.02)' },
+          ],
+        },
+      },
     },
   ],
 }))
 
 const sleepOption = computed<EChartsOption>(() => ({
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: axisColor.value, fontSize: 10 }, axisLine: { lineStyle: { color: axisLineColor.value } } },
-  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10 }, splitLine: { lineStyle: { color: splitLineColor.value } } },
+  xAxis: {
+    type: 'category',
+    data: xLabels.value,
+    axisLabel: { color: axisColor.value, fontSize: 10 },
+    axisLine: { lineStyle: { color: axisLineColor.value } },
+  },
+  yAxis: {
+    type: 'value',
+    axisLabel: { color: '#8c7b72', fontSize: 10 },
+    splitLine: { lineStyle: { color: splitLineColor.value } },
+  },
   series: [
     {
       name: '睡眠(小时)',
@@ -102,8 +153,17 @@ const sleepOption = computed<EChartsOption>(() => ({
 
 const diaperOption = computed<EChartsOption>(() => ({
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: axisColor.value, fontSize: 10 }, axisLine: { lineStyle: { color: axisLineColor.value } } },
-  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10 }, splitLine: { lineStyle: { color: splitLineColor.value } } },
+  xAxis: {
+    type: 'category',
+    data: xLabels.value,
+    axisLabel: { color: axisColor.value, fontSize: 10 },
+    axisLine: { lineStyle: { color: axisLineColor.value } },
+  },
+  yAxis: {
+    type: 'value',
+    axisLabel: { color: '#8c7b72', fontSize: 10 },
+    splitLine: { lineStyle: { color: splitLineColor.value } },
+  },
   series: [
     {
       name: '尿湿(次)',
@@ -126,8 +186,17 @@ const diaperOption = computed<EChartsOption>(() => ({
 
 const pumpOption = computed<EChartsOption>(() => ({
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: axisColor.value, fontSize: 10 }, axisLine: { lineStyle: { color: axisLineColor.value } } },
-  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter }, splitLine: { lineStyle: { color: splitLineColor.value } } },
+  xAxis: {
+    type: 'category',
+    data: xLabels.value,
+    axisLabel: { color: axisColor.value, fontSize: 10 },
+    axisLine: { lineStyle: { color: axisLineColor.value } },
+  },
+  yAxis: {
+    type: 'value',
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter },
+    splitLine: { lineStyle: { color: splitLineColor.value } },
+  },
   series: [
     {
       name: '吸奶(ml)',
@@ -138,7 +207,19 @@ const pumpOption = computed<EChartsOption>(() => ({
       data: days.value.map((d) => d.pumpAmount),
       lineStyle: { width: 2.5, color: CHART_COLORS.pump },
       itemStyle: { color: CHART_COLORS.pump },
-      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(216,168,200,0.25)' }, { offset: 1, color: 'rgba(216,168,200,0.02)' }] } },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(216,168,200,0.25)' },
+            { offset: 1, color: 'rgba(216,168,200,0.02)' },
+          ],
+        },
+      },
     },
   ],
 }))
@@ -146,7 +227,12 @@ const pumpOption = computed<EChartsOption>(() => ({
 // 对比面板格式化
 function formatComparisonValue(c: ComparisonResult, value: number): string {
   if (c.key === 'sleepMs') return formatDuration(value)
-  if (c.key === 'totalMilkAmount' || c.key === 'breastMilkAmount' || c.key === 'formulaAmount' || c.key === 'pumpAmount') {
+  if (
+    c.key === 'totalMilkAmount' ||
+    c.key === 'breastMilkAmount' ||
+    c.key === 'formulaAmount' ||
+    c.key === 'pumpAmount'
+  ) {
     return `${Math.round(value)} ml`
   }
   return `${Math.round(value)} 次`
@@ -156,14 +242,20 @@ const rangeLabel = computed(() => range.value.label)
 
 // —— 区间汇总（周报/月报）——
 const summaryDays = computed(() => Math.max(1, currentAgg.value.dayCount))
-const rangeGrowthCount = computed(() => growthStore.growths.filter((g) => g.date >= rangeStart.value && g.date <= rangeEnd.value).length)
+const rangeGrowthCount = computed(
+  () => growthStore.growths.filter((g) => g.date >= rangeStart.value && g.date <= rangeEnd.value).length,
+)
 
 const summaryItems = computed(() => {
   const agg = currentAgg.value
   const days = summaryDays.value
   return [
     { label: '喂养次数', value: `${agg.feedCount} 次`, sub: `日均 ${(agg.feedCount / days).toFixed(1)} 次` },
-    { label: '总奶量', value: formatAmount(agg.totalMilkAmount), sub: `日均 ${formatAmount(agg.totalMilkAmount / days)}` },
+    {
+      label: '总奶量',
+      value: formatAmount(agg.totalMilkAmount),
+      sub: `日均 ${formatAmount(agg.totalMilkAmount / days)}`,
+    },
     { label: '亲喂次数', value: `${agg.breastCount} 次`, sub: `日均 ${(agg.breastCount / days).toFixed(1)} 次` },
     { label: '睡眠时长', value: formatDuration(agg.sleepMs), sub: `日均 ${formatDuration(agg.sleepMs / days)}` },
     { label: '纸尿裤', value: `${agg.diaperCount} 次`, sub: `日均 ${(agg.diaperCount / days).toFixed(1)} 次` },
@@ -192,7 +284,12 @@ const heightPoints = computed(() =>
     .sort((a, b) => a.month - b.month),
 )
 /** 图表横轴上限：至少覆盖已有记录的最大月龄（不低于 24 月） */
-const growthXMax = computed(() => Math.max(24, Math.ceil(Math.max(3, ...weightPoints.value.map((p) => p.month), ...heightPoints.value.map((p) => p.month)))))
+const growthXMax = computed(() =>
+  Math.max(
+    24,
+    Math.ceil(Math.max(3, ...weightPoints.value.map((p) => p.month), ...heightPoints.value.map((p) => p.month))),
+  ),
+)
 const hasGrowthData = computed(() => weightPoints.value.length > 0 || heightPoints.value.length > 0)
 
 function whoSeries(field: 'weight' | 'length', key: 'p3' | 'p50' | 'p97'): [number, number][] {
@@ -221,9 +318,30 @@ const weightOption = computed<EChartsOption>(() => ({
   },
   tooltip: growthTooltip('kg'),
   series: [
-    { name: 'P97', type: 'line', data: whoSeries('weight', 'p97'), symbol: 'none', lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' }, itemStyle: { color: '#c4b6a6' } },
-    { name: 'P50', type: 'line', data: whoSeries('weight', 'p50'), symbol: 'none', lineStyle: { width: 1, color: '#a49482', type: 'dashed' }, itemStyle: { color: '#a49482' } },
-    { name: 'P3', type: 'line', data: whoSeries('weight', 'p3'), symbol: 'none', lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' }, itemStyle: { color: '#c4b6a6' } },
+    {
+      name: 'P97',
+      type: 'line',
+      data: whoSeries('weight', 'p97'),
+      symbol: 'none',
+      lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' },
+      itemStyle: { color: '#c4b6a6' },
+    },
+    {
+      name: 'P50',
+      type: 'line',
+      data: whoSeries('weight', 'p50'),
+      symbol: 'none',
+      lineStyle: { width: 1, color: '#a49482', type: 'dashed' },
+      itemStyle: { color: '#a49482' },
+    },
+    {
+      name: 'P3',
+      type: 'line',
+      data: whoSeries('weight', 'p3'),
+      symbol: 'none',
+      lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' },
+      itemStyle: { color: '#c4b6a6' },
+    },
     {
       name: '宝宝体重',
       type: 'line',
@@ -254,9 +372,30 @@ const heightOption = computed<EChartsOption>(() => ({
   },
   tooltip: growthTooltip('cm'),
   series: [
-    { name: 'P97', type: 'line', data: whoSeries('length', 'p97'), symbol: 'none', lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' }, itemStyle: { color: '#c4b6a6' } },
-    { name: 'P50', type: 'line', data: whoSeries('length', 'p50'), symbol: 'none', lineStyle: { width: 1, color: '#a49482', type: 'dashed' }, itemStyle: { color: '#a49482' } },
-    { name: 'P3', type: 'line', data: whoSeries('length', 'p3'), symbol: 'none', lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' }, itemStyle: { color: '#c4b6a6' } },
+    {
+      name: 'P97',
+      type: 'line',
+      data: whoSeries('length', 'p97'),
+      symbol: 'none',
+      lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' },
+      itemStyle: { color: '#c4b6a6' },
+    },
+    {
+      name: 'P50',
+      type: 'line',
+      data: whoSeries('length', 'p50'),
+      symbol: 'none',
+      lineStyle: { width: 1, color: '#a49482', type: 'dashed' },
+      itemStyle: { color: '#a49482' },
+    },
+    {
+      name: 'P3',
+      type: 'line',
+      data: whoSeries('length', 'p3'),
+      symbol: 'none',
+      lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' },
+      itemStyle: { color: '#c4b6a6' },
+    },
     {
       name: '宝宝身高',
       type: 'line',
@@ -286,10 +425,22 @@ const heightOption = computed<EChartsOption>(() => ({
     <!-- 概览：与上一周期对比 / 区间汇总（tab 切换） -->
     <div class="card overview-card">
       <div class="overview-tabs" role="tablist">
-        <button class="overview-tab" :class="{ active: overviewTab === 'compare' }" role="tab" :aria-selected="overviewTab === 'compare'" @click="overviewTab = 'compare'">
+        <button
+          class="overview-tab"
+          :class="{ active: overviewTab === 'compare' }"
+          role="tab"
+          :aria-selected="overviewTab === 'compare'"
+          @click="overviewTab = 'compare'"
+        >
           与上一周期对比
         </button>
-        <button class="overview-tab" :class="{ active: overviewTab === 'summary' }" role="tab" :aria-selected="overviewTab === 'summary'" @click="overviewTab = 'summary'">
+        <button
+          class="overview-tab"
+          :class="{ active: overviewTab === 'summary' }"
+          role="tab"
+          :aria-selected="overviewTab === 'summary'"
+          @click="overviewTab = 'summary'"
+        >
           {{ rangeLabel }}汇总
         </button>
       </div>
@@ -304,7 +455,9 @@ const heightOption = computed<EChartsOption>(() => ({
               <span class="compare-change" :class="c.change === null ? 'none' : c.change >= 0 ? 'up' : 'down'">
                 {{ c.change === null ? '—' : formatPercentChange(c.change) }}
               </span>
-              <span class="compare-prev">{{ formatComparisonValue(c, c.previous) }} → {{ formatComparisonValue(c, c.current) }}</span>
+              <span class="compare-prev"
+                >{{ formatComparisonValue(c, c.previous) }} → {{ formatComparisonValue(c, c.current) }}</span
+              >
             </div>
           </div>
         </div>
@@ -331,13 +484,47 @@ const heightOption = computed<EChartsOption>(() => ({
     <!-- 成长曲线 -->
     <p class="section-title">成长曲线</p>
     <template v-if="hasBirthDate">
-      <ChartCard v-if="weightPoints.length > 0" title="体重曲线" :subtitle="`WHO 生长标准参考（虚线 P3/P50/P97）· ${activeBaby?.name ?? ''}`" :option="weightOption" />
-      <ChartCard v-else-if="hasGrowthData" title="体重曲线" subtitle="暂无体重记录，去「今日」页记录吧" :option="{ grid: { top: 40 }, xAxis: { type: 'value', axisLabel: { show: false } }, yAxis: { type: 'value', axisLabel: { show: false } }, series: [] }" />
-      <ChartCard v-if="heightPoints.length > 0" title="身高曲线" :subtitle="`WHO 生长标准参考（虚线 P3/P50/P97）· ${activeBaby?.name ?? ''}`" :option="heightOption" />
-      <ChartCard v-else-if="hasGrowthData" title="身高曲线" subtitle="暂无身高记录，去「今日」页记录吧" :option="{ grid: { top: 40 }, xAxis: { type: 'value', axisLabel: { show: false } }, yAxis: { type: 'value', axisLabel: { show: false } }, series: [] }" />
-      <div v-if="!hasGrowthData" class="card empty-inline">暂无成长记录，去「今日」页记录体重/身高后即可查看 WHO 生长曲线</div>
+      <ChartCard
+        v-if="weightPoints.length > 0"
+        title="体重曲线"
+        :subtitle="`WHO 生长标准参考（虚线 P3/P50/P97）· ${activeBaby?.name ?? ''}`"
+        :option="weightOption"
+      />
+      <ChartCard
+        v-else-if="hasGrowthData"
+        title="体重曲线"
+        subtitle="暂无体重记录，去「今日」页记录吧"
+        :option="{
+          grid: { top: 40 },
+          xAxis: { type: 'value', axisLabel: { show: false } },
+          yAxis: { type: 'value', axisLabel: { show: false } },
+          series: [],
+        }"
+      />
+      <ChartCard
+        v-if="heightPoints.length > 0"
+        title="身高曲线"
+        :subtitle="`WHO 生长标准参考（虚线 P3/P50/P97）· ${activeBaby?.name ?? ''}`"
+        :option="heightOption"
+      />
+      <ChartCard
+        v-else-if="hasGrowthData"
+        title="身高曲线"
+        subtitle="暂无身高记录，去「今日」页记录吧"
+        :option="{
+          grid: { top: 40 },
+          xAxis: { type: 'value', axisLabel: { show: false } },
+          yAxis: { type: 'value', axisLabel: { show: false } },
+          series: [],
+        }"
+      />
+      <div v-if="!hasGrowthData" class="card empty-inline">
+        暂无成长记录，去「今日」页记录体重/身高后即可查看 WHO 生长曲线
+      </div>
     </template>
-    <div v-else class="card empty-inline">请先在「设置」中为 {{ activeBaby?.name ?? '宝宝' }} 设置出生日期，即可查看成长曲线（参照 WHO 生长标准）</div>
+    <div v-else class="card empty-inline">
+      请先在「设置」中为 {{ activeBaby?.name ?? '宝宝' }} 设置出生日期，即可查看成长曲线（参照 WHO 生长标准）
+    </div>
 
     <p class="note-text">亲喂时长因无法计量奶量，未计入奶量趋势；可在记录详情中查看每次亲喂时长。</p>
   </div>

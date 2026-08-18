@@ -10,7 +10,11 @@ defineProps<{
 
 <template>
   <div class="stat-card card">
-    <div v-if="icon" class="stat-icon" :style="{ background: (color ?? '#fdf0ea') + '33', color: color ?? 'var(--primary)' }">
+    <div
+      v-if="icon"
+      class="stat-icon"
+      :style="{ background: (color ?? '#fdf0ea') + '33', color: color ?? 'var(--primary)' }"
+    >
       {{ icon }}
     </div>
     <div class="stat-body">

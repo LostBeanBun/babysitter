@@ -83,7 +83,12 @@ export function ageInMonths(birthDate: string, date: number): number {
 }
 
 /** 线性插值获取指定月龄的百分位值 */
-export function interpolateWho(data: WhoPoint[], month: number, field: 'weight' | 'length', key: 'p3' | 'p50' | 'p97'): number {
+export function interpolateWho(
+  data: WhoPoint[],
+  month: number,
+  field: 'weight' | 'length',
+  key: 'p3' | 'p50' | 'p97',
+): number {
   if (!data.length) return 0
   if (month <= data[0].month) return data[0][field][key]
   if (month >= data[data.length - 1].month) return data[data.length - 1][field][key]

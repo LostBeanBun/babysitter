@@ -1,7 +1,14 @@
 import { db, DB_VERSION } from '@/db'
 import type { ExportFile, ExportMeta, Feeding, DiaperChange, Pumping, Sleep, Baby, GrowthRecord } from '@/types'
 import { downloadBlob, formatDate, formatTime } from '@/utils/format'
-import { FEED_TYPE_LABELS, DIAPER_TYPE_LABELS, DIAPER_COLOR_LABELS, DIAPER_AMOUNT_LABELS, PUMP_SIDE_LABELS, SLEEP_TYPE_LABELS } from '@/constants'
+import {
+  FEED_TYPE_LABELS,
+  DIAPER_TYPE_LABELS,
+  DIAPER_COLOR_LABELS,
+  DIAPER_AMOUNT_LABELS,
+  PUMP_SIDE_LABELS,
+  SLEEP_TYPE_LABELS,
+} from '@/constants'
 
 /** CSV 转义：含逗号/引号/换行时包裹引号 */
 function csvEscape(v: string | number | undefined | null): string {
@@ -32,7 +39,9 @@ export async function exportAllJson(): Promise<void> {
 }
 
 /** 导入 JSON 备份（覆盖当前数据） */
-export async function importAllJson(file: File): Promise<{ babies: number; feedings: number; diapers: number; pumpings: number; sleeps: number; growths: number }> {
+export async function importAllJson(
+  file: File,
+): Promise<{ babies: number; feedings: number; diapers: number; pumpings: number; sleeps: number; growths: number }> {
   const text = await file.text()
   let payload: ExportFile
   try {
@@ -72,7 +81,14 @@ export async function importAllJson(file: File): Promise<{ babies: number; feedi
       db.growths.bulkAdd(growths),
     ])
   })
-  return { babies: babies.length, feedings: feedings.length, diapers: diapers.length, pumpings: pumpings.length, sleeps: sleeps.length, growths: growths.length }
+  return {
+    babies: babies.length,
+    feedings: feedings.length,
+    diapers: diapers.length,
+    pumpings: pumpings.length,
+    sleeps: sleeps.length,
+    growths: growths.length,
+  }
 }
 
 /** 按宝宝导出 CSV（五类分别一个文件） */
@@ -146,12 +162,7 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
   // 成长记录
   const growthRows: (string | number | undefined | null)[][] = [
     ['日期', '体重(kg)', '身高(cm)', '备注'],
-    ...growths.map((g) => [
-      formatDate(g.date),
-      g.weight ?? '',
-      g.height ?? '',
-      g.notes ?? '',
-    ]),
+    ...growths.map((g) => [formatDate(g.date), g.weight ?? '', g.height ?? '', g.notes ?? '']),
   ]
   downloadBlob('\ufeff' + toCsv(growthRows), `${baby.name}-成长记录-${stamp}.csv`, 'text/csv;charset=utf-8')
 }
