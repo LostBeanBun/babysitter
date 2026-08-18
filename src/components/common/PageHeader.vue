@@ -7,7 +7,10 @@ const babyStore = useBabyStore()
 <template>
   <header class="page-header">
     <div class="header-left">
-      <h1 class="header-title">{{ babyStore.activeBaby?.name ?? '宝宝日记' }}</h1>
+      <h1 class="header-title">
+        <span v-if="babyStore.activeBaby?.avatar" class="header-avatar">{{ babyStore.activeBaby.avatar }}</span>
+        {{ babyStore.activeBaby?.name ?? '宝宝日记' }}
+      </h1>
       <p v-if="babyStore.activeBaby" class="header-sub">记录美好时光</p>
     </div>
     <slot name="right" />
@@ -48,6 +51,11 @@ const babyStore = useBabyStore()
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+
+.header-avatar {
+  font-size: 18px;
+  margin-right: 5px;
 }
 
 .header-sub {

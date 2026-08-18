@@ -14,7 +14,7 @@ import DiaperForm from '@/components/forms/DiaperForm.vue'
 import PumpingForm from '@/components/forms/PumpingForm.vue'
 import SleepForm from '@/components/forms/SleepForm.vue'
 import { startOfDay, formatDuration, formatAmount } from '@/utils/format'
-import { MS_PER_DAY } from '@/constants'
+import { MS_PER_DAY, BABY_AVATARS } from '@/constants'
 import type { Feeding, DiaperChange, Pumping, Sleep, FeedType, DiaperType, DiaperColor, DiaperAmount, PumpSide, SleepType } from '@/types'
 
 /** 各表单编辑 props 结构（与表单组件 props.editing 一致） */
@@ -37,6 +37,7 @@ const hasBaby = computed(() => babyStore.babies.length > 0)
 const onboardingOpen = ref(false)
 const onboardName = ref('')
 const onboardBirthDate = ref('')
+const onboardAvatar = ref('')
 
 function openOnboarding() {
   onboardingOpen.value = true
@@ -45,9 +46,10 @@ function openOnboarding() {
 async function onOnboarded() {
   const name = onboardName.value.trim()
   if (!name) return
-  await babyStore.addBaby(name, undefined, onboardBirthDate.value || undefined)
+  await babyStore.addBaby(name, undefined, onboardBirthDate.value || undefined, undefined, undefined, onboardAvatar.value || undefined)
   onboardName.value = ''
   onboardBirthDate.value = ''
+  onboardAvatar.value = ''
   onboardingOpen.value = false
 }
 
@@ -247,6 +249,21 @@ const editPayload = computed(() => {
         <label class="form-label">出生日期（可选）</label>
         <input v-model="onboardBirthDate" type="date" class="form-input" />
       </div>
+      <div class="form-field">
+        <label class="form-label">头像</label>
+        <div class="avatar-picker">
+          <button
+            v-for="a in BABY_AVATARS"
+            :key="a"
+            type="button"
+            class="avatar-option"
+            :class="{ selected: onboardAvatar === a }"
+            @click="onboardAvatar = a"
+          >
+            {{ a }}
+          </button>
+        </div>
+      </div>
       <button class="btn btn-primary btn-block btn-lg" :disabled="!onboardName.trim()" @click="onOnboarded">开始记录</button>
     </Modal>
   </div>
@@ -390,5 +407,30 @@ const editPayload = computed(() => {
 
 .confirm-actions .btn {
   flex: 1;
+}
+
+.avatar-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.avatar-option {
+  min-height: 40px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.avatar-option.selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: scale(1.06);
 }
 </style>

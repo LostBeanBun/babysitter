@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
 import { exportAllJson, exportBabyCsvs, importAllJson } from '@/services/export'
+import { BABY_AVATARS } from '@/constants'
 import PageHeader from '@/components/common/PageHeader.vue'
 import Modal from '@/components/common/Modal.vue'
 import type { Baby } from '@/types'
@@ -13,6 +14,7 @@ const recordCounts = ref({ feedings: 0, diapers: 0, pumpings: 0, sleeps: 0 })
 const babyModal = ref<{ mode: 'add' | 'edit'; id?: number } | null>(null)
 const babyName = ref('')
 const babyBirthDate = ref('')
+const babyAvatar = ref('')
 const deleteBabyConfirm = ref<Baby | null>(null)
 const exportSuccess = ref(false)
 const importBusy = ref(false)
@@ -29,12 +31,14 @@ onMounted(async () => {
 function openAddBaby() {
   babyName.value = ''
   babyBirthDate.value = ''
+  babyAvatar.value = ''
   babyModal.value = { mode: 'add' }
 }
 
 function openEditBaby(b: Baby) {
   babyName.value = b.name
   babyBirthDate.value = b.birthDate ?? ''
+  babyAvatar.value = b.avatar ?? ''
   babyModal.value = { mode: 'edit', id: b.id }
 }
 
@@ -45,9 +49,10 @@ async function saveBaby() {
     await babyStore.updateBaby(babyModal.value.id, {
       name,
       birthDate: babyBirthDate.value || undefined,
+      avatar: babyAvatar.value || undefined,
     })
   } else {
-    await babyStore.addBaby(name, undefined, babyBirthDate.value || undefined)
+    await babyStore.addBaby(name, undefined, babyBirthDate.value || undefined, undefined, undefined, babyAvatar.value || undefined)
   }
   babyModal.value = null
 }
@@ -130,7 +135,7 @@ async function confirmClearAll() {
           :class="{ active: b.id === babyStore.activeBabyId }"
           @click="b.id != null && babyStore.selectBaby(b.id)"
         >
-          <div class="baby-avatar" :style="{ background: b.avatarColor }">{{ b.name[0] }}</div>
+          <div class="baby-avatar" :style="{ background: b.avatarColor }">{{ b.avatar ?? b.name[0] }}</div>
           <div class="baby-info">
             <p class="baby-name">{{ b.name }}{{ b.id === babyStore.activeBabyId ? '（当前）' : '' }}</p>
             <p class="baby-meta">{{ babyAge(b) }}</p>
@@ -184,6 +189,21 @@ async function confirmClearAll() {
       <div class="form-field">
         <label class="form-label">出生日期（可选）</label>
         <input v-model="babyBirthDate" type="date" class="form-input" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">头像</label>
+        <div class="avatar-picker">
+          <button
+            v-for="a in BABY_AVATARS"
+            :key="a"
+            type="button"
+            class="avatar-option"
+            :class="{ selected: babyAvatar === a }"
+            @click="babyAvatar = a"
+          >
+            {{ a }}
+          </button>
+        </div>
       </div>
       <div class="form-actions">
         <button class="btn btn-outline" @click="babyModal = null">取消</button>
@@ -366,6 +386,31 @@ async function confirmClearAll() {
   color: var(--text);
   line-height: 1.7;
   margin-bottom: 18px;
+}
+
+.avatar-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.avatar-option {
+  min-height: 40px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.avatar-option.selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: scale(1.06);
 }
 
 .form-actions {
