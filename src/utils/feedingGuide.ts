@@ -35,17 +35,6 @@ export function sinceLastFeedingMs(lastStart: number, now: number): number {
   return Math.max(0, now - lastStart)
 }
 
-/** 按月龄给出喂奶建议文案 */
-export function feedingAdvice(baby?: Baby): string {
-  const months = baby?.birthDate ? ageInMonths(baby.birthDate, Date.now()) : 0
-  if (months < 1) return '新生儿按需喂养，通常每 2-3 小时一次'
-  if (months < 3) return '按需喂养，通常每 3 小时左右一次'
-  if (months < 6) return '通常每 3-4 小时一次，可逐渐拉长夜间间隔'
-  if (months < 9) return '添加辅食后，通常每 4 小时左右一次'
-  if (months < 12) return '通常每 4-5 小时一次'
-  return '通常每 5-6 小时一次，随辅食增加可减少奶量'
-}
-
 /** 喂奶提醒本地开关 key */
 export const FEED_REMINDER_KEY = 'babysitter.feedReminder'
 

@@ -17,21 +17,10 @@ export function formatDate(ts: number): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
-/** 本地日期字符串转当天 0 点时间戳 */
-export function dateToStart(dateStr: string): number {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  return new Date(y, m - 1, d).getTime()
-}
-
 /** 当天 0 点时间戳 */
 export function startOfDay(ts: number): number {
   const d = new Date(ts)
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-}
-
-/** 当天 23:59:59.999 时间戳 */
-export function endOfDay(ts: number): number {
-  return startOfDay(ts) + 24 * 3600_000 - 1
 }
 
 /** 格式化时长：秒/分钟 → "X小时Y分钟" / "Y分钟" */
@@ -51,38 +40,11 @@ export function formatAmount(ml?: number): string {
   return `${Math.round(ml)} ml`
 }
 
-/** 格式化日期为 "8月13日 周四" */
-export function formatDateCN(ts: number): string {
-  const d = new Date(ts)
-  const week = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()]
-  return `${d.getMonth() + 1}月${d.getDate()}日 周${week}`
-}
-
-/** 相对时间：今天/昨天/日期 */
-export function formatDayLabel(ts: number): string {
-  const today = startOfDay(Date.now())
-  const day = startOfDay(ts)
-  if (day === today) return '今天'
-  if (day === today - 24 * 3600_000) return '昨天'
-  return formatDate(ts)
-}
-
 /** 百分比变化格式：+12.5% / -3.2% */
 export function formatPercentChange(change: number): string {
   if (!isFinite(change)) return '—'
   const sign = change > 0 ? '+' : ''
   return `${sign}${change.toFixed(1)}%`
-}
-
-/** 生成短 id */
-export function uid(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
-}
-
-/** 当前是否夜间（22:00-6:00） */
-export function isNightTime(ts: number): boolean {
-  const h = new Date(ts).getHours()
-  return h >= 22 || h < 6
 }
 
 /** 下载文件到本地 */
