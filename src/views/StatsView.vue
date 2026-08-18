@@ -36,6 +36,9 @@ const range = computed(() => RANGE_PRESETS.find((p) => p.key === rangeKey.value)
 const rangeStart = computed(() => range.value.getRange(now.value)[0])
 const rangeEnd = computed(() => range.value.getRange(now.value)[1])
 
+// 概览 tab：对比 / 汇总
+const overviewTab = ref<'compare' | 'summary'>('compare')
+
 // 每日序列（趋势图数据）
 const days = computed<DayAggregate[]>(() =>
   buildDailySeries(
@@ -285,37 +288,41 @@ const heightOption = computed<EChartsOption>(() => ({
       </button>
     </div>
 
-    <!-- 对比面板 -->
-    <div class="card compare-card">
-      <div class="compare-head">
-        <h3 class="compare-title">与上一周期对比</h3>
-        <span class="compare-sub">{{ rangeLabel }} vs 上一周期（等长）</span>
+    <!-- 概览：与上一周期对比 / 区间汇总（tab 切换） -->
+    <div class="card overview-card">
+      <div class="overview-tabs" role="tablist">
+        <button class="overview-tab" :class="{ active: overviewTab === 'compare' }" role="tab" :aria-selected="overviewTab === 'compare'" @click="overviewTab = 'compare'">
+          与上一周期对比
+        </button>
+        <button class="overview-tab" :class="{ active: overviewTab === 'summary' }" role="tab" :aria-selected="overviewTab === 'summary'" @click="overviewTab = 'summary'">
+          {{ rangeLabel }}汇总
+        </button>
       </div>
-      <div class="compare-grid">
-        <div v-for="c in comparisons" :key="c.key" class="compare-item">
-          <p class="compare-label">{{ c.label }}</p>
-          <p class="compare-value">{{ formatComparisonValue(c, c.current) }}</p>
-          <div class="compare-change-row">
-            <span class="compare-change" :class="c.change === null ? 'none' : c.change >= 0 ? 'up' : 'down'">
-              {{ c.change === null ? '—' : formatPercentChange(c.change) }}
-            </span>
-            <span class="compare-prev">{{ formatComparisonValue(c, c.previous) }} → {{ formatComparisonValue(c, c.current) }}</span>
+
+      <div v-if="overviewTab === 'compare'" class="overview-body">
+        <span class="overview-sub">{{ rangeLabel }} vs 上一周期（等长）</span>
+        <div class="compare-grid">
+          <div v-for="c in comparisons" :key="c.key" class="compare-item">
+            <p class="compare-label">{{ c.label }}</p>
+            <p class="compare-value">{{ formatComparisonValue(c, c.current) }}</p>
+            <div class="compare-change-row">
+              <span class="compare-change" :class="c.change === null ? 'none' : c.change >= 0 ? 'up' : 'down'">
+                {{ c.change === null ? '—' : formatPercentChange(c.change) }}
+              </span>
+              <span class="compare-prev">{{ formatComparisonValue(c, c.previous) }} → {{ formatComparisonValue(c, c.current) }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 区间汇总（周报/月报） -->
-    <div class="card summary-card">
-      <div class="compare-head">
-        <h3 class="compare-title">{{ rangeLabel }}汇总</h3>
-        <span class="compare-sub">共 {{ summaryDays }} 天 · 每日均值参考</span>
-      </div>
-      <div class="summary-grid">
-        <div v-for="s in summaryItems" :key="s.label" class="summary-item">
-          <p class="summary-label">{{ s.label }}</p>
-          <p class="summary-value">{{ s.value }}</p>
-          <p class="summary-sub">{{ s.sub }}</p>
+      <div v-else class="overview-body">
+        <span class="overview-sub">共 {{ summaryDays }} 天 · 每日均值参考</span>
+        <div class="summary-grid">
+          <div v-for="s in summaryItems" :key="s.label" class="summary-item">
+            <p class="summary-label">{{ s.label }}</p>
+            <p class="summary-value">{{ s.value }}</p>
+            <p class="summary-sub">{{ s.sub }}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -368,11 +375,41 @@ const heightOption = computed<EChartsOption>(() => ({
   color: #fff;
 }
 
-.compare-card {
+.overview-card {
   margin-bottom: 12px;
 }
 
-.summary-card {
+.overview-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+
+.overview-tab {
+  flex: 1;
+  min-height: 0; /* 覆盖全局 button min-height:44px */
+  padding: 9px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.overview-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.overview-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
   margin-bottom: 12px;
 }
 

@@ -431,6 +431,7 @@ async function confirmClearAll() {
   position: relative;
   width: 48px;
   height: 28px;
+  min-height: 0; /* 覆盖全局 button 的 min-height:44px，保持开关比例 */
   border-radius: 999px;
   border: none;
   background: var(--border);
