@@ -600,6 +600,7 @@ const heightOption = computed<EChartsOption>(() => ({
 
 .overview-tab {
   flex: 1;
+  min-width: 0; /* 允许收缩，避免长文本（如英文 tab）撑破容器 */
   min-height: 0; /* 覆盖全局 button min-height:44px */
   padding: 9px 12px;
   border-radius: 999px;
@@ -608,6 +609,8 @@ const heightOption = computed<EChartsOption>(() => ({
   color: var(--text-secondary);
   transition: all 0.15s ease;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .overview-tab.active {
