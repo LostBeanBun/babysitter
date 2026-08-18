@@ -30,7 +30,7 @@ const babyStore = useBabyStore()
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(253, 246, 239, 0.92);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);

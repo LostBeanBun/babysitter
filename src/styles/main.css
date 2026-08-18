@@ -20,6 +20,11 @@
   --danger: #d96a5a;
   --danger-soft: #fdeeea;
 
+  /* 半透明背景（页头 / 底部导航毛玻璃） */
+  --header-bg: rgba(253, 246, 239, 0.92);
+  --surface-translucent: rgba(255, 255, 255, 0.92);
+  --modal-mask: rgba(74, 58, 51, 0.4);
+
   --radius: 16px;
   --radius-sm: 10px;
   --radius-lg: 20px;
@@ -46,6 +51,39 @@
   /* 防止 iOS 横竖屏切换时字体自动缩放 */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/* ===== 暗色主题（data-theme="dark"） ===== */
+[data-theme='dark'] {
+  --bg: #1d1916;
+  --bg-soft: #251f1a;
+  --surface: #29231e;
+  --surface-2: #322a23;
+  --border: #42372f;
+  --text: #f0e6dd;
+  --text-secondary: #b9ab9e;
+  --text-muted: #8d7f72;
+
+  --primary: #e8906c;
+  --primary-soft: #3b2a20;
+  --primary-dark: #f5a984;
+  --accent-green: #9cc7ab;
+  --accent-blue: #9dbbdf;
+  --accent-yellow: #eccf7d;
+  --accent-purple: #c4acd8;
+
+  --danger: #e07a6a;
+  --danger-soft: #3a241e;
+
+  --header-bg: rgba(29, 25, 22, 0.92);
+  --surface-translucent: rgba(41, 35, 30, 0.92);
+  --modal-mask: rgba(0, 0, 0, 0.55);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  color-scheme: dark;
 }
 
 * {
@@ -245,7 +283,7 @@ textarea {
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(74, 58, 51, 0.4);
+  background: var(--modal-mask);
   z-index: 100;
   display: flex;
   align-items: flex-end;

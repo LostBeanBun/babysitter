@@ -56,7 +56,7 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   max-width: 640px;
   height: calc(var(--tabbar-height) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--surface-translucent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
