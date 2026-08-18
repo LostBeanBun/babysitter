@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import './echartsSetup'
 import type { EChartsOption } from 'echarts'
+import { isDark } from '@/composables/useTheme'
 
 const props = defineProps<{
   title: string
@@ -14,6 +15,13 @@ const props = defineProps<{
 
 const style = computed(() => ({ height: props.height ?? '260px' }))
 
+// tooltip 配色跟随主题
+const tooltipColors = computed(() =>
+  isDark.value
+    ? { backgroundColor: 'rgba(41,35,30,0.96)', borderColor: '#42372f', textColor: '#f0e6dd' }
+    : { backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#f0e2d4', textColor: '#4a3a33' },
+)
+
 // 统一 tooltip 样式（避免数组类型兼容问题，仅处理对象形式）
 const mergedOption = computed<EChartsOption>(() => {
   const base = props.option
@@ -23,10 +31,10 @@ const mergedOption = computed<EChartsOption>(() => {
     tooltip: hasTooltip
       ? {
           trigger: 'axis',
-          backgroundColor: 'rgba(255,255,255,0.96)',
-          borderColor: '#f0e2d4',
+          backgroundColor: tooltipColors.value.backgroundColor,
+          borderColor: tooltipColors.value.borderColor,
           borderWidth: 1,
-          textStyle: { color: '#4a3a33', fontSize: 12 },
+          textStyle: { color: tooltipColors.value.textColor, fontSize: 12 },
           confine: true,
           ...(typeof base.tooltip === 'object' && !Array.isArray(base.tooltip) ? base.tooltip : {}),
         }

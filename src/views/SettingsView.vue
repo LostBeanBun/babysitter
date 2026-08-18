@@ -4,6 +4,7 @@ import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
 import { exportAllJson, exportBabyCsvs, importAllJson } from '@/services/export'
 import { BABY_AVATARS } from '@/constants'
+import { setTheme, themeMode, type ThemeMode } from '@/composables/useTheme'
 import PageHeader from '@/components/common/PageHeader.vue'
 import Modal from '@/components/common/Modal.vue'
 import type { Baby } from '@/types'
@@ -23,6 +24,12 @@ const clearAllConfirm = ref(false)
 const clearBusy = ref(false)
 
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
+
+const THEME_OPTIONS: { value: ThemeMode; label: string; icon: string }[] = [
+  { value: 'system', label: '跟随系统', icon: '🖥️' },
+  { value: 'light', label: '浅色', icon: '☀️' },
+  { value: 'dark', label: '深色', icon: '🌙' },
+]
 
 onMounted(async () => {
   recordCounts.value = await countAllRecords()
@@ -169,6 +176,23 @@ async function confirmClearAll() {
       <input ref="importFileRef" type="file" accept="application/json,.json" hidden @change="handleImportFile" />
       <p v-if="exportSuccess" class="export-ok">✓ 已导出备份文件</p>
       <button class="btn btn-danger-soft btn-block" @click="clearAllConfirm = true">清空全部数据</button>
+    </div>
+
+    <!-- 外观 -->
+    <p class="section-title">外观</p>
+    <div class="card">
+      <div class="theme-options">
+        <button
+          v-for="t in THEME_OPTIONS"
+          :key="t.value"
+          class="theme-option"
+          :class="{ active: themeMode === t.value }"
+          @click="setTheme(t.value)"
+        >
+          <span class="theme-icon">{{ t.icon }}</span>
+          <span class="theme-label">{{ t.label }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- 关于 -->
@@ -411,6 +435,43 @@ async function confirmClearAll() {
   border-color: var(--primary);
   background: var(--primary-soft);
   transform: scale(1.06);
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  transition: all 0.12s ease;
+}
+
+.theme-option.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.theme-icon {
+  font-size: 22px;
+}
+
+.theme-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.theme-option.active .theme-label {
+  color: var(--primary-dark);
 }
 
 .form-actions {

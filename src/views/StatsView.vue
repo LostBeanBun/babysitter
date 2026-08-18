@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { EChartsOption } from 'echarts'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -10,11 +10,17 @@ import { useSleepStore } from '@/stores/sleep'
 import { buildDailySeries, aggregateRange, compareRanges, RANGE_PRESETS, type DayAggregate, type ComparisonResult } from '@/services/stats'
 import { CHART_COLORS } from '@/constants'
 import { formatDuration, formatPercentChange } from '@/utils/format'
+import { isDark } from '@/composables/useTheme'
 
 const feedingStore = useFeedingStore()
 const diaperStore = useDiaperStore()
 const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
+
+// 图表配色跟随主题
+const axisColor = computed(() => (isDark.value ? '#b9ab9e' : '#8c7b72'))
+const axisLineColor = computed(() => (isDark.value ? '#42372f' : '#f0e2d4'))
+const splitLineColor = computed(() => (isDark.value ? '#2b251f' : '#f5ece2'))
 
 const now = ref(Date.now())
 setInterval(() => (now.value = Date.now()), 60_000)
@@ -54,8 +60,8 @@ const yFormatter = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Str
 // —— 趋势图配置 ——
 const milkOption = computed<EChartsOption>(() => ({
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: '#8c7b72', fontSize: 10 }, axisLine: { lineStyle: { color: '#f0e2d4' } } },
-  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter }, splitLine: { lineStyle: { color: '#f5ece2' } } },
+  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: axisColor.value, fontSize: 10 }, axisLine: { lineStyle: { color: axisLineColor.value } } },
+  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter }, splitLine: { lineStyle: { color: splitLineColor.value } } },
   series: [
     {
       name: '奶量(ml)',
@@ -73,8 +79,8 @@ const milkOption = computed<EChartsOption>(() => ({
 
 const sleepOption = computed<EChartsOption>(() => ({
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: '#8c7b72', fontSize: 10 }, axisLine: { lineStyle: { color: '#f0e2d4' } } },
-  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10 }, splitLine: { lineStyle: { color: '#f5ece2' } } },
+  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: axisColor.value, fontSize: 10 }, axisLine: { lineStyle: { color: axisLineColor.value } } },
+  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10 }, splitLine: { lineStyle: { color: splitLineColor.value } } },
   series: [
     {
       name: '睡眠(小时)',
@@ -88,8 +94,8 @@ const sleepOption = computed<EChartsOption>(() => ({
 
 const diaperOption = computed<EChartsOption>(() => ({
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: '#8c7b72', fontSize: 10 }, axisLine: { lineStyle: { color: '#f0e2d4' } } },
-  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10 }, splitLine: { lineStyle: { color: '#f5ece2' } } },
+  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: axisColor.value, fontSize: 10 }, axisLine: { lineStyle: { color: axisLineColor.value } } },
+  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10 }, splitLine: { lineStyle: { color: splitLineColor.value } } },
   series: [
     {
       name: '尿湿(次)',
@@ -112,8 +118,8 @@ const diaperOption = computed<EChartsOption>(() => ({
 
 const pumpOption = computed<EChartsOption>(() => ({
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: '#8c7b72', fontSize: 10 }, axisLine: { lineStyle: { color: '#f0e2d4' } } },
-  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter }, splitLine: { lineStyle: { color: '#f5ece2' } } },
+  xAxis: { type: 'category', data: xLabels.value, axisLabel: { color: axisColor.value, fontSize: 10 }, axisLine: { lineStyle: { color: axisLineColor.value } } },
+  yAxis: { type: 'value', axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter }, splitLine: { lineStyle: { color: splitLineColor.value } } },
   series: [
     {
       name: '吸奶(ml)',
