@@ -9,7 +9,8 @@ const LOCALE_KEY = 'babysitter.locale'
 function detectLocale(): Locale {
   const saved = localStorage.getItem(LOCALE_KEY)
   if (saved === 'zh-CN' || saved === 'en-US') return saved
-  return navigator.language.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US'
+  // 默认中文，无保存记录时固定使用 zh-CN
+  return 'zh-CN'
 }
 
 const locale = detectLocale()
