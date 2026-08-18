@@ -130,12 +130,12 @@ const pumpOption = computed<EChartsOption>(() => ({
 }))
 
 // 对比面板格式化
-function formatComparisonValue(c: ComparisonResult): string {
-  if (c.key === 'sleepMs') return formatDuration(c.current)
+function formatComparisonValue(c: ComparisonResult, value: number): string {
+  if (c.key === 'sleepMs') return formatDuration(value)
   if (c.key === 'totalMilkAmount' || c.key === 'breastMilkAmount' || c.key === 'formulaAmount' || c.key === 'pumpAmount') {
-    return `${Math.round(c.current)} ml`
+    return `${Math.round(value)} ml`
   }
-  return `${Math.round(c.current)} 次`
+  return `${Math.round(value)} 次`
 }
 
 const rangeLabel = computed(() => range.value.label)
@@ -167,12 +167,12 @@ const rangeLabel = computed(() => range.value.label)
       <div class="compare-grid">
         <div v-for="c in comparisons" :key="c.key" class="compare-item">
           <p class="compare-label">{{ c.label }}</p>
-          <p class="compare-value">{{ formatComparisonValue(c) }}</p>
+          <p class="compare-value">{{ formatComparisonValue(c, c.current) }}</p>
           <div class="compare-change-row">
             <span class="compare-change" :class="c.change === null ? 'none' : c.change >= 0 ? 'up' : 'down'">
               {{ c.change === null ? '—' : formatPercentChange(c.change) }}
             </span>
-            <span class="compare-prev">{{ Math.round(c.previous) }} → {{ Math.round(c.current) }}</span>
+            <span class="compare-prev">{{ formatComparisonValue(c, c.previous) }} → {{ formatComparisonValue(c, c.current) }}</span>
           </div>
         </div>
       </div>
