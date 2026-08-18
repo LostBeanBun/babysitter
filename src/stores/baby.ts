@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { db } from '@/db'
+import { db, clearBabyData } from '@/db'
 import { useLiveQuery } from '@/composables/useLiveQuery'
 import type { Baby } from '@/types'
 import { AVATAR_COLORS } from '@/constants'
@@ -9,7 +9,10 @@ const ACTIVE_BABY_KEY = 'babysitter.activeBabyId'
 
 /** 宝宝资料 store：管理宝宝列表、当前宝宝选择 */
 export const useBabyStore = defineStore('baby', () => {
-  const { data: babies, loading: babiesLoading } = useLiveQuery(() => db.babies.orderBy('createdAt').toArray(), [] as Baby[])
+  const { data: babies, loading: babiesLoading } = useLiveQuery(
+    () => db.babies.orderBy('createdAt').toArray(),
+    [] as Baby[],
+  )
   const activeBabyId = ref<number | null>(null)
 
   // 初始化时从 localStorage 恢复当前宝宝
@@ -41,7 +44,14 @@ export const useBabyStore = defineStore('baby', () => {
   })
 
   /** 新增宝宝，自动切换为当前宝宝 */
-  async function addBaby(name: string, gender?: Baby['gender'], birthDate?: string, birthWeight?: number, birthHeight?: number, avatar?: string): Promise<number> {
+  async function addBaby(
+    name: string,
+    gender?: Baby['gender'],
+    birthDate?: string,
+    birthWeight?: number,
+    birthHeight?: number,
+    avatar?: string,
+  ): Promise<number> {
     const id = await db.babies.add({
       name,
       gender,
@@ -62,13 +72,9 @@ export const useBabyStore = defineStore('baby', () => {
   }
 
   async function deleteBaby(id: number) {
-    await db.transaction('rw', db.babies, db.feedings, db.diapers, db.pumpings, db.sleeps, async () => {
-      await db.feedings.where('babyId').equals(id).delete()
-      await db.diapers.where('babyId').equals(id).delete()
-      await db.pumpings.where('babyId').equals(id).delete()
-      await db.sleeps.where('babyId').equals(id).delete()
-      await db.babies.delete(id)
-    })
+    // 清理该宝宝全部业务数据（含成长记录），避免产生孤儿数据
+    await clearBabyData(id)
+    await db.babies.delete(id)
     if (activeBabyId.value === id) activeBabyId.value = null
   }
 
