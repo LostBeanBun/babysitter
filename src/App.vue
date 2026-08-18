@@ -80,6 +80,13 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   color: var(--primary);
 }
 
+/* PC/平板：底部导航铺满全屏 */
+@media (min-width: 700px) {
+  .tabbar {
+    max-width: none;
+  }
+}
+
 .tabbar-icon {
   width: 24px;
   height: 24px;

@@ -658,6 +658,17 @@ const editPayload = computed(() => {
   }
 }
 
+/* PC/平板：统计卡 3 列避免单卡过宽；快捷按钮限宽居中避免拉伸 */
+@media (min-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .quick-actions {
+    max-width: 720px;
+  }
+}
+
 .quick-btn {
   display: flex;
   flex-direction: column;

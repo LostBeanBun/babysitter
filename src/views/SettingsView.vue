@@ -518,6 +518,13 @@ async function confirmClearAll() {
   gap: 6px;
 }
 
+/* PC/平板：生肖选择限宽居中，避免格子被拉得过大 */
+@media (min-width: 900px) {
+  .avatar-picker {
+    max-width: 480px;
+  }
+}
+
 .avatar-option {
   min-height: 40px;
   padding: 4px;

@@ -63,4 +63,13 @@ const babyStore = useBabyStore()
   color: var(--text-muted);
   margin-top: 1px;
 }
+
+/* PC/平板：页头铺满全屏 */
+@media (min-width: 700px) {
+  .page-header {
+    max-width: none;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
 </style>
