@@ -80,10 +80,10 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   color: var(--primary);
 }
 
-/* PC/平板：底部导航铺满全屏 */
+/* PC/平板：底部导航与内容容器同宽并居中 */
 @media (min-width: 700px) {
   .tabbar {
-    max-width: none;
+    max-width: 1200px;
   }
 }
 

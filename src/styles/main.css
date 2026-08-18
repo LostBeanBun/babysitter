@@ -149,10 +149,11 @@ textarea {
   margin: 0 auto;
 }
 
-/* PC/平板：内容铺满全屏 */
+/* PC/平板：内容容器加宽并居中（保持整体居中布局） */
 @media (min-width: 700px) {
   .page {
-    max-width: none;
+    max-width: 1200px;
+    margin: 0 auto;
     padding-left: 32px;
     padding-right: 32px;
   }

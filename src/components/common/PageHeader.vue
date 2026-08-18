@@ -64,10 +64,10 @@ const babyStore = useBabyStore()
   margin-top: 1px;
 }
 
-/* PC/平板：页头铺满全屏 */
+/* PC/平板：页头与内容容器同宽并居中 */
 @media (min-width: 700px) {
   .page-header {
-    max-width: none;
+    max-width: 1200px;
     padding-left: 32px;
     padding-right: 32px;
   }
