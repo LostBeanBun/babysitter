@@ -276,16 +276,11 @@ const heightOption = computed<EChartsOption>(() => ({
     <PageHeader />
 
     <!-- 时间范围 -->
-    <div class="range-row">
-      <button
-        v-for="p in RANGE_PRESETS"
-        :key="p.key"
-        class="range-chip"
-        :class="{ active: rangeKey === p.key }"
-        @click="rangeKey = p.key"
-      >
-        {{ p.label }}
-      </button>
+    <div class="range-select-row">
+      <label class="range-select-label" for="range-select">时间范围</label>
+      <select id="range-select" v-model="rangeKey" class="form-input range-select">
+        <option v-for="p in RANGE_PRESETS" :key="p.key" :value="p.key">{{ p.label }}</option>
+      </select>
     </div>
 
     <!-- 概览：与上一周期对比 / 区间汇总（tab 切换） -->
@@ -349,30 +344,23 @@ const heightOption = computed<EChartsOption>(() => ({
 </template>
 
 <style scoped>
-.range-row {
+.range-select-row {
   display: flex;
-  gap: 8px;
-  overflow-x: auto;
+  align-items: center;
+  gap: 10px;
   padding: 4px 0 12px;
-  -webkit-overflow-scrolling: touch;
 }
 
-.range-chip {
-  flex-shrink: 0;
-  padding: 7px 16px;
-  border-radius: 999px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+.range-select-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  transition: all 0.12s ease;
+  flex-shrink: 0;
 }
 
-.range-chip.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+.range-select {
+  flex: 1;
+  min-width: 0;
 }
 
 .overview-card {

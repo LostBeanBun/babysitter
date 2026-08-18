@@ -104,16 +104,11 @@ const filters = [
   <div class="page log-page">
     <PageHeader />
 
-    <div class="filter-row">
-      <button
-        v-for="f in filters"
-        :key="f.key"
-        class="filter-chip"
-        :class="{ active: filter === f.key }"
-        @click="filter = f.key"
-      >
-        {{ f.label }}
-      </button>
+    <div class="filter-select-row">
+      <label class="filter-select-label" for="filter-select">记录类型</label>
+      <select id="filter-select" v-model="filter" class="form-input filter-select">
+        <option v-for="f in filters" :key="f.key" :value="f.key">{{ f.label }}</option>
+      </select>
     </div>
 
     <div class="card">
@@ -178,30 +173,23 @@ const filters = [
 </template>
 
 <style scoped>
-.filter-row {
+.filter-select-row {
   display: flex;
-  gap: 8px;
-  overflow-x: auto;
+  align-items: center;
+  gap: 10px;
   padding: 4px 0 12px;
-  -webkit-overflow-scrolling: touch;
 }
 
-.filter-chip {
-  flex-shrink: 0;
-  padding: 7px 16px;
-  border-radius: 999px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+.filter-select-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  transition: all 0.12s ease;
+  flex-shrink: 0;
 }
 
-.filter-chip.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+.filter-select {
+  flex: 1;
+  min-width: 0;
 }
 
 .empty-inline {
