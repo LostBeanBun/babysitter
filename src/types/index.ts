@@ -11,6 +11,8 @@ export interface Baby {
   birthWeight?: number
   /** 出生身高 cm */
   birthHeight?: number
+  /** 头像 emoji */
+  avatar?: string
   /** 头像背景色（主题色变量名） */
   avatarColor: string
   createdAt: number

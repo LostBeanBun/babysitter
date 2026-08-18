@@ -41,13 +41,14 @@ export const useBabyStore = defineStore('baby', () => {
   })
 
   /** 新增宝宝，自动切换为当前宝宝 */
-  async function addBaby(name: string, gender?: Baby['gender'], birthDate?: string, birthWeight?: number, birthHeight?: number): Promise<number> {
+  async function addBaby(name: string, gender?: Baby['gender'], birthDate?: string, birthWeight?: number, birthHeight?: number, avatar?: string): Promise<number> {
     const id = await db.babies.add({
       name,
       gender,
       birthDate,
       birthWeight,
       birthHeight,
+      avatar,
       avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
       createdAt: Date.now(),
     })
