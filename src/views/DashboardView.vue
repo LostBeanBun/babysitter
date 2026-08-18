@@ -5,6 +5,7 @@ import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
 import { usePumpingStore } from '@/stores/pumping'
 import { useSleepStore } from '@/stores/sleep'
+import { useGrowthStore } from '@/stores/growth'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatCard from '@/components/common/StatCard.vue'
 import Timeline, { type TimelineEntry } from '@/components/timeline/Timeline.vue'
@@ -13,21 +14,24 @@ import FeedingForm from '@/components/forms/FeedingForm.vue'
 import DiaperForm from '@/components/forms/DiaperForm.vue'
 import PumpingForm from '@/components/forms/PumpingForm.vue'
 import SleepForm from '@/components/forms/SleepForm.vue'
+import GrowthForm from '@/components/forms/GrowthForm.vue'
 import { startOfDay, formatDuration, formatAmount } from '@/utils/format'
 import { MS_PER_DAY, BABY_AVATARS } from '@/constants'
-import type { Feeding, DiaperChange, Pumping, Sleep, FeedType, DiaperType, DiaperColor, DiaperAmount, PumpSide, SleepType } from '@/types'
+import type { Feeding, DiaperChange, Pumping, Sleep, GrowthRecord, FeedType, DiaperType, DiaperColor, DiaperAmount, PumpSide, SleepType } from '@/types'
 
 /** 各表单编辑 props 结构（与表单组件 props.editing 一致） */
 type FeedingFormProps = { id: number; type: FeedType; startTime: number; endTime?: number; duration?: number; amount?: number; notes?: string }
 type DiaperFormProps = { id: number; type: DiaperType; time: number; color?: DiaperColor; amount?: DiaperAmount; notes?: string }
 type PumpingFormProps = { id: number; side: PumpSide; startTime: number; endTime?: number; duration?: number; amount?: number; notes?: string }
 type SleepFormProps = { id: number; type: SleepType; startTime: number; endTime: number; notes?: string }
+type GrowthFormProps = { id: number; date: number; weight?: number; height?: number; notes?: string }
 
 const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
 const diaperStore = useDiaperStore()
 const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
+const growthStore = useGrowthStore()
 
 const now = ref(Date.now())
 setInterval(() => (now.value = Date.now()), 60_000)
@@ -62,6 +66,7 @@ const todayFeedings = computed(() => feedingStore.feedings.filter((f) => f.start
 const todayDiapers = computed(() => diaperStore.diapers.filter((d) => d.time >= todayStart.value && d.time <= todayEnd.value))
 const todayPumpings = computed(() => pumpingStore.pumpings.filter((p) => p.startTime >= todayStart.value && p.startTime <= todayEnd.value))
 const todaySleeps = computed(() => sleepStore.sleeps.filter((s) => s.endTime >= todayStart.value && s.startTime <= todayEnd.value))
+const todayGrowths = computed(() => growthStore.growths.filter((g) => g.date >= todayStart.value && g.date <= todayEnd.value))
 
 // 今日汇总
 const totalMilk = computed(() => todayFeedings.value.reduce((sum, f) => sum + (f.amount ?? 0), 0))
@@ -85,10 +90,10 @@ const sleepTotal = computed(() => todaySleeps.value.reduce((sum, s) => {
 }, 0))
 
 // 弹窗状态
-const modalState = ref<{ kind: 'feeding' | 'diaper' | 'pumping' | 'sleep'; editing?: TimelineEntry } | null>(null)
+const modalState = ref<{ kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth'; editing?: TimelineEntry } | null>(null)
 const confirmDelete = ref<TimelineEntry | null>(null)
 
-function openAdd(kind: 'feeding' | 'diaper' | 'pumping' | 'sleep') {
+function openAdd(kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth') {
   modalState.value = { kind }
 }
 
@@ -106,7 +111,8 @@ async function confirmDeleteAction() {
   if (e.kind === 'feeding') await feedingStore.remove(e.id)
   else if (e.kind === 'diaper') await diaperStore.remove(e.id)
   else if (e.kind === 'pumping') await pumpingStore.remove(e.id)
-  else await sleepStore.remove(e.id)
+  else if (e.kind === 'sleep') await sleepStore.remove(e.id)
+  else await growthStore.remove(e.id)
   confirmDelete.value = null
 }
 
@@ -130,8 +136,12 @@ const editPayload = computed(() => {
     const p = e.raw as Pumping
     return { id: e.id, side: p.side, startTime: p.startTime, endTime: p.endTime, duration: p.duration, amount: p.amount, notes: p.notes }
   }
-  const s = e.raw as Sleep
-  return { id: e.id, type: s.type, startTime: s.startTime, endTime: s.endTime, notes: s.notes }
+  if (e.kind === 'sleep') {
+    const s = e.raw as Sleep
+    return { id: e.id, type: s.type, startTime: s.startTime, endTime: s.endTime, notes: s.notes }
+  }
+  const g = e.raw as GrowthRecord
+  return { id: e.id, date: g.date, weight: g.weight, height: g.height, notes: g.notes }
 })
 </script>
 
@@ -182,17 +192,22 @@ const editPayload = computed(() => {
         <span class="quick-icon">😴</span>
         <span class="quick-label">睡眠</span>
       </button>
+      <button class="quick-btn growth" @click="openAdd('growth')">
+        <span class="quick-icon">📏</span>
+        <span class="quick-label">成长</span>
+      </button>
     </div>
 
     <!-- 今日时间线 -->
     <p class="section-title">今日记录</p>
     <div class="card">
       <Timeline
-        v-if="todayFeedings.length + todayDiapers.length + todayPumpings.length + todaySleeps.length > 0"
+        v-if="todayFeedings.length + todayDiapers.length + todayPumpings.length + todaySleeps.length + todayGrowths.length > 0"
         :feedings="todayFeedings"
         :diapers="todayDiapers"
         :pumpings="todayPumpings"
         :sleeps="todaySleeps"
+        :growths="todayGrowths"
         @edit="onEdit"
         @delete="onDelete"
       />
@@ -227,11 +242,17 @@ const editPayload = computed(() => {
         @saved="onSaved"
         @cancelled="modalState = null"
       />
+      <GrowthForm
+        v-else-if="modalState?.kind === 'growth'"
+        :editing="modalState?.editing ? (editPayload as GrowthFormProps) : undefined"
+        @saved="onSaved"
+        @cancelled="modalState = null"
+      />
     </Modal>
 
     <!-- 删除确认 -->
     <Modal :show="confirmDelete !== null" title="删除记录" @close="confirmDelete = null">
-      <p class="confirm-text">确定要删除这条{{ confirmDelete?.kind === 'feeding' ? '喂养' : confirmDelete?.kind === 'diaper' ? '纸尿裤' : confirmDelete?.kind === 'pumping' ? '吸奶' : '睡眠' }}记录吗？此操作不可撤销。</p>
+      <p class="confirm-text">确定要删除这条{{ confirmDelete?.kind === 'feeding' ? '喂养' : confirmDelete?.kind === 'diaper' ? '纸尿裤' : confirmDelete?.kind === 'pumping' ? '吸奶' : confirmDelete?.kind === 'sleep' ? '睡眠' : '成长' }}记录吗？此操作不可撤销。</p>
       <div class="confirm-actions">
         <button class="btn btn-outline" @click="confirmDelete = null">取消</button>
         <button class="btn btn-danger-soft" @click="confirmDeleteAction">确认删除</button>
@@ -345,7 +366,7 @@ const editPayload = computed(() => {
 
 .quick-actions {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 

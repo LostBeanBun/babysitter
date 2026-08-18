@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Feeding, DiaperChange, Pumping, Sleep } from '@/types'
+import type { Feeding, DiaperChange, Pumping, Sleep, GrowthRecord } from '@/types'
 import { FEED_TYPE_LABELS, DIAPER_TYPE_LABELS, DIAPER_COLOR_LABELS, DIAPER_AMOUNT_LABELS, PUMP_SIDE_LABELS, SLEEP_TYPE_LABELS } from '@/constants'
 import { formatTime, formatDuration, formatAmount } from '@/utils/format'
 
 export interface TimelineEntry {
   id: number
-  kind: 'feeding' | 'diaper' | 'pumping' | 'sleep'
+  kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth'
   time: number
   icon: string
   color: string
   title: string
   detail: string
   duration?: number
-  raw: Feeding | DiaperChange | Pumping | Sleep
+  raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord
 }
 
 const props = defineProps<{
@@ -21,6 +21,7 @@ const props = defineProps<{
   diapers: DiaperChange[]
   pumpings: Pumping[]
   sleeps: Sleep[]
+  growths?: GrowthRecord[]
   /** 是否按天分组显示（默认按时间倒序扁平显示） */
   grouped?: boolean
 }>()
@@ -94,6 +95,22 @@ const entries = computed<TimelineEntry[]>(() => {
       detail: `${formatTime(s.startTime)} - ${formatTime(s.endTime)}`,
       duration: dur,
       raw: s,
+    })
+  }
+
+  for (const g of props.growths ?? []) {
+    const detailParts: string[] = []
+    if (g.weight != null) detailParts.push(`体重 ${g.weight} kg`)
+    if (g.height != null) detailParts.push(`身高 ${g.height} cm`)
+    list.push({
+      id: g.id!,
+      kind: 'growth',
+      time: g.date,
+      icon: '📏',
+      color: '#8FBF9F',
+      title: '成长记录',
+      detail: detailParts.join(' · ') || '已记录',
+      raw: g,
     })
   }
 
