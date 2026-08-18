@@ -67,14 +67,25 @@ npm run build
 
 ```
 src/
-├── components/     # 通用组件（表单/时间线/图表/弹窗）
-├── composables/    # liveQuery 响应式封装
+├── components/     # 组件
+│   ├── charts/     # 图表（ChartCard 等）
+│   ├── common/     # 基础组件（PageHeader / TabBar / BaseModal / StatCard）
+│   ├── forms/      # 记录表单（喂养/睡眠/纸尿裤/吸奶/成长）
+│   └── timeline/   # 时间线组件
+├── composables/    # 组合式函数（liveQuery / useTheme）
 ├── constants/      # 类型标签与配色
 ├── db/             # Dexie 数据库定义
-├── router/         # 路由
+├── router/         # 路由与底部导航配置
 ├── services/       # 统计聚合、导出导入
 ├── stores/         # Pinia 状态
+├── styles/         # 全局样式
 ├── types/          # TypeScript 类型
 ├── utils/          # 工具函数
 └── views/          # 页面视图
 ```
+
+## 🧹 工程规范
+
+- ESLint + Prettier 统一代码风格（`npm run lint` / `npm run format`）
+- EditorConfig 规范缩进与换行
+- TypeScript 严格模式类型检查（`npm run typecheck`）

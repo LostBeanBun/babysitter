@@ -31,6 +31,11 @@ export function setTheme(mode: ThemeMode) {
   apply()
 }
 
+/** 在明暗之间切换（页头快捷按钮用） */
+export function toggleTheme() {
+  setTheme(isDark.value ? 'light' : 'dark')
+}
+
 /** 应用启动时初始化（须在挂载前同步调用，避免闪烁） */
 export function initTheme() {
   apply()
