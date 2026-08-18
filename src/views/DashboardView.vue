@@ -666,6 +666,7 @@ const editPayload = computed(() => {
 
   .quick-actions {
     max-width: 720px;
+    margin: 0 auto;
   }
 }
 

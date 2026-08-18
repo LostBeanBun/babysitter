@@ -518,10 +518,16 @@ async function confirmClearAll() {
   gap: 6px;
 }
 
-/* PC/平板：生肖选择限宽居中，避免格子被拉得过大 */
+/* PC/平板：设置页为表单型页面，限宽居中避免内容被拉得过宽 */
 @media (min-width: 900px) {
+  .settings-page {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
   .avatar-picker {
     max-width: 480px;
+    margin: 0 auto;
   }
 }
 
