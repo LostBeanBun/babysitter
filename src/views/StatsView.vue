@@ -12,7 +12,7 @@ import { useGrowthStore } from '@/stores/growth'
 import { buildDailySeries, aggregateRange, compareRanges, RANGE_PRESETS, type DayAggregate, type ComparisonResult } from '@/services/stats'
 import { CHART_COLORS } from '@/constants'
 import { whoData, ageInMonths } from '@/constants/whoGrowth'
-import { formatDuration, formatPercentChange } from '@/utils/format'
+import { formatDuration, formatPercentChange, formatAmount } from '@/utils/format'
 import { isDark } from '@/composables/useTheme'
 
 const babyStore = useBabyStore()
@@ -151,6 +151,24 @@ function formatComparisonValue(c: ComparisonResult, value: number): string {
 
 const rangeLabel = computed(() => range.value.label)
 
+// —— 区间汇总（周报/月报）——
+const summaryDays = computed(() => Math.max(1, currentAgg.value.dayCount))
+const rangeGrowthCount = computed(() => growthStore.growths.filter((g) => g.date >= rangeStart.value && g.date <= rangeEnd.value).length)
+
+const summaryItems = computed(() => {
+  const agg = currentAgg.value
+  const days = summaryDays.value
+  return [
+    { label: '喂养次数', value: `${agg.feedCount} 次`, sub: `日均 ${(agg.feedCount / days).toFixed(1)} 次` },
+    { label: '总奶量', value: formatAmount(agg.totalMilkAmount), sub: `日均 ${formatAmount(agg.totalMilkAmount / days)}` },
+    { label: '亲喂次数', value: `${agg.breastCount} 次`, sub: `日均 ${(agg.breastCount / days).toFixed(1)} 次` },
+    { label: '睡眠时长', value: formatDuration(agg.sleepMs), sub: `日均 ${formatDuration(agg.sleepMs / days)}` },
+    { label: '纸尿裤', value: `${agg.diaperCount} 次`, sub: `日均 ${(agg.diaperCount / days).toFixed(1)} 次` },
+    { label: '吸奶量', value: formatAmount(agg.pumpAmount), sub: `日均 ${formatAmount(agg.pumpAmount / days)}` },
+    { label: '成长记录', value: `${rangeGrowthCount.value} 条`, sub: rangeLabel.value },
+  ]
+})
+
 // —— 成长曲线（体重/身高 + WHO 生长标准参考）——
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
 const growthRecords = computed(() => [...growthStore.growths].sort((a, b) => a.date - b.date))
@@ -287,6 +305,21 @@ const heightOption = computed<EChartsOption>(() => ({
       </div>
     </div>
 
+    <!-- 区间汇总（周报/月报） -->
+    <div class="card summary-card">
+      <div class="compare-head">
+        <h3 class="compare-title">{{ rangeLabel }}汇总</h3>
+        <span class="compare-sub">共 {{ summaryDays }} 天 · 每日均值参考</span>
+      </div>
+      <div class="summary-grid">
+        <div v-for="s in summaryItems" :key="s.label" class="summary-item">
+          <p class="summary-label">{{ s.label }}</p>
+          <p class="summary-value">{{ s.value }}</p>
+          <p class="summary-sub">{{ s.sub }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- 趋势图 -->
     <ChartCard title="每日奶量趋势" :subtitle="`${rangeLabel} · 瓶喂母乳 + 配方奶`" :option="milkOption" />
     <ChartCard title="每日睡眠时长" :subtitle="rangeLabel" :option="sleepOption" />
@@ -337,6 +370,57 @@ const heightOption = computed<EChartsOption>(() => ({
 
 .compare-card {
   margin-bottom: 12px;
+}
+
+.summary-card {
+  margin-bottom: 12px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 400px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+.summary-item {
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.summary-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.summary-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .compare-head {
