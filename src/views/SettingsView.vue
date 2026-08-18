@@ -104,6 +104,8 @@ async function confirmClearAll() {
   clearBusy.value = true
   try {
     await clearAllData()
+    // 同步重置内存中的当前宝宝，避免残留旧 id 在后续导入时"巧合命中"
+    babyStore.activeBabyId = null
     localStorage.removeItem('babysitter.activeBabyId')
     recordCounts.value = { feedings: 0, diapers: 0, pumpings: 0, sleeps: 0 }
     clearAllConfirm.value = false
