@@ -405,6 +405,7 @@ babyWeight: '宝宝体重',
       babyHeight: '宝宝身高',
       babyHead: '宝宝头围',
     growthSection: '成长曲线',
+    noData: '暂无数据',
     growthEmptyBoth: '暂无成长记录，去「今日」页记录体重/身高/头围后即可查看 WHO 生长曲线',
     noteText: '亲喂时长因无法计量奶量，未计入奶量趋势；可在记录详情中查看每次亲喂时长。',
     periods: {

@@ -115,12 +115,12 @@ const milkOption = computed<EChartsOption>(() => ({
   xAxis: {
     type: 'category',
     data: xLabels.value,
-    axisLabel: { color: axisColor.value, fontSize: 10 },
+    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
     type: 'value',
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter },
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
@@ -155,12 +155,12 @@ const sleepOption = computed<EChartsOption>(() => ({
   xAxis: {
     type: 'category',
     data: xLabels.value,
-    axisLabel: { color: axisColor.value, fontSize: 10 },
+    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
     type: 'value',
-    axisLabel: { color: '#8c7b72', fontSize: 10 },
+    axisLabel: { color: '#8c7b72', fontSize: 10, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
@@ -179,12 +179,12 @@ const diaperOption = computed<EChartsOption>(() => ({
   xAxis: {
     type: 'category',
     data: xLabels.value,
-    axisLabel: { color: axisColor.value, fontSize: 10 },
+    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
     type: 'value',
-    axisLabel: { color: '#8c7b72', fontSize: 10 },
+    axisLabel: { color: '#8c7b72', fontSize: 10, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
@@ -212,12 +212,12 @@ const pumpOption = computed<EChartsOption>(() => ({
   xAxis: {
     type: 'category',
     data: xLabels.value,
-    axisLabel: { color: axisColor.value, fontSize: 10 },
+    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
     type: 'value',
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter },
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
@@ -252,14 +252,14 @@ const temperatureOption = computed<EChartsOption>(() => ({
   xAxis: {
     type: 'category',
     data: xLabels.value,
-    axisLabel: { color: axisColor.value, fontSize: 10 },
+    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
     type: 'value',
     min: 35,
     max: 40,
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}℃` },
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}℃`, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
@@ -425,11 +425,11 @@ function whoSeries(field: WhoField, key: WhoPercentileKey): [number, number][] {
   return whoPoints.value.filter((p) => p.month <= growthXMax.value).map((p) => [monthToTs(p.month), p[field][key]])
 }
 
-/** 时间轴标签：M/D（跨年显示 YYYY/M/D） */
+/** 时间轴标签：M/D（跨年显示 YY/M/D，保持标签紧凑避免重叠） */
 const tsAxisLabel = (v: number) => {
   const d = new Date(v)
   const birth = new Date(birthTs.value)
-  if (d.getFullYear() !== birth.getFullYear()) return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`
+  if (d.getFullYear() !== birth.getFullYear()) return `${String(d.getFullYear()).slice(2)}/${d.getMonth() + 1}/${d.getDate()}`
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
@@ -501,13 +501,13 @@ const weightOption = computed<EChartsOption>(() => ({
     type: 'value',
     min: growthXMin.value,
     max: growthXMaxTs.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, formatter: tsAxisLabel },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: tsAxisLabel, hideOverlap: true },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
     type: 'value',
     scale: true,
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}kg` },
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}kg`, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   tooltip: growthTooltip('kg'),
@@ -528,13 +528,13 @@ const heightOption = computed<EChartsOption>(() => ({
     type: 'value',
     min: growthXMin.value,
     max: growthXMaxTs.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, formatter: tsAxisLabel },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: tsAxisLabel, hideOverlap: true },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
     type: 'value',
     scale: true,
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}cm` },
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}cm`, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   tooltip: growthTooltip('cm'),
@@ -555,13 +555,13 @@ const hcOption = computed<EChartsOption>(() => ({
     type: 'value',
     min: growthXMin.value,
     max: growthXMaxTs.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, formatter: tsAxisLabel },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: tsAxisLabel, hideOverlap: true },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
     type: 'value',
     scale: true,
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}cm` },
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}cm`, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   tooltip: growthTooltip('cm'),
@@ -981,6 +981,7 @@ const hcOption = computed<EChartsOption>(() => ({
 
 .growth-info-btn {
   flex-shrink: 0;
+  min-height: 0; /* 覆盖全局 button min-height:44px，保持正圆 */
   width: 22px;
   height: 22px;
   border-radius: 50%;

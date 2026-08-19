@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import VChart from 'vue-echarts'
 import './echartsSetup'
 import type { EChartsOption } from 'echarts'
@@ -11,9 +12,33 @@ const props = defineProps<{
   /** ECharts 配置对象 */
   option: EChartsOption
   height?: string
+  /** 无数据占位：显式传入时优先生效；缺省时自动检测 series 是否含有有效数据 */
+  empty?: boolean
 }>()
 
+const { t } = useI18n()
+
 const style = computed(() => ({ height: props.height ?? '260px' }))
+
+/** 判断单个 series 是否存在有效数据点（null/undefined/0 均视为无数据） */
+function seriesHasData(s: unknown): boolean {
+  const data = (s as { data?: unknown } | null)?.data
+  if (!Array.isArray(data) || data.length === 0) return false
+  return data.some((v) => {
+    if (v === null || v === undefined) return false
+    if (typeof v === 'number') return v !== 0
+    if (Array.isArray(v)) return v.length > 1 && v[1] !== null && v[1] !== undefined && v[1] !== 0
+    return true
+  })
+}
+
+/** 图表是否处于无数据状态（渲染占位而非空图表） */
+const isEmpty = computed(() => {
+  if (props.empty === true) return true
+  const series = props.option.series
+  if (!Array.isArray(series) || series.length === 0) return true
+  return !series.some(seriesHasData)
+})
 
 // tooltip 配色跟随主题
 const tooltipColors = computed(() =>
@@ -52,7 +77,11 @@ const mergedOption = computed<EChartsOption>(() => {
       </div>
       <p v-if="subtitle" class="chart-sub">{{ subtitle }}</p>
     </div>
-    <VChart :option="mergedOption" :style="style" autoresize />
+    <div v-if="isEmpty" class="chart-empty" :style="style">
+      <span class="chart-empty-icon">📊</span>
+      <p class="chart-empty-text">{{ t('stats.noData') }}</p>
+    </div>
+    <VChart v-else :option="mergedOption" :style="style" autoresize />
   </div>
 </template>
 
@@ -87,5 +116,26 @@ const mergedOption = computed<EChartsOption>(() => {
   margin-top: 3px;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.chart-empty-icon {
+  font-size: 30px;
+  opacity: 0.55;
+}
+
+.chart-empty-text {
+  font-size: 13px;
+  color: var(--text-muted);
 }
 </style>

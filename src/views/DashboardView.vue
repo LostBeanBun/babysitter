@@ -1070,10 +1070,11 @@ const editPayload = computed(() => {
   min-height: 88px;
 }
 
-/* 小屏下统计卡更紧凑，避免长数值溢出 */
-@media (max-width: 400px) {
+/* 小屏下统计卡单列展示：双列时图标占位过大、数值与说明文字被挤压换行 */
+@media (max-width: 520px) {
   .stats-grid {
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .stats-grid .stat-card {

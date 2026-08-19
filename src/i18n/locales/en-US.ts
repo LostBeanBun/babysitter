@@ -405,6 +405,7 @@ babyWeight: 'Baby weight',
       babyHeight: 'Baby height',
       babyHead: 'Baby head',
     growthSection: 'Growth curves',
+    noData: 'No data yet',
     growthEmptyBoth: 'No growth records yet — record weight/height/head circumference on Today to view WHO curves',
     noteText:
       'Breastfeeding duration is not counted in the milk trend (amount is unknown); view each session in record details.',
