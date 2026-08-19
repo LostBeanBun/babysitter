@@ -39,11 +39,6 @@ function toCsv(rows: (string | number | undefined | null)[][]): string {
   return rows.map((r) => r.map(csvEscape).join(',')).join('\r\n')
 }
 
-/** 读取 i18n 中的 CSV 表头数组 */
-function csvHeader(key: string): (string | number | undefined | null)[] {
-  return i18n.global.t(key) as unknown as (string | number | undefined | null)[]
-}
-
 /** 导出全量数据为 JSON 备份文件 */
 export async function exportAllJson(): Promise<void> {
   const [babies, feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures] =
@@ -174,7 +169,7 @@ export async function importAllJson(
   }
 }
 
-/** 按宝宝导出 CSV（九类分别一个文件） */
+/** 按宝宝导出 CSV（九类记录合并为单个文件，统一宽表结构） */
 export async function exportBabyCsvs(baby: Baby): Promise<void> {
   const [feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures] =
     await Promise.all([
@@ -188,145 +183,176 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
       db.vaccinations.where('babyId').equals(baby.id!).sortBy('date'),
       db.temperatures.where('babyId').equals(baby.id!).sortBy('time'),
     ])
-  const stamp = formatDate(Date.now())
+
+  type Row = (string | number | undefined | null)[]
+  const rows: Row[] = [
+    [
+      t('exportCsv.recordType'),
+      t('exportCsv.date'),
+      t('exportCsv.time'),
+      t('exportCsv.endDate'),
+      t('exportCsv.endTime'),
+      t('exportCsv.item'),
+      t('exportCsv.value'),
+      t('exportCsv.duration'),
+      t('exportCsv.status'),
+      t('exportCsv.notes'),
+    ],
+  ]
 
   // 喂养
-  const feedRows: (string | number | undefined | null)[][] = [
-    csvHeader('exportCsv.feeding'),
-    ...feedings.map((f) => [
+  for (const f of feedings) {
+    rows.push([
+      t('exportCsv.recordTypes.feeding'),
       formatDate(f.startTime),
       formatTime(f.startTime),
+      '',
+      '',
       t(FEED_TYPE_LABELS[f.type]),
-      f.amount ?? '',
+      f.amount ? `${f.amount} ml` : '',
       f.duration ? Math.round(f.duration / 60000) : '',
+      '',
       f.notes ?? '',
-    ]),
-  ]
-  downloadBlob(
-    '\ufeff' + toCsv(feedRows),
-    t('exportCsv.feedingFileName', { name: baby.name, stamp }),
-    'text/csv;charset=utf-8',
-  )
+    ])
+  }
 
   // 纸尿裤
-  const diaperRows: (string | number | undefined | null)[][] = [
-    csvHeader('exportCsv.diaper'),
-    ...diapers.map((d) => [
+  for (const d of diapers) {
+    const color = d.color ? t(DIAPER_COLOR_LABELS[d.color]) : ''
+    const amount = d.amount ? t(DIAPER_AMOUNT_LABELS[d.amount]) : ''
+    rows.push([
+      t('exportCsv.recordTypes.diaper'),
       formatDate(d.time),
       formatTime(d.time),
+      '',
+      '',
       t(DIAPER_TYPE_LABELS[d.type]),
-      d.color ? t(DIAPER_COLOR_LABELS[d.color]) : '',
-      d.amount ? t(DIAPER_AMOUNT_LABELS[d.amount]) : '',
+      [color, amount].filter(Boolean).join(' · '),
+      '',
+      '',
       d.notes ?? '',
-    ]),
-  ]
-  downloadBlob(
-    '\ufeff' + toCsv(diaperRows),
-    t('exportCsv.diaperFileName', { name: baby.name, stamp }),
-    'text/csv;charset=utf-8',
-  )
+    ])
+  }
 
   // 吸奶
-  const pumpRows: (string | number | undefined | null)[][] = [
-    csvHeader('exportCsv.pump'),
-    ...pumpings.map((p) => [
+  for (const p of pumpings) {
+    rows.push([
+      t('exportCsv.recordTypes.pump'),
       formatDate(p.startTime),
       formatTime(p.startTime),
+      '',
+      '',
       t(PUMP_SIDE_LABELS[p.side]),
-      p.amount ?? '',
+      p.amount ? `${p.amount} ml` : '',
       p.duration ? Math.round(p.duration / 60000) : '',
+      '',
       p.notes ?? '',
-    ]),
-  ]
-  downloadBlob(
-    '\ufeff' + toCsv(pumpRows),
-    t('exportCsv.pumpFileName', { name: baby.name, stamp }),
-    'text/csv;charset=utf-8',
-  )
+    ])
+  }
 
   // 睡眠
-  const sleepRows: (string | number | undefined | null)[][] = [
-    csvHeader('exportCsv.sleep'),
-    ...sleeps.map((s) => [
+  for (const s of sleeps) {
+    rows.push([
+      t('exportCsv.recordTypes.sleep'),
       formatDate(s.startTime),
       formatTime(s.startTime),
       formatDate(s.endTime),
       formatTime(s.endTime),
       t(SLEEP_TYPE_LABELS[s.type]),
+      '',
       Math.round((s.endTime - s.startTime) / 60000),
+      '',
       s.notes ?? '',
-    ]),
-  ]
-  downloadBlob(
-    '\ufeff' + toCsv(sleepRows),
-    t('exportCsv.sleepFileName', { name: baby.name, stamp }),
-    'text/csv;charset=utf-8',
-  )
+    ])
+  }
 
   // 成长记录
-  const growthRows: (string | number | undefined | null)[][] = [
-    csvHeader('exportCsv.growth'),
-    ...growths.map((g) => [formatDate(g.date), g.weight ?? '', g.height ?? '', g.notes ?? '']),
-  ]
-  downloadBlob(
-    '\ufeff' + toCsv(growthRows),
-    t('exportCsv.growthFileName', { name: baby.name, stamp }),
-    'text/csv;charset=utf-8',
-  )
+  for (const g of growths) {
+    const parts: string[] = []
+    if (g.weight != null) parts.push(`${g.weight} kg`)
+    if (g.height != null) parts.push(`${g.height} cm`)
+    rows.push([
+      t('exportCsv.recordTypes.growth'),
+      formatDate(g.date),
+      '',
+      '',
+      '',
+      '',
+      parts.join(' · '),
+      '',
+      '',
+      g.notes ?? '',
+    ])
+  }
 
   // 辅食
-  const solidFoodRows: (string | number | undefined | null)[][] = [
-    csvHeader('exportCsv.solidFood'),
-    ...solidFoods.map((sf) => [formatDate(sf.time), formatTime(sf.time), sf.food, sf.amount ?? '', sf.notes ?? '']),
-  ]
-  downloadBlob(
-    '\ufeff' + toCsv(solidFoodRows),
-    t('exportCsv.solidFoodFileName', { name: baby.name, stamp }),
-    'text/csv;charset=utf-8',
-  )
+  for (const sf of solidFoods) {
+    rows.push([
+      t('exportCsv.recordTypes.solidFood'),
+      formatDate(sf.time),
+      formatTime(sf.time),
+      '',
+      '',
+      sf.food,
+      sf.amount ?? '',
+      '',
+      '',
+      sf.notes ?? '',
+    ])
+  }
 
   // 用药
-  const medicationRows: (string | number | undefined | null)[][] = [
-    csvHeader('exportCsv.medication'),
-    ...medications.map((m) => [formatDate(m.time), formatTime(m.time), m.name, m.dose ?? '', m.notes ?? '']),
-  ]
-  downloadBlob(
-    '\ufeff' + toCsv(medicationRows),
-    t('exportCsv.medicationFileName', { name: baby.name, stamp }),
-    'text/csv;charset=utf-8',
-  )
+  for (const m of medications) {
+    rows.push([
+      t('exportCsv.recordTypes.medication'),
+      formatDate(m.time),
+      formatTime(m.time),
+      '',
+      '',
+      m.name,
+      m.dose ?? '',
+      '',
+      '',
+      m.notes ?? '',
+    ])
+  }
 
   // 疫苗
-  const vaccinationRows: (string | number | undefined | null)[][] = [
-    csvHeader('exportCsv.vaccination'),
-    ...vaccinations.map((v) => [
+  for (const v of vaccinations) {
+    rows.push([
+      t('exportCsv.recordTypes.vaccination'),
       formatDate(v.date),
+      '',
+      '',
+      '',
       v.name,
       v.dose ?? '',
+      '',
       v.status === 'done' ? t('vaccination.statusDone') : t('vaccination.statusPlanned'),
       v.notes ?? '',
-    ]),
-  ]
-  downloadBlob(
-    '\ufeff' + toCsv(vaccinationRows),
-    t('exportCsv.vaccinationFileName', { name: baby.name, stamp }),
-    'text/csv;charset=utf-8',
-  )
+    ])
+  }
 
   // 体温
-  const temperatureRows: (string | number | undefined | null)[][] = [
-    csvHeader('exportCsv.temperature'),
-    ...temperatures.map((tmp) => [
+  for (const tmp of temperatures) {
+    rows.push([
+      t('exportCsv.recordTypes.temperature'),
       formatDate(tmp.time),
       formatTime(tmp.time),
-      tmp.value,
+      '',
+      '',
       tmp.method ? t(TEMP_METHOD_LABELS[tmp.method]) : '',
+      tmp.value != null && tmp.value !== 0 ? `${tmp.value} ℃` : '',
+      '',
+      '',
       tmp.notes ?? '',
-    ]),
-  ]
+    ])
+  }
+
+  const stamp = formatDate(Date.now())
   downloadBlob(
-    '\ufeff' + toCsv(temperatureRows),
-    t('exportCsv.temperatureFileName', { name: baby.name, stamp }),
+    '\ufeff' + toCsv(rows),
+    t('exportCsv.allFileName', { name: baby.name, stamp }),
     'text/csv;charset=utf-8',
   )
 }
