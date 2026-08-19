@@ -111,6 +111,7 @@ const yFormatter = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Str
 
 // —— 趋势图配置 ——
 const milkOption = computed<EChartsOption>(() => ({
+  tooltip: trendTooltip((v) => `${Math.round(v)} ml`),
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
   xAxis: {
     type: 'category',
@@ -151,6 +152,7 @@ const milkOption = computed<EChartsOption>(() => ({
 }))
 
 const sleepOption = computed<EChartsOption>(() => ({
+  tooltip: trendTooltip((v) => `${v} h`),
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
   xAxis: {
     type: 'category',
@@ -175,6 +177,7 @@ const sleepOption = computed<EChartsOption>(() => ({
 }))
 
 const diaperOption = computed<EChartsOption>(() => ({
+  tooltip: trendTooltip((v) => t('common.times', { n: Math.round(v) })),
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
   xAxis: {
     type: 'category',
@@ -208,6 +211,7 @@ const diaperOption = computed<EChartsOption>(() => ({
 }))
 
 const pumpOption = computed<EChartsOption>(() => ({
+  tooltip: trendTooltip((v) => `${Math.round(v)} ml`),
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
   xAxis: {
     type: 'category',
@@ -248,6 +252,7 @@ const pumpOption = computed<EChartsOption>(() => ({
 }))
 
 const temperatureOption = computed<EChartsOption>(() => ({
+  tooltip: trendTooltip((v) => `${v} ℃`),
   grid: { left: 44, right: 16, top: 12, bottom: 28 },
   xAxis: {
     type: 'category',
@@ -432,6 +437,22 @@ const tsAxisLabel = (v: number) => {
   if (d.getFullYear() !== birth.getFullYear()) return `${String(d.getFullYear()).slice(2)}/${d.getMonth() + 1}/${d.getDate()}`
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
+
+/** 趋势图 tooltip：显示日期 + 各系列数值（无数据日显示 -），触摸/悬停均可查看 */
+const trendTooltip = (fmt: (v: number) => string) => ({
+  trigger: 'axis' as const,
+  formatter: (params: unknown) => {
+    const list = params as Array<{ seriesName: string; marker: string; value?: number | null; axisValue?: string }>
+    const first = list.find((p) => typeof p.value === 'number' && !Number.isNaN(p.value))
+    if (!first) return ''
+    const dateStr = first.axisValue ?? ''
+    const lines = list.map((p) => {
+      const v = typeof p.value === 'number' ? p.value : null
+      return `${p.marker}${p.seriesName}: ${v != null ? fmt(v) : '-'}`
+    })
+    return `<b>${dateStr}</b><br/>${lines.join('<br/>')}`
+  },
+})
 
 const growthTooltip = (unit: string) => ({
   trigger: 'axis' as const,

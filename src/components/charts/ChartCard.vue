@@ -78,7 +78,6 @@ const mergedOption = computed<EChartsOption>(() => {
       <p v-if="subtitle" class="chart-sub">{{ subtitle }}</p>
     </div>
     <div v-if="isEmpty" class="chart-empty" :style="style">
-      <span class="chart-empty-icon">📊</span>
       <p class="chart-empty-text">{{ t('stats.noData') }}</p>
     </div>
     <VChart v-else :option="mergedOption" :style="style" autoresize />
@@ -120,18 +119,11 @@ const mergedOption = computed<EChartsOption>(() => {
 
 .chart-empty {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   border: 1px dashed var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
-}
-
-.chart-empty-icon {
-  font-size: 30px;
-  opacity: 0.55;
 }
 
 .chart-empty-text {

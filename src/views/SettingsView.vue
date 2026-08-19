@@ -36,6 +36,50 @@ const importFileRef = ref<HTMLInputElement | null>(null)
 const clearAllConfirm = ref(false)
 const clearBusy = ref(false)
 
+// —— 分享给朋友 ——
+const shareFeedback = ref<string | null>(null)
+
+/** 当前部署地址（分享链接） */
+const shareUrl = computed(() => {
+  const { origin, pathname } = window.location
+  return `${origin}${pathname}`
+})
+
+async function handleShare() {
+  shareFeedback.value = null
+  const url = shareUrl.value
+  const text = `${t('settings.shareText')} ${url}`
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: t('settings.shareTitle'), text, url })
+      return
+    } catch (e) {
+      // 用户主动取消分享（AbortError）时静默退出，不降级复制
+      if ((e as Error)?.name === 'AbortError') return
+    }
+  }
+  // 降级：复制推荐语 + 链接到剪贴板
+  try {
+    await navigator.clipboard.writeText(text)
+    shareFeedback.value = t('common.copied')
+  } catch {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      shareFeedback.value = t('common.copied')
+    } catch {
+      shareFeedback.value = `${t('settings.shareFallback')} ${url}`
+    }
+  }
+  window.setTimeout(() => (shareFeedback.value = null), 3000)
+}
+
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
 
 // —— 提醒设置（多类提醒，默认全部关闭，由用户自行开启）——
@@ -335,6 +379,14 @@ async function confirmClearAll() {
           </template>
         </div>
       </div>
+    </div>
+
+    <!-- 分享给朋友 -->
+    <p class="section-title">{{ t('settings.shareSection') }}</p>
+    <div class="card">
+      <p class="data-tip">{{ t('settings.shareTip') }}</p>
+      <button class="btn btn-primary btn-block" @click="handleShare">{{ t('settings.shareBtn') }}</button>
+      <p v-if="shareFeedback" class="export-ok">{{ shareFeedback }}</p>
     </div>
 
     <!-- 关于 -->
