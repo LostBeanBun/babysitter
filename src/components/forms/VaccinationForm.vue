@@ -5,7 +5,13 @@ import type { VaccinationStatus } from '@/types'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useVaccinationStore } from '@/stores/vaccination'
 import { useBabyStore } from '@/stores/baby'
-import { VACCINE_PLAN, planDateFromBirth } from '@/constants/vaccinePlan'
+import {
+  VACCINE_PLAN,
+  SELF_PAID_VACCINE_PLAN,
+  planDateFromBirth,
+  type VaccinePlanItem,
+  type VaccinePlanCategory,
+} from '@/constants/vaccinePlan'
 import BaseModal from '@/components/common/BaseModal.vue'
 
 const { t } = useI18n()
@@ -31,14 +37,18 @@ const STATUS_OPTIONS: { value: VaccinationStatus; label: string; icon: string; c
 
 // —— 计划库选择 ——
 const planOpen = ref(false)
+const planTab = ref<VaccinePlanCategory>('free')
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
+
+/** 当前 Tab 展示的疫苗列表 */
+const planItems = computed(() => (planTab.value === 'free' ? VACCINE_PLAN : SELF_PAID_VACCINE_PLAN))
 
 /** 已添加过的疫苗（同名+同剂次），避免重复添加 */
 const existingKeys = computed(() =>
   new Set(vaccinationStore.vaccinations.map((v) => `${v.name}|${v.dose ?? ''}`)),
 )
 
-function pickFromPlan(item: (typeof VACCINE_PLAN)[number]) {
+function pickFromPlan(item: VaccinePlanItem) {
   if (!activeBaby.value?.birthDate) {
     alert(t('vaccination.needBirthDate'))
     return
@@ -132,9 +142,31 @@ async function submit() {
 
     <BaseModal :show="planOpen" :title="t('vaccination.planTitle')" @close="planOpen = false">
       <p class="plan-tip">{{ t('vaccination.planTip', { name: activeBaby?.name ?? '' }) }}</p>
+      <div class="plan-tabs" role="tablist">
+        <button
+          type="button"
+          class="plan-tab"
+          :class="{ active: planTab === 'free' }"
+          role="tab"
+          :aria-selected="planTab === 'free'"
+          @click="planTab = 'free'"
+        >
+          🆓 {{ t('vaccination.planTabFree') }}
+        </button>
+        <button
+          type="button"
+          class="plan-tab"
+          :class="{ active: planTab === 'self' }"
+          role="tab"
+          :aria-selected="planTab === 'self'"
+          @click="planTab = 'self'"
+        >
+          💉 {{ t('vaccination.planTabSelf') }}
+        </button>
+      </div>
       <div class="plan-list">
         <button
-          v-for="(item, i) in VACCINE_PLAN"
+          v-for="(item, i) in planItems"
           :key="i"
           type="button"
           class="plan-item"
@@ -175,6 +207,30 @@ async function submit() {
   color: var(--text-muted);
   margin-bottom: 12px;
   line-height: 1.6;
+}
+
+.plan-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.plan-tab {
+  padding: 9px 6px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all 0.12s ease;
+}
+
+.plan-tab.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .plan-list {
