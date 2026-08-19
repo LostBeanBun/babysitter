@@ -12,6 +12,7 @@ const props = defineProps<{
     date: number
     weight?: number
     height?: number
+    headCircumference?: number
     notes?: string
   }
 }>()
@@ -22,6 +23,9 @@ const growthStore = useGrowthStore()
 const date = ref(toDateTimeLocal(props.editing?.date ?? Date.now()).slice(0, 10))
 const weight = ref<string>(props.editing?.weight != null ? String(props.editing.weight) : '')
 const height = ref<string>(props.editing?.height != null ? String(props.editing.height) : '')
+const headCircumference = ref<string>(
+  props.editing?.headCircumference != null ? String(props.editing.headCircumference) : '',
+)
 const notes = ref(props.editing?.notes ?? '')
 
 async function submit() {
@@ -32,6 +36,7 @@ async function submit() {
   }
   const w = weight.value ? Number(weight.value) : undefined
   const h = height.value ? Number(height.value) : undefined
+  const hc = headCircumference.value ? Number(headCircumference.value) : undefined
   if (w !== undefined && (isNaN(w) || w <= 0)) {
     alert(t('growth.invalidWeight'))
     return
@@ -40,7 +45,11 @@ async function submit() {
     alert(t('growth.invalidHeight'))
     return
   }
-  if (w === undefined && h === undefined) {
+  if (hc !== undefined && (isNaN(hc) || hc <= 0)) {
+    alert(t('growth.invalidHead'))
+    return
+  }
+  if (w === undefined && h === undefined && hc === undefined) {
     alert(t('growth.invalidEmpty'))
     return
   }
@@ -50,10 +59,11 @@ async function submit() {
       date: d,
       weight: w,
       height: h,
+      headCircumference: hc,
       notes: notes.value || undefined,
     })
   } else {
-    await growthStore.add({ date: d, weight: w, height: h, notes: notes.value || undefined })
+    await growthStore.add({ date: d, weight: w, height: h, headCircumference: hc, notes: notes.value || undefined })
   }
   emit('saved')
 }
@@ -87,6 +97,19 @@ async function submit() {
         min="0"
         step="0.5"
         :placeholder="t('growth.heightPlaceholder')"
+        class="form-input"
+        inputmode="decimal"
+      />
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">{{ t('growth.headLabel') }}</label>
+      <input
+        v-model="headCircumference"
+        type="number"
+        min="0"
+        step="0.1"
+        :placeholder="t('growth.headPlaceholder')"
         class="form-input"
         inputmode="decimal"
       />

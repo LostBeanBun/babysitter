@@ -7,7 +7,7 @@ import type { GrowthRecord } from '@/types'
 
 const t = i18n.global.t
 
-/** 成长记录 store（体重/身高） */
+/** 成长记录 store（体重/身高/头围） */
 export const useGrowthStore = defineStore('growth', () => {
   const babyStore = useBabyStore()
   const { activeBabyId } = storeToRefs(babyStore)
@@ -23,7 +23,13 @@ export const useGrowthStore = defineStore('growth', () => {
   )
 
   /** 新增成长记录 */
-  async function add(data: { date: number; weight?: number; height?: number; notes?: string }): Promise<number> {
+  async function add(data: {
+    date: number
+    weight?: number
+    height?: number
+    headCircumference?: number
+    notes?: string
+  }): Promise<number> {
     const babyId = activeBabyId.value
     if (babyId == null) throw new Error(t('errors.noBaby'))
     const now = Date.now()
@@ -32,6 +38,7 @@ export const useGrowthStore = defineStore('growth', () => {
       date: data.date,
       weight: data.weight,
       height: data.height,
+      headCircumference: data.headCircumference,
       notes: data.notes,
       createdAt: now,
       updatedAt: now,

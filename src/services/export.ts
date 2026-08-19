@@ -271,6 +271,7 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
     const parts: string[] = []
     if (g.weight != null) parts.push(`${g.weight} kg`)
     if (g.height != null) parts.push(`${g.height} cm`)
+    if (g.headCircumference != null) parts.push(`${g.headCircumference} cm（头围）`)
     rows.push([
       t('exportCsv.recordTypes.growth'),
       formatDate(g.date),

@@ -22,6 +22,7 @@ import SolidFoodForm from '@/components/forms/SolidFoodForm.vue'
 import MedicationForm from '@/components/forms/MedicationForm.vue'
 import VaccinationForm from '@/components/forms/VaccinationForm.vue'
 import TemperatureForm from '@/components/forms/TemperatureForm.vue'
+import { formatTime } from '@/utils/format'
 import type {
   Feeding,
   DiaperChange,
@@ -278,6 +279,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
         :medications="filteredMedications"
         :vaccinations="filteredVaccinations"
         :temperatures="filteredTemperatures"
+        :deleting-key="confirmDelete ? confirmDelete.kind + '-' + confirmDelete.id : null"
         grouped
         @edit="onEdit"
         @delete="onDelete"
@@ -351,6 +353,14 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 
     <BaseModal :show="confirmDelete !== null" :title="t('common.deleteRecord')" @close="confirmDelete = null">
       <p class="confirm-text">{{ t('log.deleteSimple') }}</p>
+      <div v-if="confirmDelete" class="confirm-record">
+        <span class="confirm-record-icon" :style="{ background: confirmDelete.color + '22' }">{{ confirmDelete.icon }}</span>
+        <div class="confirm-record-body">
+          <p class="confirm-record-title">{{ confirmDelete.title }}</p>
+          <p class="confirm-record-detail">{{ confirmDelete.detail }}</p>
+          <p class="confirm-record-time">{{ confirmDelete.timeLabel ?? formatTime(confirmDelete.time) }}</p>
+        </div>
+      </div>
       <div class="confirm-actions">
         <button class="btn btn-outline" @click="confirmDelete = null">{{ t('common.cancel') }}</button>
         <button class="btn btn-danger-soft" @click="confirmDeleteAction">{{ t('log.confirmDelete') }}</button>
@@ -405,6 +415,53 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   color: var(--text);
   line-height: 1.6;
   margin-bottom: 18px;
+}
+
+.confirm-record {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  margin-bottom: 18px;
+}
+
+.confirm-record-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.confirm-record-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.confirm-record-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.confirm-record-detail {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.confirm-record-time {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
 }
 
 .confirm-actions {

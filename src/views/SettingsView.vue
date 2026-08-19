@@ -5,10 +5,10 @@ import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
 import { exportAllJson, exportBabyCsvs, importAllJson } from '@/services/export'
 import { BABY_AVATARS } from '@/constants'
-import { FEED_REMINDER_KEY } from '@/utils/feedingGuide'
+import { loadReminders, saveReminders, type ReminderConfig, type ReminderType } from '@/utils/reminderScheduler'
 import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import type { Baby } from '@/types'
+import type { Baby, BabyGender } from '@/types'
 
 const babyStore = useBabyStore()
 const { t } = useI18n()
@@ -26,6 +26,7 @@ const recordCounts = ref({
 })
 const babyModal = ref<{ mode: 'add' | 'edit'; id?: number } | null>(null)
 const babyName = ref('')
+const babyGender = ref<BabyGender | ''>('')
 const babyBirthDate = ref('')
 const babyAvatar = ref('')
 const deleteBabyConfirm = ref<Baby | null>(null)
@@ -37,20 +38,40 @@ const clearBusy = ref(false)
 
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
 
-// 喂奶提醒开关
-const feedReminder = ref(localStorage.getItem(FEED_REMINDER_KEY) === 'on')
+// —— 提醒设置（多类提醒，默认全部关闭，由用户自行开启）——
+const reminders = ref<ReminderConfig>(loadReminders())
 
-async function toggleFeedReminder() {
-  feedReminder.value = !feedReminder.value
-  localStorage.setItem(FEED_REMINDER_KEY, feedReminder.value ? 'on' : 'off')
-  if (feedReminder.value && 'Notification' in window && Notification.permission === 'default') {
+async function requestNotificationPermission(): Promise<boolean> {
+  if (!('Notification' in window)) return false
+  if (Notification.permission === 'granted') return true
+  if (Notification.permission === 'default') {
     try {
-      await Notification.requestPermission()
+      const p = await Notification.requestPermission()
+      return p === 'granted'
     } catch {
-      /* 用户拒绝或环境不支持时静默 */
+      return false
     }
   }
+  return false
 }
+
+async function toggleReminder(type: ReminderType) {
+  reminders.value[type].enabled = !reminders.value[type].enabled
+  if (reminders.value[type].enabled) await requestNotificationPermission()
+  saveReminders(reminders.value)
+}
+
+function persistReminders() {
+  saveReminders(reminders.value)
+}
+
+const reminderRows = computed(() => [
+  { type: 'feed' as const, title: t('reminders.feed.title'), sub: t('reminders.feed.sub') },
+  { type: 'sleep' as const, title: t('reminders.sleep.title'), sub: t('reminders.sleep.sub') },
+  { type: 'medication' as const, title: t('reminders.medication.title'), sub: t('reminders.medication.sub') },
+  { type: 'vaccination' as const, title: t('reminders.vaccination.title'), sub: t('reminders.vaccination.sub') },
+  { type: 'diaper' as const, title: t('reminders.diaper.title'), sub: t('reminders.diaper.sub') },
+])
 
 onMounted(async () => {
   recordCounts.value = await countAllRecords()
@@ -58,6 +79,7 @@ onMounted(async () => {
 
 function openAddBaby() {
   babyName.value = ''
+  babyGender.value = ''
   babyBirthDate.value = ''
   babyAvatar.value = ''
   babyModal.value = { mode: 'add' }
@@ -65,6 +87,7 @@ function openAddBaby() {
 
 function openEditBaby(b: Baby) {
   babyName.value = b.name
+  babyGender.value = b.gender ?? ''
   babyBirthDate.value = b.birthDate ?? ''
   babyAvatar.value = b.avatar ?? ''
   babyModal.value = { mode: 'edit', id: b.id }
@@ -72,18 +95,21 @@ function openEditBaby(b: Baby) {
 
 async function saveBaby() {
   const name = babyName.value.trim()
-  if (!name) return
+  // 宝宝名称/性别/出生日期均为必填（出生日期用于月龄换算与生长曲线参考线）
+  if (!name || !babyBirthDate.value) return
+  if (babyModal.value?.mode === 'add' && !babyGender.value) return
   if (babyModal.value?.mode === 'edit' && babyModal.value.id != null) {
     await babyStore.updateBaby(babyModal.value.id, {
       name,
-      birthDate: babyBirthDate.value || undefined,
+      gender: babyGender.value || undefined,
+      birthDate: babyBirthDate.value,
       avatar: babyAvatar.value || undefined,
     })
   } else {
     await babyStore.addBaby(
       name,
-      undefined,
-      babyBirthDate.value || undefined,
+      babyGender.value || undefined,
+      babyBirthDate.value,
       undefined,
       undefined,
       babyAvatar.value || undefined,
@@ -196,7 +222,10 @@ async function confirmClearAll() {
           <div class="baby-avatar" :style="{ background: b.avatarColor }">{{ b.avatar ?? b.name[0] }}</div>
           <div class="baby-info">
             <p class="baby-name">{{ b.name }}{{ b.id === babyStore.activeBabyId ? t('common.current') : '' }}</p>
-            <p class="baby-meta">{{ babyAge(b) }}</p>
+            <p class="baby-meta">
+              {{ b.gender ? t(b.gender === 'boy' ? 'settings.genderBoy' : 'settings.genderGirl') : t('settings.genderUnknown') }}
+              · {{ babyAge(b) }}
+            </p>
           </div>
           <div class="baby-actions">
             <button class="icon-btn" :title="t('common.edit')" @click.stop="openEditBaby(b)">✏️</button>
@@ -238,25 +267,74 @@ async function confirmClearAll() {
       </button>
     </div>
 
-    <!-- 喂奶提醒 -->
-    <p class="section-title">{{ t('settings.feedReminderTitle') }}</p>
+    <!-- 提醒设置 -->
+    <p class="section-title">{{ t('settings.reminderSectionTitle') }}</p>
     <div class="card">
-      <div class="reminder-row">
-        <div class="reminder-info">
-          <p class="reminder-title">{{ t('settings.reminderTitle') }}</p>
-          <p class="reminder-sub">{{ t('settings.reminderSub') }}</p>
+      <p class="data-tip">{{ t('settings.reminderTip') }}</p>
+      <div v-for="r in reminderRows" :key="r.type" class="reminder-block">
+        <div class="reminder-row">
+          <div class="reminder-info">
+            <p class="reminder-title">{{ r.title }}</p>
+            <p class="reminder-sub">{{ r.sub }}</p>
+          </div>
+          <button
+            class="switch"
+            :class="{ on: reminders[r.type].enabled }"
+            role="switch"
+            :aria-checked="reminders[r.type].enabled"
+            @click="toggleReminder(r.type)"
+          >
+            <span class="switch-knob"></span>
+          </button>
         </div>
-        <button
-          class="switch"
-          :class="{ on: feedReminder }"
-          role="switch"
-          :aria-checked="feedReminder"
-          @click="toggleFeedReminder"
-        >
-          <span class="switch-knob"></span>
-        </button>
+        <div v-if="reminders[r.type].enabled" class="reminder-param">
+          <template v-if="r.type === 'feed'">
+            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
+            <input
+              v-model.number="reminders.feed.intervalHours"
+              type="number"
+              min="0"
+              step="0.5"
+              class="form-input reminder-param-input"
+              @change="persistReminders"
+            />
+            <p class="reminder-param-hint">{{ t('reminders.feed.hint') }}</p>
+          </template>
+          <template v-else-if="r.type === 'sleep'">
+            <label class="reminder-param-label">{{ t('reminders.sleepTimeLabel') }}</label>
+            <input
+              v-model="reminders.sleep.time"
+              type="time"
+              class="form-input reminder-param-input"
+              @change="persistReminders"
+            />
+          </template>
+          <template v-else-if="r.type === 'medication'">
+            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
+            <input
+              v-model.number="reminders.medication.intervalHours"
+              type="number"
+              min="1"
+              step="1"
+              class="form-input reminder-param-input"
+              @change="persistReminders"
+            />
+            <p class="reminder-param-hint">{{ t('reminders.medication.hint') }}</p>
+          </template>
+          <template v-else-if="r.type === 'diaper'">
+            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
+            <input
+              v-model.number="reminders.diaper.intervalHours"
+              type="number"
+              min="1"
+              step="1"
+              class="form-input reminder-param-input"
+              @change="persistReminders"
+            />
+            <p class="reminder-param-hint">{{ t('reminders.diaper.hint') }}</p>
+          </template>
+        </div>
       </div>
-      <p class="reminder-hint">{{ t('settings.reminderHint') }}</p>
     </div>
 
     <!-- 关于 -->
@@ -279,7 +357,32 @@ async function confirmClearAll() {
         <input v-model="babyName" type="text" :placeholder="t('settings.babyNamePh')" class="form-input" />
       </div>
       <div class="form-field">
-        <label class="form-label">{{ t('settings.birthDate') }}</label>
+        <label class="form-label">{{ t('settings.genderLabel') }} {{ babyModal?.mode === 'add' ? '*' : '' }}</label>
+        <div class="gender-picker" role="radiogroup">
+          <button
+            type="button"
+            class="gender-option"
+            :class="{ selected: babyGender === 'boy' }"
+            :aria-checked="babyGender === 'boy'"
+            role="radio"
+            @click="babyGender = 'boy'"
+          >
+            <span class="gender-emoji">👦</span>{{ t('settings.genderBoy') }}
+          </button>
+          <button
+            type="button"
+            class="gender-option"
+            :class="{ selected: babyGender === 'girl' }"
+            :aria-checked="babyGender === 'girl'"
+            role="radio"
+            @click="babyGender = 'girl'"
+          >
+            <span class="gender-emoji">👧</span>{{ t('settings.genderGirl') }}
+          </button>
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">{{ t('settings.birthDate') }} *</label>
         <input v-model="babyBirthDate" type="date" class="form-input" />
       </div>
       <div class="form-field">
@@ -299,7 +402,11 @@ async function confirmClearAll() {
       </div>
       <div class="form-actions">
         <button class="btn btn-outline" @click="babyModal = null">{{ t('common.cancel') }}</button>
-        <button class="btn btn-primary" :disabled="!babyName.trim()" @click="saveBaby">
+        <button
+          class="btn btn-primary"
+          :disabled="!babyName.trim() || !babyBirthDate || (babyModal?.mode === 'add' && !babyGender)"
+          @click="saveBaby"
+        >
           {{ t('settings.saveBaby') }}
         </button>
       </div>
@@ -478,6 +585,46 @@ async function confirmClearAll() {
   line-height: 1.7;
 }
 
+.reminder-block {
+  padding: 4px 0 12px;
+}
+
+.reminder-block + .reminder-block {
+  border-top: 1px dashed var(--border);
+  padding-top: 12px;
+}
+
+.reminder-param {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+
+.reminder-param-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.reminder-param-input {
+  width: 88px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.reminder-param-hint {
+  width: 100%;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
 .switch {
   position: relative;
   width: 48px;
@@ -569,6 +716,39 @@ async function confirmClearAll() {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 6px;
+}
+
+.gender-picker {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.gender-option {
+  min-height: 44px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.12s ease;
+}
+
+.gender-option.selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  transform: scale(1.02);
+}
+
+.gender-emoji {
+  font-size: 16px;
 }
 
 /* PC/平板：设置页为表单型页面，限宽居中避免内容被拉得过宽 */

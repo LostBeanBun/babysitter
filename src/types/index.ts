@@ -100,7 +100,7 @@ export interface Sleep {
   updatedAt: number
 }
 
-/** 成长记录（体重/身高测量） */
+/** 成长记录（体重/身高/头围测量） */
 export interface GrowthRecord {
   id?: number
   babyId: number
@@ -110,6 +110,8 @@ export interface GrowthRecord {
   weight?: number
   /** 身高 cm */
   height?: number
+  /** 头围 cm */
+  headCircumference?: number
   notes?: string
   createdAt: number
   updatedAt: number

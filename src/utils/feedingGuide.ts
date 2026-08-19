@@ -37,11 +37,3 @@ export function avgFeedingIntervalMs(startTimes: number[], count = 3): number | 
 export function sinceLastFeedingMs(lastStart: number, now: number): number {
   return Math.max(0, now - lastStart)
 }
-
-/** 喂奶提醒本地开关 key */
-export const FEED_REMINDER_KEY = 'babysitter.feedReminder'
-
-/** 读取喂奶提醒开关 */
-export function isFeedReminderOn(): boolean {
-  return localStorage.getItem(FEED_REMINDER_KEY) === 'on'
-}

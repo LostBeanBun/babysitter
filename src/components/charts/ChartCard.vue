@@ -46,7 +46,10 @@ const mergedOption = computed<EChartsOption>(() => {
 <template>
   <div class="chart-card card">
     <div class="chart-head">
-      <h3 class="chart-title">{{ title }}</h3>
+      <div class="chart-title-row">
+        <h3 class="chart-title">{{ title }}</h3>
+        <slot name="title-action" />
+      </div>
       <p v-if="subtitle" class="chart-sub">{{ subtitle }}</p>
     </div>
     <VChart :option="mergedOption" :style="style" autoresize />
@@ -61,6 +64,13 @@ const mergedOption = computed<EChartsOption>(() => {
 
 .chart-head {
   margin-bottom: 10px;
+}
+
+.chart-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .chart-title {

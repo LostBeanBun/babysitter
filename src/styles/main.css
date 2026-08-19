@@ -123,6 +123,11 @@
   color-scheme: dark;
 }
 
+/* 暗色下 body 使用纯净背景：移除亮色主题的暖色渐变光晕，避免出现脏色发光块 */
+[data-theme='dark'] body {
+  background: var(--bg);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

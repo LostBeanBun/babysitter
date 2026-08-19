@@ -4,7 +4,8 @@ defineProps<{
   value: string
   icon?: string
   color?: string
-  sub?: string
+  /** 支持多行说明：传数组则每项一行 */
+  sub?: string | Array<string | undefined>
 }>()
 </script>
 
@@ -20,7 +21,12 @@ defineProps<{
     <div class="stat-body">
       <p class="stat-value" :style="color ? { color } : undefined">{{ value }}</p>
       <p class="stat-label">{{ label }}</p>
-      <p v-if="sub" class="stat-sub">{{ sub }}</p>
+      <template v-if="sub">
+        <p v-if="Array.isArray(sub)" class="stat-sub">
+          <span v-for="(s, i) in sub" :key="i" v-show="s" class="stat-sub-line">{{ s }}</span>
+        </p>
+        <p v-else class="stat-sub">{{ sub }}</p>
+      </template>
     </div>
   </div>
 </template>
@@ -84,6 +90,13 @@ defineProps<{
   font-size: 11px;
   color: var(--text-muted);
   margin-top: 1px;
+}
+
+.stat-sub-line {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 400px) {

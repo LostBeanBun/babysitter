@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
@@ -24,15 +24,16 @@ import SolidFoodForm from '@/components/forms/SolidFoodForm.vue'
 import MedicationForm from '@/components/forms/MedicationForm.vue'
 import VaccinationForm from '@/components/forms/VaccinationForm.vue'
 import TemperatureForm from '@/components/forms/TemperatureForm.vue'
-import { startOfDay, formatDuration, formatAmount, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
+import { startOfDay, formatDuration, formatAmount, formatTime, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { MS_PER_DAY, BABY_AVATARS, FEED_TYPE_LABELS } from '@/constants'
 import {
   recommendedIntervalMs,
   recommendedIntervalLabel,
   avgFeedingIntervalMs,
   sinceLastFeedingMs,
-  isFeedReminderOn,
 } from '@/utils/feedingGuide'
+import { checkReminders } from '@/utils/reminderScheduler'
+import { dailyGuide } from '@/utils/dailyGuides'
 import type {
   Feeding,
   DiaperChange,
@@ -51,6 +52,7 @@ import type {
   SleepType,
   VaccinationStatus,
   TemperatureMethod,
+  BabyGender,
 } from '@/types'
 
 /** 各表单编辑 props 结构（与表单组件 props.editing 一致） */
@@ -114,12 +116,14 @@ const temperatureStore = useTemperatureStore()
 const { t, locale } = useI18n()
 
 const now = ref(Date.now())
-setInterval(() => (now.value = Date.now()), 60_000)
+const nowTimer = window.setInterval(() => (now.value = Date.now()), 60_000)
+onUnmounted(() => window.clearInterval(nowTimer))
 
 // 无宝宝时显示引导
 const hasBaby = computed(() => babyStore.babies.length > 0)
 const onboardingOpen = ref(false)
 const onboardName = ref('')
+const onboardGender = ref<BabyGender | ''>('')
 const onboardBirthDate = ref('')
 const onboardAvatar = ref('')
 
@@ -129,16 +133,18 @@ function openOnboarding() {
 
 async function onOnboarded() {
   const name = onboardName.value.trim()
-  if (!name) return
+  // 名称/性别/出生日期均为必填（出生日期用于月龄换算与生长曲线参考线）
+  if (!name || !onboardBirthDate.value || !onboardGender.value) return
   await babyStore.addBaby(
     name,
-    undefined,
-    onboardBirthDate.value || undefined,
+    onboardGender.value,
+    onboardBirthDate.value,
     undefined,
     undefined,
     onboardAvatar.value || undefined,
   )
   onboardName.value = ''
+  onboardGender.value = ''
   onboardBirthDate.value = ''
   onboardAvatar.value = ''
   onboardingOpen.value = false
@@ -206,27 +212,26 @@ const lastFeedingLabel = computed(() => {
   return m === 0 ? t('dashboard.lastFeedHour', { n: h }) : t('dashboard.lastFeedHourMin', { n: h, m })
 })
 
-// —— 喂奶间隔分析与提醒 ——
+// —— 提醒调度（喂奶/睡眠/用药/疫苗/尿布，默认关闭，由用户自行开启）——
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
-const feedReminderOn = ref(isFeedReminderOn())
 const recommendedMs = computed(() => recommendedIntervalMs(activeBaby.value))
 const avgGapMs = computed(() => avgFeedingIntervalMs(feedingStore.feedings.map((f) => f.startTime)))
+/** 按月龄的每日参考数据（无出生日期时为 null） */
+const guide = computed(() => dailyGuide(activeBaby.value))
 const sinceMs = computed(() => (lastFeeding.value ? sinceLastFeedingMs(lastFeeding.value.startTime, now.value) : null))
-/** 超过建议间隔且开关开启时提示 */
-const overdue = computed(() => feedReminderOn.value && sinceMs.value != null && sinceMs.value > recommendedMs.value)
-let lastNotifiedAt = 0
+/** 超过建议间隔时提示（实际提醒是否弹出由提醒配置决定） */
+const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommendedMs.value)
 watch(now, () => {
-  if (!overdue.value || !sinceMs.value) return
-  if (Date.now() - lastNotifiedAt < 5 * 60_000) return
   if (!('Notification' in window) || Notification.permission !== 'granted') return
-  new Notification(t('feed.reminderTitle'), {
-    body: t('feed.notificationBody', {
-      duration: formatDuration(sinceMs.value),
-      label: recommendedIntervalLabel(activeBaby.value),
-    }),
-    tag: 'feed-reminder',
+  const hits = checkReminders({
+    now: now.value,
+    baby: activeBaby.value,
+    feedings: feedingStore.feedings,
+    medications: medicationStore.medications,
+    vaccinations: vaccinationStore.vaccinations,
+    diapers: diaperStore.diapers,
   })
-  lastNotifiedAt = Date.now()
+  hits.forEach((h) => new Notification(h.title, { body: h.body, tag: h.tag }))
 })
 const sleepTotal = computed(() =>
   todaySleeps.value.reduce((sum, s) => {
@@ -488,44 +493,7 @@ const editPayload = computed(() => {
         </div>
       </div>
 
-      <!-- 今日汇总 -->
-      <div class="stats-grid">
-        <StatCard
-          :label="t('dashboard.statLastFeed')"
-          :value="lastFeedingLabel"
-          :sub="lastFeeding ? t('feed.suggested', { label: recommendedIntervalLabel(activeBaby) }) : undefined"
-          icon="🍼"
-          color="#E8906C"
-        />
-        <StatCard
-          :label="t('dashboard.statMilk')"
-          :value="formatAmount(totalMilk) || '0 ml'"
-          icon="🥛"
-          color="#C4A8E0"
-        />
-        <StatCard
-          :label="t('dashboard.statFeedCount')"
-          :value="t('common.times', { n: feedCount })"
-          icon="🍽️"
-          color="#F2A28C"
-        />
-        <StatCard :label="t('dashboard.statSleep')" :value="formatDuration(sleepTotal)" icon="😴" color="#8FAED8" />
-        <StatCard
-          :label="t('dashboard.statDiaper')"
-          :value="t('common.times', { n: todayDiapers.length })"
-          icon="🧷"
-          color="#9A8FC8"
-        />
-        <StatCard
-          :label="t('dashboard.statPump')"
-          :value="t('common.times', { n: todayPumpings.length })"
-          :sub="formatAmount(todayPumpings.reduce((s, p) => s + (p.amount ?? 0), 0)) || undefined"
-          icon="🎀"
-          color="#D8A8C8"
-        />
-      </div>
-
-      <!-- 快捷记录 -->
+      <!-- 快捷记录（高频操作置顶） -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>
       <div class="quick-actions">
         <button class="quick-btn feed" @click="openAdd('feeding')">
@@ -566,23 +534,61 @@ const editPayload = computed(() => {
         </button>
       </div>
 
-      <!-- 喂奶间隔分析 -->
-      <div v-if="avgGapMs != null" class="interval-card card">
-        <div class="interval-item">
-          <p class="interval-label">{{ t('dashboard.avgInterval') }}</p>
-          <p class="interval-value">{{ formatDuration(avgGapMs) }}</p>
-        </div>
-        <div class="interval-item">
-          <p class="interval-label">{{ activeBaby?.birthDate ? t('feed.intervalByAge') : t('feed.intervalLabel') }}</p>
-          <p class="interval-value">{{ recommendedIntervalLabel(activeBaby) }}</p>
-        </div>
-      </div>
-
-      <!-- 奶睡一键 -->
+      <!-- 奶睡一键（与快捷记录同组） -->
       <button class="btn btn-outline sleep-feed-btn" @click="sleepFeedOpen = true">
         <span class="sf-btn-icon">🍼😴</span>
         <span>{{ t('dashboard.sleepFeedButton') }}</span>
       </button>
+
+      <!-- 今日概览（统计卡 + 喂奶间隔分析） -->
+      <p class="section-title">{{ t('dashboard.todayOverview') }}</p>
+      <div class="stats-grid">
+        <StatCard
+          :label="t('dashboard.statLastFeed')"
+          :value="lastFeedingLabel"
+          :sub="lastFeeding ? [t('feed.suggested', { label: recommendedIntervalLabel(activeBaby) }), avgGapMs != null ? t('dashboard.avgIntervalInline', { value: formatDuration(avgGapMs) }) : undefined] : undefined"
+          icon="🍼"
+          color="#E8906C"
+        />
+        <StatCard
+          :label="t('dashboard.statMilk')"
+          :value="formatAmount(totalMilk) || '0 ml'"
+          :sub="guide ? t('dashboard.guideMilk', { value: guide.milk }) : undefined"
+          icon="🥛"
+          color="#C4A8E0"
+        />
+        <StatCard
+          :label="t('dashboard.statFeedCount')"
+          :value="t('common.times', { n: feedCount })"
+          :sub="guide ? t('dashboard.guideFeedCount', { value: guide.feedCount }) : undefined"
+          icon="🍽️"
+          color="#F2A28C"
+        />
+        <StatCard
+          :label="t('dashboard.statSleep')"
+          :value="formatDuration(sleepTotal)"
+          :sub="guide ? t('dashboard.guideSleep', { value: guide.sleep }) : undefined"
+          icon="😴"
+          color="#8FAED8"
+        />
+        <StatCard
+          :label="t('dashboard.statDiaper')"
+          :value="t('common.times', { n: todayDiapers.length })"
+          :sub="guide ? t('dashboard.guideDiaper', { value: guide.diaper }) : undefined"
+          icon="🧷"
+          color="#9A8FC8"
+        />
+        <StatCard
+          :label="t('dashboard.statPump')"
+          :value="t('common.times', { n: todayPumpings.length })"
+          :sub="[
+            formatAmount(todayPumpings.reduce((s, p) => s + (p.amount ?? 0), 0)) || undefined,
+            guide ? t('dashboard.guidePump', { value: guide.pump }) : undefined,
+          ]"
+          icon="🎀"
+          color="#D8A8C8"
+        />
+      </div>
 
       <!-- 今日记录 -->
       <div class="section-row">
@@ -612,6 +618,7 @@ const editPayload = computed(() => {
           :medications="todayMedications"
           :vaccinations="todayVaccinations"
           :temperatures="todayTemperatures"
+          :deleting-key="confirmDelete ? confirmDelete.kind + '-' + confirmDelete.id : null"
           @edit="onEdit"
           @delete="onDelete"
         />
@@ -709,6 +716,14 @@ const editPayload = computed(() => {
             })
           }}
         </p>
+        <div v-if="confirmDelete" class="confirm-record">
+          <span class="confirm-record-icon" :style="{ background: confirmDelete.color + '22' }">{{ confirmDelete.icon }}</span>
+          <div class="confirm-record-body">
+            <p class="confirm-record-title">{{ confirmDelete.title }}</p>
+            <p class="confirm-record-detail">{{ confirmDelete.detail }}</p>
+            <p class="confirm-record-time">{{ confirmDelete.timeLabel ?? formatTime(confirmDelete.time) }}</p>
+          </div>
+        </div>
         <div class="confirm-actions">
           <button class="btn btn-outline" @click="confirmDelete = null">{{ t('common.cancel') }}</button>
           <button class="btn btn-danger-soft" @click="confirmDeleteAction">{{ t('log.confirmDelete') }}</button>
@@ -779,8 +794,33 @@ const editPayload = computed(() => {
         <input v-model="onboardName" type="text" :placeholder="t('dashboard.onboardingNamePh')" class="form-input" />
       </div>
       <div class="form-field">
-        <label class="form-label">{{ t('settings.birthDate') }}</label>
+        <label class="form-label">{{ t('settings.birthDate') }} *</label>
         <input v-model="onboardBirthDate" type="date" class="form-input" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">{{ t('settings.genderLabel') }} *</label>
+        <div class="gender-picker" role="radiogroup">
+          <button
+            type="button"
+            class="gender-option"
+            :class="{ selected: onboardGender === 'boy' }"
+            :aria-checked="onboardGender === 'boy'"
+            role="radio"
+            @click="onboardGender = 'boy'"
+          >
+            <span class="gender-emoji">👦</span>{{ t('settings.genderBoy') }}
+          </button>
+          <button
+            type="button"
+            class="gender-option"
+            :class="{ selected: onboardGender === 'girl' }"
+            :aria-checked="onboardGender === 'girl'"
+            role="radio"
+            @click="onboardGender = 'girl'"
+          >
+            <span class="gender-emoji">👧</span>{{ t('settings.genderGirl') }}
+          </button>
+        </div>
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('settings.avatarLabel') }}</label>
@@ -797,7 +837,11 @@ const editPayload = computed(() => {
           </button>
         </div>
       </div>
-      <button class="btn btn-primary btn-block btn-lg" :disabled="!onboardName.trim()" @click="onOnboarded">
+      <button
+        class="btn btn-primary btn-block btn-lg"
+        :disabled="!onboardName.trim() || !onboardBirthDate || !onboardGender"
+        @click="onOnboarded"
+      >
         {{ t('common.start') }}
       </button>
     </BaseModal>
@@ -1012,6 +1056,13 @@ const editPayload = computed(() => {
   font-variant-numeric: tabular-nums;
 }
 
+.interval-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
 /* 统一卡片高度：网格内不受全局 .card + .card 相邻外边距规则影响，
    避免同一行卡片因 margin-top 差异导致高度参差不齐 */
 .stats-grid .stat-card {
@@ -1166,6 +1217,53 @@ const editPayload = computed(() => {
   margin-bottom: 18px;
 }
 
+.confirm-record {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  margin-bottom: 18px;
+}
+
+.confirm-record-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.confirm-record-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.confirm-record-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.confirm-record-detail {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.confirm-record-time {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
 .confirm-actions {
   display: flex;
   gap: 10px;
@@ -1198,5 +1296,38 @@ const editPayload = computed(() => {
   border-color: var(--primary);
   background: var(--primary-soft);
   transform: scale(1.06);
+}
+
+.gender-picker {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.gender-option {
+  min-height: 44px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.12s ease;
+}
+
+.gender-option.selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  transform: scale(1.02);
+}
+
+.gender-emoji {
+  font-size: 16px;
 }
 </style>

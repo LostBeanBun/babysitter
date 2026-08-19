@@ -27,12 +27,27 @@ const { t, locale } = useI18n()
 
 export type TimelineKind = 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature'
 
+/** 各记录类型的统一主色（时间轴/图标标识） */
+const KIND_COLORS: Record<TimelineKind, string> = {
+  feeding: '#E8906C',
+  diaper: '#9A8FC8',
+  pumping: '#D8A8C8',
+  sleep: '#8FAED8',
+  growth: '#8FBF9F',
+  solidFood: '#D8905A',
+  medication: '#D86A8A',
+  vaccination: '#6AB0D8',
+  temperature: '#E8A45A',
+}
+
 export interface TimelineEntry {
   id: number
   kind: TimelineKind
   time: number
   icon: string
   color: string
+  /** 类型统一主色（时间轴节点颜色） */
+  kindColor: string
   title: string
   detail: string
   duration?: number
@@ -53,6 +68,8 @@ const props = defineProps<{
   temperatures?: Temperature[]
   /** 是否按天分组显示（默认按时间倒序扁平显示） */
   grouped?: boolean
+  /** 正在等待删除确认的条目 key（`kind-id`，与列表 key 一致，用于高亮选中的删除目标） */
+  deletingKey?: string | null
 }>()
 
 const emit = defineEmits<{ edit: [entry: TimelineEntry]; delete: [entry: TimelineEntry] }>()
@@ -72,6 +89,7 @@ const entries = computed<TimelineEntry[]>(() => {
       time: f.startTime,
       icon: f.type.startsWith('breast') ? '🤱' : '🍼',
       color,
+      kindColor: KIND_COLORS.feeding,
       title: t(FEED_TYPE_LABELS[f.type]),
       detail,
       duration: f.duration,
@@ -89,6 +107,7 @@ const entries = computed<TimelineEntry[]>(() => {
       time: d.time,
       icon: d.type === 'wet' ? '💧' : d.type === 'dirty' ? '💩' : '🧷',
       color: '#9A8FC8',
+      kindColor: KIND_COLORS.diaper,
       title: t(DIAPER_TYPE_LABELS[d.type]),
       detail: detailParts.slice(1).join(' · ') || t('common.changed'),
       raw: d,
@@ -105,6 +124,7 @@ const entries = computed<TimelineEntry[]>(() => {
       time: p.startTime,
       icon: '🎀',
       color: '#D8A8C8',
+      kindColor: KIND_COLORS.pumping,
       title: t('timeline.pumpTitle', { side: t(PUMP_SIDE_LABELS[p.side]) }),
       detail: detailParts.join(' · ') || t('common.recorded'),
       duration: p.duration,
@@ -120,8 +140,9 @@ const entries = computed<TimelineEntry[]>(() => {
       time: s.startTime,
       icon: s.type === 'night' ? '🌙' : '😴',
       color: '#8FAED8',
+      kindColor: KIND_COLORS.sleep,
       title: t(SLEEP_TYPE_LABELS[s.type]),
-      detail: `${formatTime(s.startTime)} - ${formatTime(s.endTime)}`,
+      detail: `${formatTime(s.startTime)} - ${formatTime(s.endTime)}${dur > 0 ? ` · ${formatDuration(dur)}` : ''}`,
       duration: dur,
       raw: s,
     })
@@ -131,14 +152,17 @@ const entries = computed<TimelineEntry[]>(() => {
     const detailParts: string[] = []
     if (g.weight != null) detailParts.push(t('timeline.weight', { value: g.weight }))
     if (g.height != null) detailParts.push(t('timeline.height', { value: g.height }))
+    if (g.headCircumference != null) detailParts.push(t('timeline.headCircumference', { value: g.headCircumference }))
     list.push({
       id: g.id!,
       kind: 'growth',
       time: g.date,
       icon: '📏',
       color: '#8FBF9F',
+      kindColor: KIND_COLORS.growth,
       title: t('growth.title'),
       detail: detailParts.join(' · ') || t('common.recorded'),
+      timeLabel: formatDate(g.date),
       raw: g,
     })
   }
@@ -152,6 +176,7 @@ const entries = computed<TimelineEntry[]>(() => {
       time: sf.time,
       icon: '🍎',
       color: '#D8905A',
+      kindColor: KIND_COLORS.solidFood,
       title: t('timeline.solidFood'),
       detail: detailParts.join(' · '),
       raw: sf,
@@ -167,6 +192,7 @@ const entries = computed<TimelineEntry[]>(() => {
       time: m.time,
       icon: '💊',
       color: '#D86A8A',
+      kindColor: KIND_COLORS.medication,
       title: t('timeline.medication'),
       detail: detailParts.join(' · '),
       raw: m,
@@ -183,6 +209,7 @@ const entries = computed<TimelineEntry[]>(() => {
       time: v.date,
       icon: '💉',
       color: v.status === 'done' ? '#6AB0D8' : '#D8A45A',
+      kindColor: KIND_COLORS.vaccination,
       title: t('timeline.vaccination'),
       detail: detailParts.join(' · '),
       timeLabel: formatDate(v.date),
@@ -199,6 +226,7 @@ const entries = computed<TimelineEntry[]>(() => {
       time: tmp.time,
       icon: '🌡️',
       color: '#E8A45A',
+      kindColor: KIND_COLORS.temperature,
       title: t('timeline.temperature'),
       detail: detailParts.join(' · '),
       raw: tmp,
@@ -225,7 +253,7 @@ const groupedEntries = computed(() => {
 <template>
   <div class="timeline">
     <template v-if="!grouped">
-      <div v-for="e in entries" :key="e.kind + '-' + e.id" class="tl-item" @click="emit('edit', e)">
+      <div v-for="e in entries" :key="e.kind + '-' + e.id" class="tl-item" :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id }" @click="emit('edit', e)">
         <div class="tl-icon" :style="{ background: e.color + '22' }">
           <span>{{ e.icon }}</span>
         </div>
@@ -243,8 +271,17 @@ const groupedEntries = computed(() => {
     <template v-else>
       <div v-for="[day, items] in groupedEntries!" :key="day" class="tl-group">
         <p class="tl-day">{{ day }}</p>
-        <div v-for="e in items" :key="e.kind + '-' + e.id" class="tl-item" @click="emit('edit', e)">
-          <div class="tl-icon" :style="{ background: e.color + '22' }">
+        <div
+          v-for="e in items"
+          :key="e.kind + '-' + e.id"
+          class="tl-item tl-timeline-item"
+          :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id }"
+          @click="emit('edit', e)"
+        >
+          <div
+            class="tl-icon tl-timeline-node"
+            :style="{ color: e.kindColor, borderColor: e.kindColor }"
+          >
             <span>{{ e.icon }}</span>
           </div>
           <div class="tl-body">
@@ -263,14 +300,51 @@ const groupedEntries = computed(() => {
 
 <style scoped>
 .tl-group {
+  position: relative;
   margin-bottom: 18px;
 }
 
+/* 时间轴竖线：贯穿同一天的记录（对齐节点中心：item padding-left 12 + 节点半宽 21） */
+.tl-group::before {
+  content: '';
+  position: absolute;
+  left: 32px;
+  top: 34px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
 .tl-day {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-secondary);
   margin: 0 4px 8px;
+  padding: 0 6px;
+  background: var(--bg);
+  border-radius: 999px;
+}
+
+/* 时间轴节点：不透明底色遮住轴线，同类型统一主色描边 */
+.tl-timeline-item {
+  position: relative;
+  gap: 12px;
+}
+
+.tl-timeline-item .tl-timeline-node {
+  background: var(--bg);
+  box-shadow:
+    inset 0 0 0 1.5px currentColor,
+    0 0 0 3px var(--bg);
+  flex-shrink: 0;
+}
+
+.tl-timeline-item + .tl-timeline-item {
+  margin-top: 2px;
 }
 
 .tl-item {
@@ -347,8 +421,8 @@ const groupedEntries = computed(() => {
 }
 
 .tl-delete {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -358,12 +432,20 @@ const groupedEntries = computed(() => {
   opacity: 0;
   transition:
     opacity 0.12s ease,
-    background 0.12s ease;
+    background 0.12s ease,
+    color 0.12s ease;
   flex-shrink: 0;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .tl-item:hover .tl-delete {
   opacity: 1;
+}
+
+.tl-delete:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .tl-delete:active,
@@ -371,6 +453,38 @@ const groupedEntries = computed(() => {
   background: var(--danger-soft);
   color: var(--danger);
   opacity: 1;
+}
+
+/* 删除待确认态：高亮被选中的条目 */
+.tl-item.tl-deleting {
+  background: var(--danger-soft);
+  box-shadow: inset 0 0 0 1.5px var(--danger);
+  animation: tl-deleting-pulse 1.4s ease-in-out infinite;
+}
+
+.tl-item.tl-deleting .tl-delete {
+  background: var(--danger);
+  color: #fff;
+  opacity: 1;
+  box-shadow: 0 2px 8px rgba(217, 122, 82, 0.4);
+}
+
+.tl-item.tl-deleting .tl-title {
+  color: var(--danger);
+}
+
+@keyframes tl-deleting-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1.5px var(--danger),
+      0 0 0 0 rgba(217, 122, 82, 0.18);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1.5px var(--danger),
+      0 0 0 4px rgba(217, 122, 82, 0.08);
+  }
 }
 
 @media (hover: none) {

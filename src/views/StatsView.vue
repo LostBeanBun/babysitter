@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { EChartsOption } from 'echarts'
 import PageHeader from '@/components/common/PageHeader.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import ChartCard from '@/components/charts/ChartCard.vue'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
@@ -22,7 +23,7 @@ import {
   type ComparisonResult,
 } from '@/services/stats'
 import { CHART_COLORS } from '@/constants'
-import { whoData, ageInMonths } from '@/constants/whoGrowth'
+import { whoData, ageInMonths, type WhoField, type WhoPercentileKey } from '@/constants/whoGrowth'
 import { formatDuration, formatPercentChange, formatAmount } from '@/utils/format'
 import { isDark } from '@/composables/useTheme'
 
@@ -44,13 +45,17 @@ const axisLineColor = computed(() => (isDark.value ? '#42372f' : '#f0e2d4'))
 const splitLineColor = computed(() => (isDark.value ? '#2b251f' : '#f5ece2'))
 
 const now = ref(Date.now())
-setInterval(() => (now.value = Date.now()), 60_000)
+const nowTimer = window.setInterval(() => (now.value = Date.now()), 60_000)
+onUnmounted(() => window.clearInterval(nowTimer))
 
 // 时间范围选择
 const rangeKey = ref('7d')
 const range = computed(() => RANGE_PRESETS.find((p) => p.key === rangeKey.value)!)
 const rangeStart = computed(() => range.value.getRange(now.value)[0])
 const rangeEnd = computed(() => range.value.getRange(now.value)[1])
+
+// WHO 生长曲线说明弹窗
+const growthInfoOpen = ref(false)
 
 // 概览 tab：对比 / 汇总
 const overviewTab = ref<'compare' | 'summary'>('compare')
@@ -358,50 +363,145 @@ const summaryItems = computed(() => {
   ]
 })
 
-// —— 成长曲线（体重/身高 + WHO 生长标准参考）——
+// —— 成长曲线（体重/身高/头围 + WHO 生长标准参考，时间轴按真实记录日期）——
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
 const growthRecords = computed(() => [...growthStore.growths].sort((a, b) => a.date - b.date))
-/** 有出生日期才能换算月龄 */
+/** 有出生日期才能换算月龄/绘制参考线 */
 const hasBirthDate = computed(() => Boolean(activeBaby.value?.birthDate))
 const whoPoints = computed(() => whoData(activeBaby.value?.gender))
 
+/** 出生日 0 点时间戳（时间轴原点） */
+const birthTs = computed(() => {
+  const b = activeBaby.value?.birthDate
+  return b ? new Date(b + 'T00:00:00').getTime() : 0
+})
+
+/** 月龄 → 日历日期时间戳（出生日 + n 个自然月，处理月末溢出） */
+function monthToTs(month: number): number {
+  const d = new Date(birthTs.value)
+  const m = d.getMonth() + Math.floor(month)
+  const y = d.getFullYear() + Math.floor(m / 12)
+  const mm = ((m % 12) + 12) % 12
+  const day = Math.min(d.getDate(), new Date(y, mm + 1, 0).getDate())
+  return new Date(y, mm, day).getTime()
+}
+
 const weightPoints = computed(() =>
-  growthRecords.value
-    .filter((g) => g.weight != null)
-    .map((g) => ({ month: ageInMonths(activeBaby.value!.birthDate!, g.date), weight: g.weight! }))
-    .sort((a, b) => a.month - b.month),
+  growthRecords.value.filter((g) => g.weight != null).map((g) => ({ ts: g.date, value: g.weight! })),
 )
 const heightPoints = computed(() =>
-  growthRecords.value
-    .filter((g) => g.height != null)
-    .map((g) => ({ month: ageInMonths(activeBaby.value!.birthDate!, g.date), height: g.height! }))
-    .sort((a, b) => a.month - b.month),
+  growthRecords.value.filter((g) => g.height != null).map((g) => ({ ts: g.date, value: g.height! })),
 )
-/** 图表横轴上限：至少覆盖已有记录的最大月龄（不低于 24 月） */
-const growthXMax = computed(() =>
+const hcPoints = computed(() =>
+  growthRecords.value
+    .filter((g) => g.headCircumference != null)
+    .map((g) => ({ ts: g.date, value: g.headCircumference! })),
+)
+
+/** 图表覆盖的最大月龄（至少 24 月） */
+const growthXMax = computed(() => {
+  const months = [...weightPoints.value, ...heightPoints.value, ...hcPoints.value].map((p) =>
+    ageInMonths(activeBaby.value!.birthDate!, p.ts),
+  )
+  return Math.max(24, Math.ceil(Math.max(3, ...months)))
+})
+const hasGrowthData = computed(
+  () => weightPoints.value.length > 0 || heightPoints.value.length > 0 || hcPoints.value.length > 0,
+)
+
+/** 时间轴范围：出生日 → max(参考曲线最大日期, 最后记录日期) */
+const growthXMin = computed(() => birthTs.value)
+const growthXMaxTs = computed(() =>
   Math.max(
-    24,
-    Math.ceil(Math.max(3, ...weightPoints.value.map((p) => p.month), ...heightPoints.value.map((p) => p.month))),
+    monthToTs(growthXMax.value),
+    ...weightPoints.value.map((p) => p.ts),
+    ...heightPoints.value.map((p) => p.ts),
+    ...hcPoints.value.map((p) => p.ts),
   ),
 )
-const hasGrowthData = computed(() => weightPoints.value.length > 0 || heightPoints.value.length > 0)
 
-function whoSeries(field: 'weight' | 'length', key: 'p3' | 'p50' | 'p97'): [number, number][] {
-  return whoPoints.value.filter((p) => p.month <= growthXMax.value).map((p) => [p.month, p[field][key]])
+/** WHO 参考线数据（x 为月龄对应的日历日期时间戳） */
+function whoSeries(field: WhoField, key: WhoPercentileKey): [number, number][] {
+  return whoPoints.value.filter((p) => p.month <= growthXMax.value).map((p) => [monthToTs(p.month), p[field][key]])
+}
+
+/** 时间轴标签：M/D（跨年显示 YYYY/M/D） */
+const tsAxisLabel = (v: number) => {
+  const d = new Date(v)
+  const birth = new Date(birthTs.value)
+  if (d.getFullYear() !== birth.getFullYear()) return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`
+  return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
 const growthTooltip = (unit: string) => ({
   trigger: 'axis' as const,
-  valueFormatter: (v: unknown) => (Array.isArray(v) ? `${Number(v[1]).toFixed(1)} ${unit}` : `${v} ${unit}`),
+  formatter: (params: unknown) => {
+    const list = params as Array<{ seriesName: string; marker: string; value?: [number, number] }>
+    const first = list.find((p) => Array.isArray(p.value))
+    if (!first?.value) return ''
+    const d = new Date(first.value[0])
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const lines = list.map((p) => {
+      const v = Array.isArray(p.value) ? p.value[1] : null
+      return `${p.marker}${p.seriesName}: ${v != null ? Number(v).toFixed(1) : '-'} ${unit}`
+    })
+    return `<b>${dateStr}</b><br/>${lines.join('<br/>')}`
+  },
 })
 
+/** WHO 参考线颜色（P15/P85 更浅，突出 P3-P97 区间） */
+const WHO_LINE_COLORS: Record<WhoPercentileKey, string> = {
+  p97: '#c4b6a6',
+  p85: '#d8cbbd',
+  p50: '#a49482',
+  p15: '#d8cbbd',
+  p3: '#c4b6a6',
+}
+
+function growthSeries(
+  field: WhoField,
+  data: { ts: number; value: number }[],
+  mainColor: string,
+  label: string,
+): EChartsOption['series'] {
+  const keys: WhoPercentileKey[] = ['p97', 'p85', 'p50', 'p15', 'p3']
+  const series: EChartsOption['series'] = keys.map((k) => ({
+    name: k.toUpperCase(),
+    type: 'line',
+    data: whoSeries(field, k),
+    symbol: 'none',
+    smooth: 0.4,
+    lineStyle: { width: 1, color: WHO_LINE_COLORS[k], type: 'dashed' },
+    itemStyle: { color: WHO_LINE_COLORS[k] },
+  }))
+  series.push({
+    name: label,
+    type: 'line',
+    data: data.map((p) => [p.ts, p.value]),
+    smooth: true,
+    symbol: 'circle',
+    symbolSize: 7,
+    lineStyle: { width: 2.5, color: mainColor },
+    itemStyle: { color: mainColor },
+  })
+  return series
+}
+
 const weightOption = computed<EChartsOption>(() => ({
-  grid: { left: 44, right: 16, top: 12, bottom: 28 },
+  grid: { left: 44, right: 16, top: 34, bottom: 30 },
+  legend: {
+    top: 4,
+    left: 'center',
+    itemWidth: 14,
+    itemHeight: 8,
+    itemGap: 12,
+    textStyle: { fontSize: 10, color: axisColor.value },
+  },
   xAxis: {
     type: 'value',
-    min: 0,
-    max: growthXMax.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}${t('duration.monthShort')}` },
+    min: growthXMin.value,
+    max: growthXMaxTs.value,
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: tsAxisLabel },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
@@ -411,51 +511,24 @@ const weightOption = computed<EChartsOption>(() => ({
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   tooltip: growthTooltip('kg'),
-  series: [
-    {
-      name: 'P97',
-      type: 'line',
-      data: whoSeries('weight', 'p97'),
-      symbol: 'none',
-      lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' },
-      itemStyle: { color: '#c4b6a6' },
-    },
-    {
-      name: 'P50',
-      type: 'line',
-      data: whoSeries('weight', 'p50'),
-      symbol: 'none',
-      lineStyle: { width: 1, color: '#a49482', type: 'dashed' },
-      itemStyle: { color: '#a49482' },
-    },
-    {
-      name: 'P3',
-      type: 'line',
-      data: whoSeries('weight', 'p3'),
-      symbol: 'none',
-      lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' },
-      itemStyle: { color: '#c4b6a6' },
-    },
-    {
-      name: t('stats.babyWeight'),
-      type: 'line',
-      data: weightPoints.value.map((p) => [p.month, p.weight]),
-      smooth: true,
-      symbol: 'circle',
-      symbolSize: 7,
-      lineStyle: { width: 2.5, color: CHART_COLORS.feedAmount },
-      itemStyle: { color: CHART_COLORS.feedAmount },
-    },
-  ],
+  series: growthSeries('weight', weightPoints.value, CHART_COLORS.feedAmount, t('stats.babyWeight')),
 }))
 
 const heightOption = computed<EChartsOption>(() => ({
-  grid: { left: 44, right: 16, top: 12, bottom: 28 },
+  grid: { left: 44, right: 16, top: 34, bottom: 30 },
+  legend: {
+    top: 4,
+    left: 'center',
+    itemWidth: 14,
+    itemHeight: 8,
+    itemGap: 12,
+    textStyle: { fontSize: 10, color: axisColor.value },
+  },
   xAxis: {
     type: 'value',
-    min: 0,
-    max: growthXMax.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}${t('duration.monthShort')}` },
+    min: growthXMin.value,
+    max: growthXMaxTs.value,
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: tsAxisLabel },
     axisLine: { lineStyle: { color: axisLineColor.value } },
   },
   yAxis: {
@@ -465,42 +538,34 @@ const heightOption = computed<EChartsOption>(() => ({
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   tooltip: growthTooltip('cm'),
-  series: [
-    {
-      name: 'P97',
-      type: 'line',
-      data: whoSeries('length', 'p97'),
-      symbol: 'none',
-      lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' },
-      itemStyle: { color: '#c4b6a6' },
-    },
-    {
-      name: 'P50',
-      type: 'line',
-      data: whoSeries('length', 'p50'),
-      symbol: 'none',
-      lineStyle: { width: 1, color: '#a49482', type: 'dashed' },
-      itemStyle: { color: '#a49482' },
-    },
-    {
-      name: 'P3',
-      type: 'line',
-      data: whoSeries('length', 'p3'),
-      symbol: 'none',
-      lineStyle: { width: 1, color: '#c4b6a6', type: 'dashed' },
-      itemStyle: { color: '#c4b6a6' },
-    },
-    {
-      name: t('stats.babyHeight'),
-      type: 'line',
-      data: heightPoints.value.map((p) => [p.month, p.height]),
-      smooth: true,
-      symbol: 'circle',
-      symbolSize: 7,
-      lineStyle: { width: 2.5, color: CHART_COLORS.sleep },
-      itemStyle: { color: CHART_COLORS.sleep },
-    },
-  ],
+  series: growthSeries('length', heightPoints.value, CHART_COLORS.sleep, t('stats.babyHeight')),
+}))
+
+const hcOption = computed<EChartsOption>(() => ({
+  grid: { left: 44, right: 16, top: 34, bottom: 30 },
+  legend: {
+    top: 4,
+    left: 'center',
+    itemWidth: 14,
+    itemHeight: 8,
+    itemGap: 12,
+    textStyle: { fontSize: 10, color: axisColor.value },
+  },
+  xAxis: {
+    type: 'value',
+    min: growthXMin.value,
+    max: growthXMaxTs.value,
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: tsAxisLabel },
+    axisLine: { lineStyle: { color: axisLineColor.value } },
+  },
+  yAxis: {
+    type: 'value',
+    scale: true,
+    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}cm` },
+    splitLine: { lineStyle: { color: splitLineColor.value } },
+  },
+  tooltip: growthTooltip('cm'),
+  series: growthSeries('hc', hcPoints.value, '#6AB0D8', t('stats.babyHead')),
 }))
 </script>
 
@@ -596,7 +661,11 @@ const heightOption = computed<EChartsOption>(() => ({
         :title="t('stats.growthTitle')"
         :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
         :option="weightOption"
-      />
+      >
+        <template #title-action>
+          <button class="growth-info-btn" :aria-label="t('stats.whoInfoTitle')" @click="growthInfoOpen = true">?</button>
+        </template>
+      </ChartCard>
       <ChartCard
         v-else-if="hasGrowthData"
         :title="t('stats.growthTitle')"
@@ -613,11 +682,36 @@ const heightOption = computed<EChartsOption>(() => ({
         :title="t('stats.heightTitle')"
         :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
         :option="heightOption"
-      />
+      >
+        <template #title-action>
+          <button class="growth-info-btn" :aria-label="t('stats.whoInfoTitle')" @click="growthInfoOpen = true">?</button>
+        </template>
+      </ChartCard>
       <ChartCard
         v-else-if="hasGrowthData"
         :title="t('stats.heightTitle')"
         :subtitle="t('stats.heightEmpty')"
+        :option="{
+          grid: { top: 40 },
+          xAxis: { type: 'value', axisLabel: { show: false } },
+          yAxis: { type: 'value', axisLabel: { show: false } },
+          series: [],
+        }"
+      />
+      <ChartCard
+        v-if="hcPoints.length > 0"
+        :title="t('stats.hcTitle')"
+        :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
+        :option="hcOption"
+      >
+        <template #title-action>
+          <button class="growth-info-btn" :aria-label="t('stats.whoInfoTitle')" @click="growthInfoOpen = true">?</button>
+        </template>
+      </ChartCard>
+      <ChartCard
+        v-else-if="hasGrowthData"
+        :title="t('stats.hcTitle')"
+        :subtitle="t('stats.hcEmpty')"
         :option="{
           grid: { top: 40 },
           xAxis: { type: 'value', axisLabel: { show: false } },
@@ -634,6 +728,20 @@ const heightOption = computed<EChartsOption>(() => ({
     </div>
 
     <p class="note-text">{{ t('stats.noteText') }}</p>
+
+    <BaseModal :show="growthInfoOpen" :title="t('stats.whoInfoTitle')" @close="growthInfoOpen = false">
+      <div class="who-info">
+        <p class="who-intro">{{ t('stats.whoIntro') }}</p>
+        <ul class="who-list">
+          <li><b>P3</b><span>{{ t('stats.whoP3') }}</span></li>
+          <li><b>P15</b><span>{{ t('stats.whoP15') }}</span></li>
+          <li><b>P50</b><span>{{ t('stats.whoP50') }}</span></li>
+          <li><b>P85</b><span>{{ t('stats.whoP85') }}</span></li>
+          <li><b>P97</b><span>{{ t('stats.whoP97') }}</span></li>
+        </ul>
+        <p class="who-range">{{ t('stats.whoRange') }}</p>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
@@ -869,6 +977,71 @@ const heightOption = computed<EChartsOption>(() => ({
   color: var(--text-muted);
   margin: 12px 4px 4px;
   line-height: 1.6;
+}
+
+.growth-info-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.growth-info-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.who-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.who-intro {
+  margin-bottom: 12px;
+}
+
+.who-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.who-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.who-list b {
+  flex-shrink: 0;
+  min-width: 40px;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.who-range {
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .section-title {
