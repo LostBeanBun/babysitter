@@ -34,11 +34,11 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 <template>
   <header class="page-header">
     <div class="header-left">
-      <h1 class="header-title">
-        <span v-if="babyStore.activeBaby?.avatar" class="header-avatar">{{ babyStore.activeBaby.avatar }}</span>
-        {{ babyStore.activeBaby?.name ?? t('app.name') }}
-      </h1>
-      <p v-if="babyStore.activeBaby" class="header-sub">{{ t('app.tagline') }}</p>
+      <span v-if="babyStore.activeBaby?.avatar" class="header-avatar">{{ babyStore.activeBaby.avatar }}</span>
+      <div class="header-text">
+        <h1 class="header-title">{{ babyStore.activeBaby?.name ?? t('app.name') }}</h1>
+        <p v-if="babyStore.activeBaby" class="header-sub">{{ t('app.tagline') }}</p>
+      </div>
     </div>
     <div class="header-right">
       <slot name="right" />
@@ -113,13 +113,20 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   align-items: center;
   justify-content: space-between;
   background: var(--header-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
   border-bottom: 1px solid var(--border);
   z-index: 40;
 }
 
 .header-left {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-text {
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -133,11 +140,21 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  letter-spacing: 0.01em;
 }
 
+/* 宝宝头像徽章：圆角方形渐变底 */
 .header-avatar {
-  font-size: 18px;
-  margin-right: 5px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--primary-soft), var(--surface-2));
+  border: 1px solid var(--border);
 }
 
 .header-sub {
@@ -160,25 +177,32 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .lang-toggle {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   min-height: 0;
-  border-radius: 50%;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1px;
   color: var(--text-secondary);
-  background: var(--surface-2);
+  background: var(--surface);
   border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
   transition:
     color 0.15s ease,
-    background 0.15s ease;
+    background 0.15s ease,
+    transform 0.12s ease,
+    border-color 0.15s ease;
+}
+
+.lang-toggle:hover {
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .lang-toggle:active {
-  background: var(--surface);
-  color: var(--primary);
+  transform: scale(0.92);
 }
 
 .lang-badge {
@@ -189,19 +213,19 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
 .lang-menu {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   right: 0;
-  min-width: 132px;
+  min-width: 148px;
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
   z-index: 50;
-  animation: lang-pop 0.12s ease-out;
+  animation: lang-pop 0.14s ease-out;
 }
 
 .lang-menu button {
@@ -209,8 +233,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 9px 12px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 9px;
   font-size: 14px;
   color: var(--text);
   text-align: left;
@@ -243,24 +267,31 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
 /* 主题切换按钮：圆形图标按钮，不受全局 min-height 影响 */
 .theme-toggle {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   min-height: 0;
-  border-radius: 50%;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
-  background: var(--surface-2);
+  background: var(--surface);
   border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
   transition:
     color 0.15s ease,
-    background 0.15s ease;
+    background 0.15s ease,
+    transform 0.12s ease,
+    border-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .theme-toggle:active {
-  background: var(--surface);
-  color: var(--primary);
+  transform: scale(0.92);
 }
 
 /* PC/平板：页头与内容容器同宽并居中 */

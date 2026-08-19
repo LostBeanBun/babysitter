@@ -5,15 +5,13 @@ import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
 import { exportAllJson, exportBabyCsvs, importAllJson } from '@/services/export'
 import { BABY_AVATARS } from '@/constants'
-import { setTheme, themeMode, type ThemeMode } from '@/composables/useTheme'
-import { setLocale } from '@/i18n'
 import { FEED_REMINDER_KEY } from '@/utils/feedingGuide'
 import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { Baby } from '@/types'
 
 const babyStore = useBabyStore()
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 const recordCounts = ref({
   feedings: 0,
@@ -52,21 +50,6 @@ async function toggleFeedReminder() {
       /* 用户拒绝或环境不支持时静默 */
     }
   }
-}
-
-const THEME_OPTIONS: { value: ThemeMode; labelKey: string; icon: string }[] = [
-  { value: 'system', labelKey: 'theme.followSystem', icon: '🖥️' },
-  { value: 'light', labelKey: 'theme.light', icon: '☀️' },
-  { value: 'dark', labelKey: 'theme.dark', icon: '🌙' },
-]
-
-const LOCALE_OPTIONS = [
-  { value: 'zh-CN' as const, labelKey: 'language.zh' },
-  { value: 'en-US' as const, labelKey: 'language.en' },
-]
-
-function changeLocale(l: 'zh-CN' | 'en-US') {
-  setLocale(l)
 }
 
 onMounted(async () => {
@@ -255,41 +238,6 @@ async function confirmClearAll() {
       </button>
     </div>
 
-    <!-- 外观 -->
-    <p class="section-title">{{ t('theme.title') }}</p>
-    <div class="card">
-      <div class="theme-options">
-        <button
-          v-for="opt in THEME_OPTIONS"
-          :key="opt.value"
-          class="theme-option"
-          :class="{ active: themeMode === opt.value }"
-          @click="setTheme(opt.value)"
-        >
-          <span class="theme-icon">{{ opt.icon }}</span>
-          <span class="theme-label">{{ t(opt.labelKey) }}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- 语言 -->
-    <p class="section-title">{{ t('language.title') }}</p>
-    <div class="card">
-      <p class="data-tip">{{ t('language.hint') }}</p>
-      <div class="theme-options lang-options">
-        <button
-          v-for="opt in LOCALE_OPTIONS"
-          :key="opt.value"
-          class="theme-option"
-          :class="{ active: locale === opt.value }"
-          @click="changeLocale(opt.value)"
-        >
-          <span class="theme-icon">{{ opt.value === 'zh-CN' ? '🇨🇳' : '🇺🇸' }}</span>
-          <span class="theme-label">{{ t(opt.labelKey) }}</span>
-        </button>
-      </div>
-    </div>
-
     <!-- 喂奶提醒 -->
     <p class="section-title">{{ t('settings.feedReminderTitle') }}</p>
     <div class="card">
@@ -395,12 +343,17 @@ async function confirmClearAll() {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
   border: 1.5px solid var(--border);
   background: var(--surface);
   cursor: pointer;
-  transition: all 0.12s ease;
+  box-shadow: var(--shadow-xs);
+  transition: all 0.15s ease;
+}
+
+.baby-item:active {
+  transform: scale(0.99);
 }
 
 @media (max-width: 400px) {
@@ -423,6 +376,7 @@ async function confirmClearAll() {
 .baby-item.active {
   border-color: var(--primary);
   background: var(--primary-soft);
+  box-shadow: 0 0 0 3px rgba(238, 122, 85, 0.12);
 }
 
 .baby-avatar {
@@ -467,19 +421,22 @@ async function confirmClearAll() {
 .icon-btn {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: none;
-  background: transparent;
+  background: var(--surface-2);
   font-size: 17px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.12s ease;
+  transition:
+    background 0.12s ease,
+    transform 0.12s ease;
 }
 
 .icon-btn:active {
-  background: var(--surface-2);
+  background: var(--surface-3);
+  transform: scale(0.92);
 }
 
 .data-tip {
@@ -564,9 +521,11 @@ async function confirmClearAll() {
 
 .data-counts span {
   font-size: 11px;
+  font-weight: 600;
   color: var(--text-secondary);
   background: var(--surface-2);
-  padding: 4px 10px;
+  border: 1px solid var(--border);
+  padding: 4px 11px;
   border-radius: 999px;
 }
 
@@ -642,49 +601,6 @@ async function confirmClearAll() {
   border-color: var(--primary);
   background: var(--primary-soft);
   transform: scale(1.06);
-}
-
-.theme-options {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-/* 语言选项两列展示，限宽避免过宽 */
-.lang-options {
-  grid-template-columns: repeat(2, 1fr);
-  max-width: 320px;
-}
-
-.theme-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 14px 8px;
-  border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: var(--surface-2);
-  transition: all 0.12s ease;
-}
-
-.theme-option.active {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.theme-icon {
-  font-size: 22px;
-}
-
-.theme-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.theme-option.active .theme-label {
-  color: var(--primary-dark);
 }
 
 .form-actions {

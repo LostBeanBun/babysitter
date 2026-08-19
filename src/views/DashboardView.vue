@@ -839,34 +839,37 @@ const editPayload = computed(() => {
 }
 
 .date-badge {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--surface);
   padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  white-space: nowrap;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 
 .feed-reminder-banner {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--primary-soft);
-  border: 1.5px solid var(--primary);
-  border-radius: var(--radius);
-  padding: 12px 14px;
+  background: linear-gradient(135deg, var(--primary-soft), var(--accent-yellow-soft));
+  border: 1px solid rgba(238, 122, 85, 0.28);
+  border-radius: var(--radius-lg);
+  padding: 13px 16px;
   margin-bottom: 12px;
+  box-shadow: var(--shadow-xs);
 }
 
 .feed-reminder-banner .fr-icon {
-  font-size: 26px;
+  font-size: 28px;
   flex-shrink: 0;
 }
 
@@ -887,21 +890,25 @@ const editPayload = computed(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--surface);
-  border: 1.5px solid var(--primary);
-  border-radius: var(--radius);
-  padding: 12px 14px;
+  background: linear-gradient(135deg, var(--accent-blue-soft), var(--surface));
+  border: 1px solid rgba(130, 174, 222, 0.32);
+  border-radius: var(--radius-lg);
+  padding: 13px 16px;
   margin-bottom: 12px;
   cursor: pointer;
-  transition: background 0.12s ease;
+  box-shadow: var(--shadow-xs);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
 }
 
 .vaccine-banner:active {
-  background: var(--primary-soft);
+  transform: scale(0.99);
+  box-shadow: var(--shadow-sm);
 }
 
 .vaccine-banner .vb-icon {
-  font-size: 26px;
+  font-size: 28px;
   flex-shrink: 0;
 }
 
@@ -921,8 +928,8 @@ const editPayload = computed(() => {
 }
 
 .vb-days {
-  color: var(--primary);
-  font-weight: 600;
+  color: var(--accent-blue);
+  font-weight: 700;
   margin-left: 4px;
 }
 
@@ -930,18 +937,18 @@ const editPayload = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  margin-top: 12px;
-  padding: 14px 12px;
+  margin-top: 14px;
+  padding: 15px 12px;
 }
 
 .sleep-feed-btn {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px;
+  padding: 13px;
   font-weight: 700;
 }
 
@@ -1043,15 +1050,7 @@ const editPayload = computed(() => {
 @media (max-width: 520px) {
   .quick-actions {
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-
-  .quick-btn {
-    padding: 14px 6px;
-  }
-
-  .quick-label {
-    font-size: 13px;
+    gap: 12px;
   }
 }
 
@@ -1070,25 +1069,76 @@ const editPayload = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   min-width: 0; /* 允许 grid track 收缩，避免长标签撑破容器 */
-  padding: 14px 8px;
-  border-radius: var(--radius);
-  border: 1.5px solid var(--border);
-  background: var(--surface);
+  padding: 12px 8px;
+  border-radius: 18px;
+  border: 1px solid transparent;
+  background: transparent;
   transition:
     transform 0.12s ease,
-    box-shadow 0.12s ease;
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .quick-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
+  background: var(--surface-2);
 }
 
 .quick-icon {
-  font-size: 24px;
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
   flex-shrink: 0;
   line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.03), var(--shadow-xs);
+  transition: transform 0.15s ease;
+}
+
+.quick-btn:active .quick-icon {
+  transform: scale(0.94);
+}
+
+/* 每种记录类型的图标专属渐变色（浅色容器 + 主题色），视觉更有层次 */
+.quick-btn.feed .quick-icon {
+  background: linear-gradient(135deg, #fde8e0, #f6c9b8);
+}
+
+.quick-btn.diaper .quick-icon {
+  background: linear-gradient(135deg, #ece5fa, #d5c6f0);
+}
+
+.quick-btn.pump .quick-icon {
+  background: linear-gradient(135deg, #fbe4f0, #f2c3dc);
+}
+
+.quick-btn.sleep .quick-icon {
+  background: linear-gradient(135deg, #e3eefb, #c2d8f0);
+}
+
+.quick-btn.growth .quick-icon {
+  background: linear-gradient(135deg, #e4f4ea, #c2e4d0);
+}
+
+.quick-btn.solidFood .quick-icon {
+  background: linear-gradient(135deg, #fbead8, #f2d0a8);
+}
+
+.quick-btn.medication .quick-icon {
+  background: linear-gradient(135deg, #fbe3ea, #f2bfce);
+}
+
+.quick-btn.vaccination .quick-icon {
+  background: linear-gradient(135deg, #e2f0fb, #bfdcf2);
+}
+
+.quick-btn.temperature .quick-icon {
+  background: linear-gradient(135deg, #fdf0da, #f5ddae);
 }
 
 .quick-label {

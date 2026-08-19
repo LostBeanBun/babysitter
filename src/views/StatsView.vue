@@ -641,8 +641,8 @@ const heightOption = computed<EChartsOption>(() => ({
 .range-select-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 0 12px;
+  gap: 12px;
+  padding: 6px 4px 14px;
 }
 
 .range-select-label {
@@ -655,10 +655,13 @@ const heightOption = computed<EChartsOption>(() => ({
 .range-select {
   flex: 1;
   min-width: 0;
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
 }
 
 .overview-card {
   margin-bottom: 12px;
+  padding: 16px;
 }
 
 .overview-tabs {
@@ -679,7 +682,7 @@ const heightOption = computed<EChartsOption>(() => ({
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -687,8 +690,8 @@ const heightOption = computed<EChartsOption>(() => ({
 
 .overview-tab.active {
   background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  color: var(--primary-dark);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .overview-sub {
@@ -713,9 +716,15 @@ const heightOption = computed<EChartsOption>(() => ({
 
 .summary-item {
   background: var(--surface-2);
-  border-radius: 12px;
-  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 11px 8px;
   text-align: center;
+  transition: transform 0.12s ease;
+}
+
+.summary-item:active {
+  transform: scale(0.97);
 }
 
 .summary-label {
@@ -777,9 +786,15 @@ const heightOption = computed<EChartsOption>(() => ({
 
 .compare-item {
   background: var(--surface-2);
-  border-radius: 12px;
-  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 11px 8px;
   text-align: center;
+  transition: transform 0.12s ease;
+}
+
+.compare-item:active {
+  transform: scale(0.97);
 }
 
 .compare-label {

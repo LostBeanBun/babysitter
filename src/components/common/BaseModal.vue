@@ -30,24 +30,34 @@ const { t } = useI18n()
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .modal-title {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text);
+  letter-spacing: 0.01em;
 }
 
 .modal-close {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--surface-2);
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.modal-close:active {
+  background: var(--surface-3);
+  transform: scale(0.9);
 }
 </style>

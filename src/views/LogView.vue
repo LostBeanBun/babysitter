@@ -363,8 +363,8 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 .filter-select-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 0 12px;
+  gap: 12px;
+  padding: 6px 4px 14px;
 }
 
 .filter-select-label {
@@ -377,19 +377,27 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 .filter-select {
   flex: 1;
   min-width: 0;
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
 }
 
 .empty-inline {
   text-align: center;
-  padding: 32px 12px;
+  padding: 40px 12px;
   color: var(--text-secondary);
   font-size: 14px;
+}
+
+.empty-inline p:first-child {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .empty-hint {
   color: var(--text-muted);
   font-size: 12px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .confirm-text {

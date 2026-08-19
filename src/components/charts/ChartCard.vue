@@ -55,17 +55,17 @@ const mergedOption = computed<EChartsOption>(() => {
 
 <style scoped>
 .chart-card {
-  padding: 14px;
+  padding: 16px;
   min-width: 0;
 }
 
 .chart-head {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .chart-title {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -74,7 +74,7 @@ const mergedOption = computed<EChartsOption>(() => {
 .chart-sub {
   font-size: 12px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 3px;
   overflow-wrap: anywhere;
   word-break: break-word;
 }

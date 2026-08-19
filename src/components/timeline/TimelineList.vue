@@ -268,7 +268,7 @@ const groupedEntries = computed(() => {
 
 .tl-day {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
   margin: 0 4px 8px;
 }
@@ -278,24 +278,31 @@ const groupedEntries = computed(() => {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: var(--radius);
+  border-radius: 16px;
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.12s ease;
 }
 
 .tl-item:hover {
   background: var(--surface-2);
 }
 
+.tl-item:active {
+  transform: scale(0.99);
+}
+
 .tl-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 13px;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
   flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 
 .tl-body {
@@ -325,12 +332,15 @@ const groupedEntries = computed(() => {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+  background: var(--surface-2);
+  padding: 2px 8px;
+  border-radius: 999px;
 }
 
 .tl-detail {
   font-size: 13px;
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: 3px;
   overflow-wrap: anywhere;
   word-break: break-word;
   min-width: 0;

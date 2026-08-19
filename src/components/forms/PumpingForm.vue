@@ -240,6 +240,13 @@ async function submit() {
   gap: 10px;
 }
 
+/* 手机下强制单列：真机日期控件固有宽度大，并排必然溢出 */
+@media (max-width: 480px) {
+  .time-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .form-actions {
   display: flex;
   gap: 10px;

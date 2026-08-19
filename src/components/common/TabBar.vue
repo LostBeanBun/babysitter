@@ -41,9 +41,10 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   height: calc(var(--tabbar-height) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
   background: var(--surface-translucent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
   border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 16px rgba(61, 48, 41, 0.04);
   display: flex;
   z-index: 50;
 }
@@ -54,23 +55,39 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   color: var(--text-muted);
   text-decoration: none;
-  transition: color 0.15s ease;
+  border-radius: 16px;
+  margin: 6px 8px;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    transform 0.12s ease;
+  min-height: 0;
+}
+
+.tabbar-item:active {
+  transform: scale(0.94);
 }
 
 .tabbar-item.active {
-  color: var(--primary);
+  color: var(--primary-dark);
+  background: var(--primary-soft);
 }
 
 .tabbar-icon {
-  width: 24px;
-  height: 24px;
+  width: 23px;
+  height: 23px;
+  transition: transform 0.18s ease;
+}
+
+.tabbar-item.active .tabbar-icon {
+  transform: translateY(-1px) scale(1.05);
 }
 
 .tabbar-label {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
 }
 
