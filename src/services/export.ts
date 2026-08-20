@@ -30,14 +30,14 @@ import {
 const t = i18n.global.t
 
 /** CSV 转义：含逗号/引号/换行时包裹引号 */
-function csvEscape(v: string | number | undefined | null): string {
+export function csvEscape(v: string | number | undefined | null): string {
   if (v === undefined || v === null) return ''
   const s = String(v)
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`
   return s
 }
 
-function toCsv(rows: (string | number | undefined | null)[][]): string {
+export function toCsv(rows: (string | number | undefined | null)[][]): string {
   return rows.map((r) => r.map(csvEscape).join(',')).join('\r\n')
 }
 
@@ -179,41 +179,52 @@ export async function importAllJson(
   }
 }
 
-/** 按宝宝导出 CSV（十类记录合并为单个文件，统一宽表结构） */
-export async function exportBabyCsvs(baby: Baby): Promise<void> {
-  const [feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures, milestones] =
-    await Promise.all([
-      db.feedings.where('babyId').equals(baby.id!).sortBy('startTime'),
-      db.diapers.where('babyId').equals(baby.id!).sortBy('time'),
-      db.pumpings.where('babyId').equals(baby.id!).sortBy('startTime'),
-      db.sleeps.where('babyId').equals(baby.id!).sortBy('startTime'),
-      db.growths.where('babyId').equals(baby.id!).sortBy('date'),
-      db.solidFoods.where('babyId').equals(baby.id!).sortBy('time'),
-      db.medications.where('babyId').equals(baby.id!).sortBy('time'),
-      db.vaccinations.where('babyId').equals(baby.id!).sortBy('date'),
-      db.temperatures.where('babyId').equals(baby.id!).sortBy('time'),
-      db.milestones.where('babyId').equals(baby.id!).sortBy('time'),
-    ])
+type Row = (string | number | undefined | null)[]
 
-  type Row = (string | number | undefined | null)[]
-  const rows: Row[] = [
-    [
-      t('exportCsv.recordType'),
-      t('exportCsv.date'),
-      t('exportCsv.time'),
-      t('exportCsv.endDate'),
-      t('exportCsv.endTime'),
-      t('exportCsv.item'),
-      t('exportCsv.value'),
-      t('exportCsv.duration'),
-      t('exportCsv.status'),
-      t('exportCsv.notes'),
-    ],
+/** 单个宝宝的全部记录数据（供 CSV 行生成使用） */
+export interface BabyCsvData {
+  feedings: Feeding[]
+  diapers: DiaperChange[]
+  pumpings: Pumping[]
+  sleeps: Sleep[]
+  growths: GrowthRecord[]
+  solidFoods: SolidFood[]
+  medications: Medication[]
+  vaccinations: Vaccination[]
+  temperatures: Temperature[]
+  milestones: Milestone[]
+}
+
+/** CSV 表头；withBaby 时首列插入宝宝名 */
+function csvHeader(withBaby: boolean): Row {
+  const cols = [
+    t('exportCsv.recordType'),
+    t('exportCsv.date'),
+    t('exportCsv.time'),
+    t('exportCsv.endDate'),
+    t('exportCsv.endTime'),
+    t('exportCsv.item'),
+    t('exportCsv.value'),
+    t('exportCsv.duration'),
+    t('exportCsv.status'),
+    t('exportCsv.notes'),
   ]
+  return withBaby ? [t('exportCsv.babyName'), ...cols] : cols
+}
+
+/**
+ * 生成单个宝宝的全部记录 CSV 数据行（不含表头）。
+ * babyName 提供时每行首列插入宝宝名（用于多宝宝合并导出）。
+ */
+export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
+  const withBaby = babyName !== undefined
+  const rows: Row[] = []
+  const nameCol = (): Row => (withBaby ? [babyName] : [])
 
   // 喂养
-  for (const f of feedings) {
+  for (const f of data.feedings) {
     rows.push([
+      ...nameCol(),
       t('exportCsv.recordTypes.feeding'),
       formatDate(f.startTime),
       formatTime(f.startTime),
@@ -228,10 +239,11 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
   }
 
   // 纸尿裤
-  for (const d of diapers) {
+  for (const d of data.diapers) {
     const color = d.color ? t(DIAPER_COLOR_LABELS[d.color]) : ''
     const amount = d.amount ? t(DIAPER_AMOUNT_LABELS[d.amount]) : ''
     rows.push([
+      ...nameCol(),
       t('exportCsv.recordTypes.diaper'),
       formatDate(d.time),
       formatTime(d.time),
@@ -246,8 +258,9 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
   }
 
   // 吸奶
-  for (const p of pumpings) {
+  for (const p of data.pumpings) {
     rows.push([
+      ...nameCol(),
       t('exportCsv.recordTypes.pump'),
       formatDate(p.startTime),
       formatTime(p.startTime),
@@ -262,8 +275,9 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
   }
 
   // 睡眠
-  for (const s of sleeps) {
+  for (const s of data.sleeps) {
     rows.push([
+      ...nameCol(),
       t('exportCsv.recordTypes.sleep'),
       formatDate(s.startTime),
       formatTime(s.startTime),
@@ -278,12 +292,13 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
   }
 
   // 成长记录
-  for (const g of growths) {
+  for (const g of data.growths) {
     const parts: string[] = []
     if (g.weight != null) parts.push(`${g.weight} kg`)
     if (g.height != null) parts.push(`${g.height} cm`)
     if (g.headCircumference != null) parts.push(`${g.headCircumference} cm（头围）`)
     rows.push([
+      ...nameCol(),
       t('exportCsv.recordTypes.growth'),
       formatDate(g.date),
       '',
@@ -298,8 +313,9 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
   }
 
   // 辅食
-  for (const sf of solidFoods) {
+  for (const sf of data.solidFoods) {
     rows.push([
+      ...nameCol(),
       t('exportCsv.recordTypes.solidFood'),
       formatDate(sf.time),
       formatTime(sf.time),
@@ -314,8 +330,9 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
   }
 
   // 用药
-  for (const m of medications) {
+  for (const m of data.medications) {
     rows.push([
+      ...nameCol(),
       t('exportCsv.recordTypes.medication'),
       formatDate(m.time),
       formatTime(m.time),
@@ -330,8 +347,9 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
   }
 
   // 疫苗
-  for (const v of vaccinations) {
+  for (const v of data.vaccinations) {
     rows.push([
+      ...nameCol(),
       t('exportCsv.recordTypes.vaccination'),
       formatDate(v.date),
       '',
@@ -346,8 +364,9 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
   }
 
   // 体温
-  for (const tmp of temperatures) {
+  for (const tmp of data.temperatures) {
     rows.push([
+      ...nameCol(),
       t('exportCsv.recordTypes.temperature'),
       formatDate(tmp.time),
       formatTime(tmp.time),
@@ -362,8 +381,9 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
   }
 
   // 里程碑
-  for (const ms of milestones) {
+  for (const ms of data.milestones) {
     rows.push([
+      ...nameCol(),
       t('exportCsv.recordTypes.milestone'),
       formatDate(ms.time),
       formatTime(ms.time),
@@ -377,10 +397,51 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
     ])
   }
 
+  return rows
+}
+
+/** 读取单个宝宝的全部记录（按时间排序） */
+async function fetchBabyData(babyId: number): Promise<BabyCsvData> {
+  const [feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures, milestones] =
+    await Promise.all([
+      db.feedings.where('babyId').equals(babyId).sortBy('startTime'),
+      db.diapers.where('babyId').equals(babyId).sortBy('time'),
+      db.pumpings.where('babyId').equals(babyId).sortBy('startTime'),
+      db.sleeps.where('babyId').equals(babyId).sortBy('startTime'),
+      db.growths.where('babyId').equals(babyId).sortBy('date'),
+      db.solidFoods.where('babyId').equals(babyId).sortBy('time'),
+      db.medications.where('babyId').equals(babyId).sortBy('time'),
+      db.vaccinations.where('babyId').equals(babyId).sortBy('date'),
+      db.temperatures.where('babyId').equals(babyId).sortBy('time'),
+      db.milestones.where('babyId').equals(babyId).sortBy('time'),
+    ])
+  return { feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures, milestones }
+}
+
+/** 按宝宝导出 CSV（十类记录合并为单个文件，统一宽表结构） */
+export async function exportBabyCsvs(baby: Baby): Promise<void> {
+  const data = await fetchBabyData(baby.id!)
+  const rows: Row[] = [csvHeader(false), ...buildBabyCsvRows(data)]
   const stamp = formatDate(Date.now())
   downloadBlob(
     '\ufeff' + toCsv(rows),
     t('exportCsv.allFileName', { name: baby.name, stamp }),
+    'text/csv;charset=utf-8',
+  )
+}
+
+/** 一键导出全部宝宝的全部记录为单个合并 CSV（首列标识宝宝名） */
+export async function exportAllBabiesCsv(): Promise<void> {
+  const babies = await db.babies.toArray()
+  const rows: Row[] = [csvHeader(true)]
+  for (const baby of babies) {
+    const data = await fetchBabyData(baby.id!)
+    rows.push(...buildBabyCsvRows(data, baby.name))
+  }
+  const stamp = formatDate(Date.now())
+  downloadBlob(
+    '\ufeff' + toCsv(rows),
+    t('exportCsv.allBabiesFileName', { stamp }),
     'text/csv;charset=utf-8',
   )
 }

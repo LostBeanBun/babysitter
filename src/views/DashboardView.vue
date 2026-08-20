@@ -13,9 +13,10 @@ import { useVaccinationStore } from '@/stores/vaccination'
 import { useTemperatureStore } from '@/stores/temperature'
 import { useMilestoneStore } from '@/stores/milestone'
 import PageHeader from '@/components/common/PageHeader.vue'
-import StatCard from '@/components/common/StatCard.vue'
 import TimelineList, { type TimelineEntry } from '@/components/timeline/TimelineList.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import OnboardingModal from '@/components/dashboard/OnboardingModal.vue'
+import TodayOverview from '@/components/dashboard/TodayOverview.vue'
 import FeedingForm from '@/components/forms/FeedingForm.vue'
 import DiaperForm from '@/components/forms/DiaperForm.vue'
 import PumpingForm from '@/components/forms/PumpingForm.vue'
@@ -26,16 +27,9 @@ import MedicationForm from '@/components/forms/MedicationForm.vue'
 import VaccinationForm from '@/components/forms/VaccinationForm.vue'
 import TemperatureForm from '@/components/forms/TemperatureForm.vue'
 import MilestoneForm from '@/components/forms/MilestoneForm.vue'
-import { startOfDay, formatDuration, formatAmount, formatTime, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
-import { MS_PER_DAY, BABY_AVATARS, FEED_TYPE_LABELS } from '@/constants'
-import {
-  recommendedIntervalMs,
-  recommendedIntervalLabel,
-  avgFeedingIntervalMs,
-  sinceLastFeedingMs,
-} from '@/utils/feedingGuide'
+import { startOfDay, formatTime, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
+import { MS_PER_DAY, FEED_TYPE_LABELS } from '@/constants'
 import { checkReminders } from '@/utils/reminderScheduler'
-import { dailyGuide } from '@/utils/dailyGuides'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import type {
   Feeding,
@@ -57,7 +51,6 @@ import type {
   VaccinationStatus,
   TemperatureMethod,
   MilestoneType,
-  BabyGender,
 } from '@/types'
 
 /** 各表单编辑 props 结构（与表单组件 props.editing 一致） */
@@ -120,42 +113,16 @@ const vaccinationStore = useVaccinationStore()
 const temperatureStore = useTemperatureStore()
 const milestoneStore = useMilestoneStore()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 const now = ref(Date.now())
 const nowTimer = window.setInterval(() => (now.value = Date.now()), 60_000)
 onUnmounted(() => window.clearInterval(nowTimer))
-
 // 无宝宝时显示引导
 const hasBaby = computed(() => babyStore.babies.length > 0)
+
 const onboardingOpen = ref(false)
-const onboardName = ref('')
-const onboardGender = ref<BabyGender | ''>('')
-const onboardBirthDate = ref('')
-const onboardAvatar = ref('')
-
-function openOnboarding() {
-  onboardingOpen.value = true
-}
-
-async function onOnboarded() {
-  const name = onboardName.value.trim()
-  // 名称/性别/出生日期均为必填（出生日期用于月龄换算与生长曲线参考线）
-  if (!name || !onboardBirthDate.value || !onboardGender.value) return
-  await babyStore.addBaby(
-    name,
-    onboardGender.value,
-    onboardBirthDate.value,
-    undefined,
-    undefined,
-    onboardAvatar.value || undefined,
-  )
-  onboardName.value = ''
-  onboardGender.value = ''
-  onboardBirthDate.value = ''
-  onboardAvatar.value = ''
-  onboardingOpen.value = false
-}
+const todayOverviewRef = ref<InstanceType<typeof TodayOverview> | null>(null)
 
 // 今日范围
 const todayStart = computed(() => startOfDay(now.value))
@@ -220,52 +187,8 @@ const todayMilestones = computed(() =>
   ),
 )
 
-// —— 疫苗提醒（今日页卡片：近 14 天内的待接种项）——
-const upcomingVaccinations = computed(() => {
-  const cutoff = todayStart.value - 14 * MS_PER_DAY
-  return vaccinationStore.vaccinations
-    .filter((v) => v.status === 'planned' && v.date >= cutoff)
-    .sort((a, b) => a.date - b.date)
-    .slice(0, 3)
-})
-
-function vaccineDaysLeft(date: number): number {
-  return Math.round((date - todayStart.value) / MS_PER_DAY)
-}
-
-// 今日汇总
-const totalMilk = computed(() => todayFeedings.value.reduce((sum, f) => sum + (f.amount ?? 0), 0))
-const feedCount = computed(() => todayFeedings.value.length)
-/** 今日泵出总量（吸奶产出） */
-const pumpTotal = computed(() => todayPumpings.value.reduce((s, p) => s + (p.amount ?? 0), 0))
-/** 今日瓶喂母乳消耗量 */
-const bottleBreastmilkTotal = computed(() =>
-  todayFeedings.value.filter((f) => f.type === 'bottle_breastmilk').reduce((s, f) => s + (f.amount ?? 0), 0),
-)
-/** 母乳库存 = 泵出 − 瓶喂母乳消耗（可为负：消耗多于泵出） */
-const breastStock = computed(() => pumpTotal.value - bottleBreastmilkTotal.value)
-const lastFeeding = computed(() => {
-  const sorted = [...feedingStore.feedings].sort((a, b) => b.startTime - a.startTime)
-  return sorted[0]
-})
-const lastFeedingLabel = computed(() => {
-  if (!lastFeeding.value) return t('common.none')
-  const mins = Math.round((now.value - lastFeeding.value.startTime) / 60000)
-  if (mins < 60) return t('dashboard.lastFeedMin', { n: mins })
-  const h = Math.floor(mins / 60)
-  const m = mins % 60
-  return m === 0 ? t('dashboard.lastFeedHour', { n: h }) : t('dashboard.lastFeedHourMin', { n: h, m })
-})
-
 // —— 提醒调度（喂奶/睡眠/用药/疫苗/尿布，默认关闭，由用户自行开启）——
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
-const recommendedMs = computed(() => recommendedIntervalMs(activeBaby.value))
-const avgGapMs = computed(() => avgFeedingIntervalMs(feedingStore.feedings.map((f) => f.startTime)))
-/** 按月龄的每日参考数据（无出生日期时为 null） */
-const guide = computed(() => dailyGuide(activeBaby.value))
-const sinceMs = computed(() => (lastFeeding.value ? sinceLastFeedingMs(lastFeeding.value.startTime, now.value) : null))
-/** 超过建议间隔时提示（实际提醒是否弹出由提醒配置决定） */
-const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommendedMs.value)
 watch(now, () => {
   if (!('Notification' in window) || Notification.permission !== 'granted') return
   const hits = checkReminders({
@@ -278,13 +201,6 @@ watch(now, () => {
   })
   hits.forEach((h) => new Notification(h.title, { body: h.body, tag: h.tag }))
 })
-const sleepTotal = computed(() =>
-  todaySleeps.value.reduce((sum, s) => {
-    const s0 = Math.max(s.startTime, todayStart.value)
-    const e0 = Math.min(s.endTime, todayEnd.value)
-    return sum + Math.max(0, e0 - s0)
-  }, 0),
-)
 
 // —— 奶睡一键（组合记录喂养 + 睡眠）——
 const sleepFeedOpen = ref(false)
@@ -328,48 +244,6 @@ async function saveSleepFeed() {
   sfSleepType.value = 'nap'
   sfSleepEnd.value = toDateTimeLocal(Date.now() + 2 * 3600_000)
   sfNotes.value = ''
-}
-
-// —— 每日小结 ——
-const summaryOpen = ref(false)
-const dailySummary = ref('')
-const summaryCopied = ref(false)
-
-function generateSummary() {
-  const d = new Date(now.value)
-  const dateLabel = new Intl.DateTimeFormat(locale.value, { month: 'long', day: 'numeric' }).format(d)
-  const pumpSum = pumpTotal.value
-  const feedAmountPart =
-    totalMilk.value > 0 ? t('dashboard.summaryFeedAmount', { amount: formatAmount(totalMilk.value) }) : ''
-  const pumpAmountPart = pumpSum > 0 ? t('dashboard.summaryPumpAmount', { amount: formatAmount(pumpSum) }) : ''
-  const lines = [
-    t('dashboard.daySummary', { name: activeBaby.value?.name ?? t('common.baby'), date: dateLabel }),
-    t('dashboard.summaryFeed', { n: feedCount.value, amount: feedAmountPart }),
-    t('dashboard.summarySleep', { duration: formatDuration(sleepTotal.value) }),
-    t('dashboard.summaryDiaper', { n: todayDiapers.value.length }),
-    t('dashboard.summaryPump', { n: todayPumpings.value.length, amount: pumpAmountPart }),
-    t('dashboard.summaryGrowth', { n: todayGrowths.value.length }),
-  ]
-  if (todaySolidFoods.value.length > 0) lines.push(t('dashboard.summarySolidFood', { n: todaySolidFoods.value.length }))
-  if (todayMedications.value.length > 0)
-    lines.push(t('dashboard.summaryMedication', { n: todayMedications.value.length }))
-  if (todayTemperatures.value.length > 0)
-    lines.push(t('dashboard.summaryTemperature', { n: todayTemperatures.value.length }))
-  if (todayMilestones.value.length > 0)
-    lines.push(t('dashboard.summaryMilestone', { n: todayMilestones.value.length }))
-  dailySummary.value = lines.join('\n')
-  summaryCopied.value = false
-  summaryOpen.value = true
-}
-
-async function copySummary() {
-  try {
-    await navigator.clipboard.writeText(dailySummary.value)
-    summaryCopied.value = true
-    setTimeout(() => (summaryCopied.value = false), 2000)
-  } catch {
-    alert(t('dashboard.copyFailed'))
-  }
 }
 
 // 弹窗状态
@@ -508,43 +382,15 @@ const editPayload = computed(() => {
       <div class="welcome-icon">👶</div>
       <h2 class="welcome-title">{{ t('dashboard.welcomeTitle') }}</h2>
       <p class="welcome-text">{{ t('dashboard.welcomeText1') }}<br />{{ t('dashboard.welcomeText2') }}</p>
-      <button class="btn btn-primary btn-lg welcome-btn" @click="openOnboarding">{{ t('dashboard.startBtn') }}</button>
+      <button class="btn btn-primary btn-lg welcome-btn" @click="onboardingOpen = true">{{ t('dashboard.startBtn') }}</button>
       <button class="btn btn-outline welcome-btn" @click="$router.push('/settings')">
         {{ t('dashboard.importHint') }}
       </button>
     </div>
 
     <template v-else>
-      <!-- 喂奶提醒条 -->
-      <div v-if="overdue" class="feed-reminder-banner">
-        <span class="fr-icon">🍼</span>
-        <div class="fr-text">
-          <p class="fr-title">{{ t('feed.sinceLast', { duration: formatDuration(sinceMs ?? 0) }) }}</p>
-          <p class="fr-sub">{{ t('feed.reminderSub', { label: recommendedIntervalLabel(activeBaby) }) }}</p>
-        </div>
-      </div>
-
-      <!-- 疫苗提醒条 -->
-      <div v-if="upcomingVaccinations.length > 0" class="vaccine-banner" @click="openAdd('vaccination')">
-        <span class="vb-icon">💉</span>
-        <div class="vb-text">
-          <p class="vb-title">{{ t('dashboard.vaccineReminderTitle') }}</p>
-          <p class="vb-sub">
-            <span v-for="v in upcomingVaccinations" :key="v.id" class="vb-item">
-              {{ v.name }}<template v-if="v.dose"> · {{ v.dose }}</template>
-              <span class="vb-days">
-                {{
-                  vaccineDaysLeft(v.date) === 0
-                    ? t('dashboard.vaccineToday')
-                    : vaccineDaysLeft(v.date) > 0
-                      ? t('dashboard.vaccineDaysLeft', { n: vaccineDaysLeft(v.date) })
-                      : t('dashboard.vaccineOverdue', { n: -vaccineDaysLeft(v.date) })
-                }}
-              </span>
-            </span>
-          </p>
-        </div>
-      </div>
+      <!-- 今日概览（提醒条 + 统计卡） -->
+      <TodayOverview ref="todayOverviewRef" :now="now" @add="openAdd('vaccination')" />
 
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>
@@ -597,47 +443,10 @@ const editPayload = computed(() => {
         <span>{{ t('dashboard.sleepFeedButton') }}</span>
       </button>
 
-      <!-- 今日概览（统计卡 + 喂奶间隔分析） -->
-      <p class="section-title">{{ t('dashboard.todayOverview') }}</p>
-      <div class="stats-grid">
-        <StatCard
-          :label="t('dashboard.statLastFeed')"
-          :value="lastFeedingLabel"
-          :sub="lastFeeding ? [t('feed.suggested', { label: recommendedIntervalLabel(activeBaby) }), avgGapMs != null ? t('dashboard.avgIntervalInline', { value: formatDuration(avgGapMs) }) : undefined] : undefined"
-          icon="🍼"
-          color="#E8906C"
-        />
-        <StatCard
-          :label="t('dashboard.statMilk')"
-          :value="formatAmount(totalMilk) || '0 ml'"
-          :sub="[
-            t('common.times', { n: feedCount }),
-            t('dashboard.milkStock', { pumped: formatAmount(pumpTotal), stock: formatAmount(breastStock) }),
-            guide ? t('dashboard.guideMilk', { value: guide.milk }) : undefined,
-          ]"
-          icon="🥛"
-          color="#C4A8E0"
-        />
-        <StatCard
-          :label="t('dashboard.statSleep')"
-          :value="formatDuration(sleepTotal)"
-          :sub="guide ? t('dashboard.guideSleep', { value: guide.sleep }) : undefined"
-          icon="😴"
-          color="#8FAED8"
-        />
-        <StatCard
-          :label="t('dashboard.statDiaper')"
-          :value="t('common.times', { n: todayDiapers.length })"
-          :sub="guide ? t('dashboard.guideDiaper', { value: guide.diaper }) : undefined"
-          icon="🧷"
-          color="#9A8FC8"
-        />
-      </div>
-
       <!-- 今日记录 -->
       <div class="section-row">
         <p class="section-title">{{ t('dashboard.todayRecords') }}</p>
-        <button class="btn btn-sm btn-outline" @click="generateSummary">{{ t('dashboard.summaryButton') }}</button>
+        <button class="btn btn-sm btn-outline" @click="todayOverviewRef?.generateSummary()">{{ t('dashboard.summaryButton') }}</button>
       </div>
       <div class="card">
         <TimelineList
@@ -830,75 +639,8 @@ const editPayload = computed(() => {
       </div>
     </BaseModal>
 
-    <!-- 今日小结弹窗 -->
-    <BaseModal :show="summaryOpen" :title="t('dashboard.summaryTitle')" @close="summaryOpen = false">
-      <pre class="summary-text">{{ dailySummary }}</pre>
-      <div class="form-actions">
-        <button class="btn btn-outline" @click="summaryOpen = false">{{ t('common.close') }}</button>
-        <button class="btn btn-primary" @click="copySummary">
-          {{ summaryCopied ? t('common.copied') : t('dashboard.summaryCopy') }}
-        </button>
-      </div>
-    </BaseModal>
-
     <!-- 首次引导添加宝宝弹窗 -->
-    <BaseModal :show="onboardingOpen" :title="t('settings.addBaby')" @close="onboardingOpen = false">
-      <div class="form-field">
-        <label class="form-label">{{ t('settings.babyName') }} *</label>
-        <input v-model="onboardName" type="text" :placeholder="t('dashboard.onboardingNamePh')" class="form-input" />
-      </div>
-      <div class="form-field">
-        <label class="form-label">{{ t('settings.birthDate') }} *</label>
-        <input v-model="onboardBirthDate" type="date" :placeholder="t('common.selectDate')" class="form-input" />
-      </div>
-      <div class="form-field">
-        <label class="form-label">{{ t('settings.genderLabel') }} *</label>
-        <div class="gender-picker" role="radiogroup">
-          <button
-            type="button"
-            class="gender-option"
-            :class="{ selected: onboardGender === 'boy' }"
-            :aria-checked="onboardGender === 'boy'"
-            role="radio"
-            @click="onboardGender = 'boy'"
-          >
-            <span class="gender-emoji">👦</span>{{ t('settings.genderBoy') }}
-          </button>
-          <button
-            type="button"
-            class="gender-option"
-            :class="{ selected: onboardGender === 'girl' }"
-            :aria-checked="onboardGender === 'girl'"
-            role="radio"
-            @click="onboardGender = 'girl'"
-          >
-            <span class="gender-emoji">👧</span>{{ t('settings.genderGirl') }}
-          </button>
-        </div>
-      </div>
-      <div class="form-field">
-        <label class="form-label">{{ t('settings.avatarLabel') }}</label>
-        <div class="avatar-picker">
-          <button
-            v-for="a in BABY_AVATARS"
-            :key="a"
-            type="button"
-            class="avatar-option"
-            :class="{ selected: onboardAvatar === a }"
-            @click="onboardAvatar = a"
-          >
-            {{ a }}
-          </button>
-        </div>
-      </div>
-      <button
-        class="btn btn-primary btn-block btn-lg"
-        :disabled="!onboardName.trim() || !onboardBirthDate || !onboardGender"
-        @click="onOnboarded"
-      >
-        {{ t('common.start') }}
-      </button>
-    </BaseModal>
+    <OnboardingModal :show="onboardingOpen" @close="onboardingOpen = false" />
   </div>
 </template>
 
@@ -936,97 +678,6 @@ const editPayload = computed(() => {
   margin-left: 12px;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.feed-reminder-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, var(--primary-soft), var(--accent-yellow-soft));
-  border: 1px solid rgba(238, 122, 85, 0.28);
-  border-radius: var(--radius-lg);
-  padding: 11px 14px;
-  margin-bottom: 10px;
-  box-shadow: var(--shadow-xs);
-}
-
-.feed-reminder-banner .fr-icon {
-  font-size: 28px;
-  flex-shrink: 0;
-}
-
-.feed-reminder-banner .fr-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.feed-reminder-banner .fr-sub {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-/* 疫苗提醒条 */
-.vaccine-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, var(--accent-blue-soft), var(--surface));
-  border: 1px solid rgba(130, 174, 222, 0.32);
-  border-radius: var(--radius-lg);
-  padding: 11px 14px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  box-shadow: var(--shadow-xs);
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.15s ease;
-}
-
-.vaccine-banner:active {
-  transform: scale(0.99);
-  box-shadow: var(--shadow-sm);
-}
-
-.vaccine-banner .vb-icon {
-  font-size: 28px;
-  flex-shrink: 0;
-}
-
-.vaccine-banner .vb-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.vaccine-banner .vb-sub {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 3px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-}
-
-.vb-days {
-  color: var(--accent-blue);
-  font-weight: 700;
-  margin-left: 4px;
-}
-
-.interval-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  margin-top: 10px;
-  padding: 12px 10px;
-}
-
 .sleep-feed-btn {
   width: 100%;
   margin-top: 10px;
@@ -1059,19 +710,6 @@ const editPayload = computed(() => {
   margin: 0;
 }
 
-.summary-text {
-  font-size: 13px;
-  line-height: 1.9;
-  color: var(--text);
-  background: var(--surface-2);
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: inherit;
-}
-
 .form-actions {
   display: flex;
   gap: 10px;
@@ -1081,48 +719,8 @@ const editPayload = computed(() => {
   flex: 1;
 }
 
-.interval-item {
-  text-align: center;
-}
-
-.interval-label {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.interval-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-  margin-top: 3px;
-  font-variant-numeric: tabular-nums;
-}
-
-.interval-hint {
-  font-size: 10px;
-  color: var(--text-muted);
-  margin-top: 2px;
-  line-height: 1.5;
-}
-
-/* 统一卡片高度：网格内不受全局 .card + .card 相邻外边距规则影响，
-   避免同一行卡片因 margin-top 差异导致高度参差不齐 */
-.stats-grid .stat-card {
-  margin: 0;
-  min-height: 84px;
-}
-
 /* 小屏下统计卡单列展示：双列时图标占位过大、数值与说明文字被挤压换行 */
 @media (max-width: 520px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .stats-grid .stat-card {
-    min-height: 80px;
-  }
-
   .welcome {
     padding: 32px 12px 20px;
   }
@@ -1148,12 +746,8 @@ const editPayload = computed(() => {
   }
 }
 
-/* PC/平板：统计卡 3 列避免单卡过宽；快捷按钮限宽居中避免拉伸 */
+/* PC/平板：快捷按钮限宽居中避免拉伸 */
 @media (min-width: 900px) {
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
   .quick-actions {
     margin: 0 auto;
   }
@@ -1318,63 +912,5 @@ const editPayload = computed(() => {
 
 .confirm-actions .btn {
   flex: 1;
-}
-
-.avatar-picker {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
-}
-
-.avatar-option {
-  min-height: 40px;
-  padding: 4px;
-  border-radius: 10px;
-  border: 1.5px solid var(--border);
-  background: var(--surface-2);
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.12s ease;
-}
-
-.avatar-option.selected {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-  transform: scale(1.06);
-}
-
-.gender-picker {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.gender-option {
-  min-height: 44px;
-  padding: 6px 8px;
-  border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: var(--surface-2);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.12s ease;
-}
-
-.gender-option.selected {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-  color: var(--primary-dark);
-  transform: scale(1.02);
-}
-
-.gender-emoji {
-  font-size: 16px;
 }
 </style>

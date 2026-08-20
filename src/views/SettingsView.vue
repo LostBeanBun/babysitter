@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
-import { exportAllJson, exportBabyCsvs, importAllJson } from '@/services/export'
+import { exportAllJson, exportAllBabiesCsv, importAllJson } from '@/services/export'
 import { BABY_AVATARS } from '@/constants'
 import { loadReminders, saveReminders, type ReminderConfig, type ReminderType } from '@/utils/reminderScheduler'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -202,7 +202,7 @@ async function handleExportJson() {
 }
 
 async function handleExportCsv() {
-  if (activeBaby.value) await exportBabyCsvs(activeBaby.value)
+  await exportAllBabiesCsv()
 }
 
 async function handleImportFile(e: Event) {
