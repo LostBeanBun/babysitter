@@ -29,6 +29,17 @@ import { dailyGuide } from '@/utils/dailyGuides'
 const props = defineProps<{ now: number }>()
 const emit = defineEmits<{ add: [kind: 'vaccination'] }>()
 
+/**
+ * 提醒条关闭状态（会话级，仅内存）：关闭后当前会话不再显示，刷新页面即重新提醒。
+ * 提醒基于实时数据（如喂奶间隔），跨天重新提醒没有意义，故不持久化。
+ */
+const dismissed = ref<{ feed: boolean; vaccine: boolean }>({ feed: false, vaccine: false })
+
+/** 关闭某提醒条（当前会话生效） */
+function dismissReminder(kind: 'feed' | 'vaccine') {
+  dismissed.value = { ...dismissed.value, [kind]: true }
+}
+
 const { t, locale } = useI18n()
 const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
@@ -200,16 +211,29 @@ defineExpose({ generateSummary })
 <template>
   <div class="today-overview">
     <!-- 喂奶提醒条 -->
-    <div v-if="overdue" class="feed-reminder-banner">
+    <div v-if="overdue && !dismissed.feed" class="feed-reminder-banner">
       <span class="fr-icon">🍼</span>
       <div class="fr-text">
         <p class="fr-title">{{ t('feed.sinceLast', { duration: formatDuration(sinceMs ?? 0) }) }}</p>
         <p class="fr-sub">{{ t('feed.reminderSub', { label: recommendedIntervalLabel(activeBaby) }) }}</p>
       </div>
+      <button
+        type="button"
+        class="banner-close"
+        :aria-label="t('common.close')"
+        :title="t('common.close')"
+        @click="dismissReminder('feed')"
+      >
+        ✕
+      </button>
     </div>
 
     <!-- 疫苗提醒条 -->
-    <div v-if="upcomingVaccinations.length > 0" class="vaccine-banner" @click="emit('add', 'vaccination')">
+    <div
+      v-if="upcomingVaccinations.length > 0 && !dismissed.vaccine"
+      class="vaccine-banner"
+      @click="emit('add', 'vaccination')"
+    >
       <span class="vb-icon">💉</span>
       <div class="vb-text">
         <p class="vb-title">{{ t('dashboard.vaccineReminderTitle') }}</p>
@@ -228,6 +252,15 @@ defineExpose({ generateSummary })
           </span>
         </p>
       </div>
+      <button
+        type="button"
+        class="banner-close"
+        :aria-label="t('common.close')"
+        :title="t('common.close')"
+        @click.stop="dismissReminder('vaccine')"
+      >
+        ✕
+      </button>
     </div>
 
     <!-- 统计卡 -->
@@ -332,10 +365,43 @@ defineExpose({ generateSummary })
   color: var(--text);
 }
 
+.feed-reminder-banner .fr-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .feed-reminder-banner .fr-sub {
   font-size: 12px;
   color: var(--text-secondary);
   margin-top: 2px;
+}
+
+/* 提醒条右上角关闭按钮（喂奶/疫苗共用） */
+.banner-close {
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  margin-left: auto;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.banner-close:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.banner-close:active {
+  transform: scale(0.9);
 }
 
 /* 疫苗提醒条 */
@@ -369,6 +435,11 @@ defineExpose({ generateSummary })
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
+}
+
+.vaccine-banner .vb-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .vaccine-banner .vb-sub {

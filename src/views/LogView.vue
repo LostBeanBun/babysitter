@@ -24,8 +24,7 @@ import MedicationForm from '@/components/forms/MedicationForm.vue'
 import VaccinationForm from '@/components/forms/VaccinationForm.vue'
 import TemperatureForm from '@/components/forms/TemperatureForm.vue'
 import MilestoneForm from '@/components/forms/MilestoneForm.vue'
-import { formatTime } from '@/utils/format'
-import { MILESTONE_TYPE_LABELS } from '@/constants'
+import { formatTime, startOfDay } from '@/utils/format'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import type {
   Feeding,
@@ -124,14 +123,65 @@ const filter = ref<
   | 'milestone'
 >('all')
 
-/** 记录搜索关键词（匹配备注/食物/药品/疫苗名等） */
-const searchQuery = ref('')
+/** 按日期筛选：null=全部，否则 { start, end } 为当天 0 点时间戳（含边界） */
+const dateRange = ref<{ start: number; end: number } | null>(null)
+/** 日期面板展开状态（与搜索展开互斥） */
+const dateOpen = ref(false)
+/** 快捷预设：'all' | 'today' | 'week' | 'month' | 'custom' */
+const datePreset = ref<'all' | 'today' | 'week' | 'month' | 'custom'>('all')
 
-function matchQuery(record: { notes?: string; food?: string; name?: string; dose?: string }, extraFields?: string[]): boolean {
-  const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return true
-  const fields = [record.notes ?? '', record.food ?? '', record.name ?? '', record.dose ?? '', ...(extraFields ?? [])]
-  return fields.some((f) => f.toLowerCase().includes(q))
+function matchDate(ts: number): boolean {
+  const r = dateRange.value
+  if (!r) return true
+  const day = startOfDay(ts)
+  return day >= r.start && day <= r.end
+}
+
+function presetRange(preset: 'today' | 'week' | 'month') {
+  const now = new Date()
+  const end = startOfDay(now.getTime())
+  const days = preset === 'today' ? 0 : preset === 'week' ? 6 : 29
+  const start = end - days * 86_400_000
+  return { start, end }
+}
+
+function applyDatePreset(preset: 'all' | 'today' | 'week' | 'month') {
+  datePreset.value = preset
+  dateRange.value = preset === 'all' ? null : presetRange(preset)
+  dateOpen.value = false
+}
+
+function clearDateFilter() {
+  datePreset.value = 'all'
+  dateRange.value = null
+  dateOpen.value = false
+}
+
+/** 切换日期面板 */
+function toggleDatePanel() {
+  dateOpen.value = !dateOpen.value
+}
+
+/** 快捷预设选项 */
+const datePresets: { key: 'all' | 'today' | 'week' | 'month'; labelKey: string }[] = [
+  { key: 'all', labelKey: 'log.dateAll' },
+  { key: 'today', labelKey: 'log.dateToday' },
+  { key: 'week', labelKey: 'log.dateWeek' },
+  { key: 'month', labelKey: 'log.dateMonth' },
+]
+
+/** 自定义起止日期（YYYY-MM-DD） */
+const customStart = ref('')
+const customEnd = ref('')
+
+function applyCustomRange() {
+  if (!customStart.value || !customEnd.value) return
+  const s = new Date(`${customStart.value}T00:00:00`).getTime()
+  const e = new Date(`${customEnd.value}T00:00:00`).getTime()
+  if (isNaN(s) || isNaN(e) || s > e) return
+  datePreset.value = 'custom'
+  dateRange.value = { start: s, end: e }
+  dateOpen.value = false
 }
 
 /** 删除撤销：过滤待删除记录 */
@@ -143,44 +193,44 @@ function keep<T extends { id?: number }>(items: T[], kind: string): T[] {
 
 const filteredFeedings = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'feeding') return []
-  return keep(feedingStore.feedings.filter((f) => matchQuery(f)), 'feeding')
+  return keep(feedingStore.feedings.filter((f) => matchDate(f.startTime)), 'feeding')
 })
 const filteredDiapers = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'diaper') return []
-  return keep(diaperStore.diapers.filter((d) => matchQuery(d)), 'diaper')
+  return keep(diaperStore.diapers.filter((d) => matchDate(d.time)), 'diaper')
 })
 const filteredPumpings = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'pumping') return []
-  return keep(pumpingStore.pumpings.filter((p) => matchQuery(p)), 'pumping')
+  return keep(pumpingStore.pumpings.filter((p) => matchDate(p.startTime)), 'pumping')
 })
 const filteredSleeps = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'sleep') return []
-  return keep(sleepStore.sleeps.filter((s) => matchQuery(s)), 'sleep')
+  return keep(sleepStore.sleeps.filter((s) => matchDate(s.startTime)), 'sleep')
 })
 const filteredGrowths = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'growth') return []
-  return keep(growthStore.growths.filter((g) => matchQuery(g)), 'growth')
+  return keep(growthStore.growths.filter((g) => matchDate(g.date)), 'growth')
 })
 const filteredSolidFoods = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'solidFood') return []
-  return keep(solidFoodStore.solidFoods.filter((sf) => matchQuery(sf)), 'solidFood')
+  return keep(solidFoodStore.solidFoods.filter((sf) => matchDate(sf.time)), 'solidFood')
 })
 const filteredMedications = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'medication') return []
-  return keep(medicationStore.medications.filter((m) => matchQuery(m)), 'medication')
+  return keep(medicationStore.medications.filter((m) => matchDate(m.time)), 'medication')
 })
 const filteredVaccinations = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'vaccination') return []
-  return keep(vaccinationStore.vaccinations.filter((v) => matchQuery(v)), 'vaccination')
+  return keep(vaccinationStore.vaccinations.filter((v) => matchDate(v.date)), 'vaccination')
 })
 const filteredTemperatures = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'temperature') return []
-  return keep(temperatureStore.temperatures.filter((tmp) => matchQuery(tmp)), 'temperature')
+  return keep(temperatureStore.temperatures.filter((tmp) => matchDate(tmp.time)), 'temperature')
 })
 const filteredMilestones = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'milestone') return []
   return keep(
-    milestoneStore.milestones.filter((ms) => matchQuery(ms, [t(MILESTONE_TYPE_LABELS[ms.type])])),
+    milestoneStore.milestones.filter((ms) => matchDate(ms.time)),
     'milestone',
   )
 })
@@ -324,44 +374,74 @@ const filters = [
 ]
 
 const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter.value)?.labelKey ?? 'log.filters.all'))
-
-/** 新增记录：默认选中当前筛选类型（'all' 时默认喂养），复用同一弹窗 */
-function openAdd(kind?: typeof filter.value) {
-  const k = kind && kind !== 'all' ? kind : 'feeding'
-  modalState.value = { kind: k }
-}
 </script>
 
 <template>
   <div class="page log-page">
     <PageHeader />
 
-    <div class="filter-select-row">
-      <label class="filter-select-label" for="filter-select">{{ t('log.filterLabel') }}</label>
-      <select id="filter-select" v-model="filter" class="form-input filter-select">
-        <option v-for="f in filters" :key="f.key" :value="f.key">{{ t(f.labelKey) }}</option>
-      </select>
-      <button type="button" class="btn btn-primary filter-add-btn" @click="openAdd(filter)">
-        + {{ t('log.addRecord') }}
-      </button>
-    </div>
-
-    <div class="search-row">
-      <input
-        v-model="searchQuery"
-        type="search"
-        class="form-input search-input"
-        :placeholder="t('log.searchPlaceholder')"
-        :aria-label="t('log.searchPlaceholder')"
-      />
+    <div class="filter-toolbar">
+      <template v-if="!dateOpen">
+        <label class="filter-select-label" for="filter-select">{{ t('log.filterLabel') }}</label>
+        <select id="filter-select" v-model="filter" class="form-input filter-select">
+          <option v-for="f in filters" :key="f.key" :value="f.key">{{ t(f.labelKey) }}</option>
+        </select>
+      </template>
+      <div v-else class="date-wrap">
+        <div class="date-presets">
+          <button
+            v-for="p in datePresets"
+            :key="p.key"
+            type="button"
+            class="date-preset"
+            :class="{ active: datePreset === p.key }"
+            @click="applyDatePreset(p.key)"
+          >
+            {{ t(p.labelKey) }}
+          </button>
+        </div>
+        <div class="date-custom">
+          <input
+            v-model="customStart"
+            type="date"
+            class="form-input date-input"
+            :aria-label="t('log.dateStart')"
+            :title="t('log.dateStart')"
+            @change="applyCustomRange"
+          />
+          <span class="date-sep">–</span>
+          <input
+            v-model="customEnd"
+            type="date"
+            class="form-input date-input"
+            :aria-label="t('log.dateEnd')"
+            :title="t('log.dateEnd')"
+            @change="applyCustomRange"
+          />
+          <button
+            v-if="dateRange"
+            type="button"
+            class="date-clear"
+            :aria-label="t('log.dateClear')"
+            :title="t('log.dateClear')"
+            @click="clearDateFilter"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
       <button
-        v-if="searchQuery"
         type="button"
-        class="search-clear"
-        :aria-label="t('common.clear')"
-        @click="searchQuery = ''"
+        class="date-toggle"
+        :class="{ active: dateOpen, filtered: dateRange !== null }"
+        :title="t('log.dateFilter')"
+        :aria-label="t('log.dateFilter')"
+        @click="toggleDatePanel"
       >
-        ✕
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="19" height="19" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <path d="M16 2v4M8 2v4M3 10h18" />
+        </svg>
       </button>
     </div>
 
@@ -475,10 +555,10 @@ function openAdd(kind?: typeof filter.value) {
 </template>
 
 <style scoped>
-.filter-select-row {
+.filter-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 6px 4px 14px;
 }
 
@@ -496,43 +576,130 @@ function openAdd(kind?: typeof filter.value) {
   box-shadow: var(--shadow-xs);
 }
 
-.filter-add-btn {
-  flex-shrink: 0;
-  border-radius: 12px;
-  box-shadow: var(--shadow-xs);
-  white-space: nowrap;
+@keyframes search-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.search-row {
+.date-toggle {
   position: relative;
-  padding: 0 4px 14px;
-}
-
-.search-input {
+  width: 40px;
+  height: 40px;
+  min-height: 0;
   border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-xs);
-  padding-right: 40px;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s ease,
+    border-color 0.15s ease;
 }
 
-.search-clear {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
+.date-toggle:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.date-toggle:active {
+  transform: scale(0.92);
+}
+
+.date-toggle.active {
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+
+.date-toggle.filtered {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.date-wrap {
+  flex: 1;
+  min-width: 0;
+  animation: search-in 0.18s ease-out;
+}
+
+.date-presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.date-preset {
+  min-height: 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.date-preset:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.date-preset.active {
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+.date-custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 10px;
+  box-shadow: var(--shadow-xs);
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.date-sep {
+  color: var(--text-muted);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.date-clear {
   width: 28px;
   height: 28px;
   min-height: 0;
   border-radius: 50%;
+  flex-shrink: 0;
   color: var(--text-muted);
   font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--surface-2);
-}
-
-.search-clear:active {
-  background: var(--surface-3);
 }
 
 .empty-inline {
