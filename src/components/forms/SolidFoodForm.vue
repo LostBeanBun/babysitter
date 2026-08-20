@@ -61,7 +61,7 @@ async function submit() {
 
     <div class="form-field">
       <label class="form-label">{{ t('solidFood.timeLabel') }}</label>
-      <input v-model="time" type="datetime-local" class="form-input" />
+      <input v-model="time" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
     </div>
 
     <div class="form-field">

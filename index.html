@@ -4,10 +4,102 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#FDF6EF" />
+
+    <!-- 基础 SEO -->
+    <title>宝宝日记 - 宝宝喂养记录、睡眠统计与成长曲线工具</title>
+    <meta
+      name="description"
+      content="宝宝日记是一款免费、纯本地保存的宝宝喂养记录与统计工具：记录亲喂/瓶喂、睡眠、纸尿裤、吸奶、体温与成长数据，自动生成趋势统计、周期对比和 WHO 百分位成长曲线，支持多宝宝与数据导出导入。"
+    />
+    <meta
+      name="keywords"
+      content="宝宝日记,宝宝喂养记录,母乳记录,睡眠记录,纸尿裤记录,成长曲线,WHO百分位,婴儿记录,育儿工具,PWA,离线可用,本地存储"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="宝宝日记" />
+    <!-- canonical 由下方脚本按部署域名动态填充（避免静态写死导致 vite 构建解析目录） -->
+    <link rel="canonical" href="" />
+
+    <!-- Open Graph（社交分享卡片） -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="宝宝日记" />
+    <meta property="og:title" content="宝宝日记 - 宝宝喂养记录、睡眠统计与成长曲线工具" />
+    <meta
+      property="og:description"
+      content="温馨简约的宝宝喂养记录工具：纯本地保存、私密安全，支持趋势统计、周期对比与 WHO 成长曲线。"
+    />
+    <meta property="og:image" content="/icons/icon-512.png" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:url" content="/" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="宝宝日记 - 宝宝喂养记录与成长统计工具" />
+    <meta
+      name="twitter:description"
+      content="温馨简约的宝宝喂养记录工具：纯本地保存、私密安全，支持趋势统计、周期对比与 WHO 成长曲线。"
+    />
+    <meta name="twitter:image" content="/icons/icon-512.png" />
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="宝宝日记" />
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <meta name="description" content="宝宝日记 - 温馨简约的宝宝喂养、睡眠、纸尿裤记录与统计工具" />
-    <title>宝宝日记</title>
+
+    <!-- 动态 canonical / OG 绝对 URL（自动适配任意部署域名，含 GitHub Pages 子路径） -->
+    <script>
+      ;(function () {
+        var origin = location.origin
+        var path = location.pathname
+        var url = origin + path
+        function set(selector, attr, value) {
+          var el = document.querySelector(selector)
+          if (el) el.setAttribute(attr, value)
+        }
+        set('link[rel="canonical"]', 'href', url)
+        set('meta[property="og:url"]', 'content', url)
+        set('meta[property="og:image"]', 'content', origin + path + 'icons/icon-512.png')
+        set('meta[name="twitter:image"]', 'content', origin + path + 'icons/icon-512.png')
+      })()
+    </script>
+
+    <!-- 结构化数据：WebApplication（供搜索引擎理解应用类型与功能） -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "宝宝日记",
+        "alternateName": "Baby Diary",
+        "description": "免费、纯本地保存的宝宝喂养记录与统计工具：亲喂/瓶喂、睡眠、纸尿裤、吸奶、体温与成长数据记录，趋势统计、周期对比与 WHO 百分位成长曲线，支持多宝宝与数据导出导入。",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": "zh-CN",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "CNY"
+        },
+        "featureList": [
+          "喂养记录",
+          "睡眠记录",
+          "纸尿裤记录",
+          "吸奶记录",
+          "体温记录",
+          "成长曲线",
+          "趋势统计",
+          "周期对比",
+          "疫苗计划",
+          "多宝宝支持",
+          "数据导出导入",
+          "离线可用"
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

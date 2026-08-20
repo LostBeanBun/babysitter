@@ -243,7 +243,7 @@ const sleepTotal = computed(() =>
 
 // —— 奶睡一键（组合记录喂养 + 睡眠）——
 const sleepFeedOpen = ref(false)
-const sfType = ref<FeedType>('bottle_breastmilk')
+const sfType = ref<FeedType>('breast_both')
 const sfAmount = ref('')
 const sfStart = ref(toDateTimeLocal(Date.now()))
 const sfSleepType = ref<SleepType>('nap')
@@ -277,7 +277,7 @@ async function saveSleepFeed() {
   await feedingStore.add({ type: sfType.value, startTime: start, amount })
   await sleepStore.add({ type: sfSleepType.value, startTime: start, endTime: end, notes: sfNotes.value || undefined })
   sleepFeedOpen.value = false
-  sfType.value = 'bottle_breastmilk'
+  sfType.value = 'breast_both'
   sfAmount.value = ''
   sfStart.value = toDateTimeLocal(Date.now())
   sfSleepType.value = 'nap'
@@ -442,13 +442,7 @@ const editPayload = computed(() => {
 
 <template>
   <div class="page dashboard">
-    <PageHeader>
-      <template #right>
-        <span class="date-badge">{{
-          new Date(now).toLocaleDateString(locale, { month: 'long', day: 'numeric', weekday: 'short' })
-        }}</span>
-      </template>
-    </PageHeader>
+    <PageHeader />
 
     <!-- 首次使用引导 -->
     <div v-if="!hasBaby" class="welcome">
@@ -553,16 +547,12 @@ const editPayload = computed(() => {
         <StatCard
           :label="t('dashboard.statMilk')"
           :value="formatAmount(totalMilk) || '0 ml'"
-          :sub="guide ? t('dashboard.guideMilk', { value: guide.milk }) : undefined"
+          :sub="[
+            t('common.times', { n: feedCount }),
+            guide ? t('dashboard.guideMilk', { value: guide.milk }) : undefined,
+          ]"
           icon="🥛"
           color="#C4A8E0"
-        />
-        <StatCard
-          :label="t('dashboard.statFeedCount')"
-          :value="t('common.times', { n: feedCount })"
-          :sub="guide ? t('dashboard.guideFeedCount', { value: guide.feedCount }) : undefined"
-          icon="🍽️"
-          color="#F2A28C"
         />
         <StatCard
           :label="t('dashboard.statSleep')"
@@ -753,7 +743,7 @@ const editPayload = computed(() => {
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('feed.startLabel') }}</label>
-        <input v-model="sfStart" type="datetime-local" class="form-input" />
+        <input v-model="sfStart" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('sleep.typeLabel') }}</label>
@@ -764,7 +754,7 @@ const editPayload = computed(() => {
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('sleep.endLabel') }}</label>
-        <input v-model="sfSleepEnd" type="datetime-local" class="form-input" />
+        <input v-model="sfSleepEnd" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('sleep.notesLabel') }}（{{ t('common.optional') }}）</label>
@@ -795,7 +785,7 @@ const editPayload = computed(() => {
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('settings.birthDate') }} *</label>
-        <input v-model="onboardBirthDate" type="date" class="form-input" />
+        <input v-model="onboardBirthDate" type="date" :placeholder="t('common.selectDate')" class="form-input" />
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('settings.genderLabel') }} *</label>
@@ -851,12 +841,12 @@ const editPayload = computed(() => {
 <style scoped>
 .welcome {
   text-align: center;
-  padding: 60px 24px 30px;
+  padding: 48px 24px 24px;
 }
 
 .welcome-icon {
   font-size: 64px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .welcome-title {
@@ -870,7 +860,7 @@ const editPayload = computed(() => {
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.7;
-  margin-bottom: 28px;
+  margin-bottom: 22px;
 }
 
 .welcome-btn {
@@ -882,33 +872,21 @@ const editPayload = computed(() => {
   margin-left: 12px;
 }
 
-.date-badge {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: var(--surface);
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-xs);
-  white-space: nowrap;
-}
-
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .feed-reminder-banner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   background: linear-gradient(135deg, var(--primary-soft), var(--accent-yellow-soft));
   border: 1px solid rgba(238, 122, 85, 0.28);
   border-radius: var(--radius-lg);
-  padding: 13px 16px;
-  margin-bottom: 12px;
+  padding: 11px 14px;
+  margin-bottom: 10px;
   box-shadow: var(--shadow-xs);
 }
 
@@ -933,12 +911,12 @@ const editPayload = computed(() => {
 .vaccine-banner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   background: linear-gradient(135deg, var(--accent-blue-soft), var(--surface));
   border: 1px solid rgba(130, 174, 222, 0.32);
   border-radius: var(--radius-lg);
-  padding: 13px 16px;
-  margin-bottom: 12px;
+  padding: 11px 14px;
+  margin-bottom: 10px;
   cursor: pointer;
   box-shadow: var(--shadow-xs);
   transition:
@@ -981,18 +959,18 @@ const editPayload = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  margin-top: 14px;
-  padding: 15px 12px;
+  margin-top: 10px;
+  padding: 12px 10px;
 }
 
 .sleep-feed-btn {
   width: 100%;
-  margin-top: 14px;
+  margin-top: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 13px;
+  padding: 11px;
   font-weight: 700;
 }
 
@@ -1004,7 +982,7 @@ const editPayload = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 18px 2px 10px;
+  margin: 14px 2px 8px;
 }
 
 .btn-sm {
@@ -1023,8 +1001,8 @@ const editPayload = computed(() => {
   color: var(--text);
   background: var(--surface-2);
   border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 16px;
+  padding: 12px;
+  margin-bottom: 12px;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: inherit;
@@ -1067,22 +1045,22 @@ const editPayload = computed(() => {
    避免同一行卡片因 margin-top 差异导致高度参差不齐 */
 .stats-grid .stat-card {
   margin: 0;
-  min-height: 88px;
+  min-height: 84px;
 }
 
 /* 小屏下统计卡单列展示：双列时图标占位过大、数值与说明文字被挤压换行 */
 @media (max-width: 520px) {
   .stats-grid {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 8px;
   }
 
   .stats-grid .stat-card {
-    min-height: 84px;
+    min-height: 80px;
   }
 
   .welcome {
-    padding: 40px 12px 24px;
+    padding: 32px 12px 20px;
   }
 
   .welcome-btn {
@@ -1095,14 +1073,14 @@ const editPayload = computed(() => {
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 /* 小屏下快捷按钮 3×3 网格：按钮更大、触控友好、英文长标签完整显示 */
 @media (max-width: 520px) {
   .quick-actions {
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 10px;
   }
 }
 
@@ -1121,10 +1099,10 @@ const editPayload = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
   min-width: 0; /* 允许 grid track 收缩，避免长标签撑破容器 */
-  padding: 12px 8px;
-  border-radius: 18px;
+  padding: 10px 6px;
+  border-radius: 16px;
   border: 1px solid transparent;
   background: transparent;
   transition:
@@ -1139,13 +1117,13 @@ const editPayload = computed(() => {
 }
 
 .quick-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 15px;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 23px;
+  font-size: 21px;
   flex-shrink: 0;
   line-height: 1;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.03), var(--shadow-xs);
@@ -1206,7 +1184,7 @@ const editPayload = computed(() => {
 
 .empty-inline {
   text-align: center;
-  padding: 24px 12px;
+  padding: 18px 12px;
   color: var(--text-muted);
   font-size: 13px;
 }
@@ -1215,7 +1193,7 @@ const editPayload = computed(() => {
   font-size: 14px;
   color: var(--text);
   line-height: 1.6;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .confirm-record {

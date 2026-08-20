@@ -184,8 +184,8 @@ textarea {
 .page {
   min-height: 100vh;
   min-height: 100dvh;
-  padding: calc(var(--header-height) + var(--safe-top) + 14px) 16px
-    calc(var(--tabbar-height) + var(--safe-bottom) + 26px);
+  padding: calc(var(--header-height) + var(--safe-top) + 10px) 14px
+    calc(var(--tabbar-height) + var(--safe-bottom) + 20px);
   max-width: 640px;
   margin: 0 auto;
 }
@@ -206,14 +206,14 @@ textarea {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
-  padding: 18px;
+  padding: 14px;
   transition:
     box-shadow 0.2s ease,
     transform 0.2s ease;
 }
 
 .card + .card {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 @media (hover: hover) {
@@ -227,7 +227,7 @@ textarea {
   font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text-secondary);
-  margin: 22px 4px 10px;
+  margin: 16px 4px 8px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -240,7 +240,7 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 11px 20px;
+  padding: 10px 16px;
   border-radius: 14px;
   font-weight: 600;
   font-size: var(--fs-base);
@@ -302,14 +302,16 @@ textarea {
 }
 
 .btn-lg {
-  padding: 14px 22px;
+  padding: 12px 20px;
   font-size: 16px;
   border-radius: 16px;
 }
 
 /* 表单 */
 .form-field {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  min-width: 0; /* 允许收缩，防止 flex/grid 场景下被内容固有宽度撑破 */
+  width: 100%;
 }
 
 .form-label {
@@ -317,7 +319,7 @@ textarea {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 7px;
+  margin-bottom: 6px;
 }
 
 .form-input,
@@ -325,7 +327,8 @@ textarea {
   width: 100%;
   min-width: 0; /* 允许收缩，防止原生日期控件等固有宽度撑破容器 */
   max-width: 100%;
-  padding: 11px 14px;
+  min-height: 44px; /* 统一输入高度，保证触摸目标与各类输入框视觉一致 */
+  padding: 9px 12px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -345,17 +348,30 @@ input[type='time'] {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  /* iOS Safari：日期控件固有宽度优先于 width:100%，移除原生外观使其像普通输入框一样随容器自适应 */
+  -webkit-appearance: none;
+  appearance: none;
+  /* 移除原生外观后，空值（无「年/月/日」占位段）时行高塌陷会变矮，固定最小高度与其他输入框等高 */
+  min-height: 44px;
 }
 
 input[type='date']::-webkit-date-and-time-value,
-input[type='datetime-local']::-webkit-date-and-time-value {
+input[type='datetime-local']::-webkit-date-and-time-value,
+input[type='time']::-webkit-date-and-time-value {
   text-align: left;
+  min-width: 0;
 }
 
 .form-input:focus,
 .form-textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3.5px var(--primary-soft);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.75;
 }
 
 /* 下拉选择：隐藏原生外观，统一自定义箭头，与整体风格一致 */
@@ -378,7 +394,7 @@ select.form-input:focus {
 
 .form-textarea {
   resize: vertical;
-  min-height: 64px;
+  min-height: 56px;
 }
 
 /* 弹窗遮罩：毛玻璃背景 */
@@ -404,12 +420,13 @@ select.form-input:focus {
   background: var(--surface);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   width: 100%;
+  min-width: 0; /* flex 子项允许收缩，小屏不被内容固有宽度撑出屏幕 */
   max-width: 640px;
   max-height: 88vh;
   max-height: 88dvh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 24px 22px calc(24px + var(--safe-bottom));
+  padding: 20px 18px calc(20px + var(--safe-bottom));
   box-shadow: var(--shadow-lg);
   animation: slideUp 0.24s cubic-bezier(0.32, 0.72, 0.24, 1);
 }
@@ -451,12 +468,12 @@ select.form-input:focus {
 /* ===== 小屏适配（≤ 400px） ===== */
 @media (max-width: 400px) {
   .page {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .card {
-    padding: 15px;
+    padding: 12px;
   }
 
   .form-actions,

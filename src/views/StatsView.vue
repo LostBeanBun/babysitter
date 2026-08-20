@@ -771,7 +771,7 @@ const hcOption = computed<EChartsOption>(() => ({
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 4px 14px;
+  padding: 4px 4px 10px;
 }
 
 .range-select-label {
@@ -789,8 +789,8 @@ const hcOption = computed<EChartsOption>(() => ({
 }
 
 .overview-card {
-  margin-bottom: 12px;
-  padding: 16px;
+  margin-bottom: 10px;
+  padding: 14px;
 }
 
 .overview-tabs {
@@ -799,7 +799,7 @@ const hcOption = computed<EChartsOption>(() => ({
   background: var(--surface-2);
   border-radius: 999px;
   padding: 4px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .overview-tab {
@@ -827,19 +827,19 @@ const hcOption = computed<EChartsOption>(() => ({
   display: block;
   font-size: 12px;
   color: var(--text-muted);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 @media (max-width: 400px) {
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 6px;
   }
 }
 
@@ -847,7 +847,7 @@ const hcOption = computed<EChartsOption>(() => ({
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 11px 8px;
+  padding: 9px 8px;
   text-align: center;
   transition: transform 0.12s ease;
 }
@@ -1070,12 +1070,12 @@ const hcOption = computed<EChartsOption>(() => ({
   font-size: 15px;
   font-weight: 700;
   color: var(--text);
-  margin: 18px 2px 10px;
+  margin: 14px 2px 8px;
 }
 
 .empty-inline {
   text-align: center;
-  padding: 28px 12px;
+  padding: 20px 12px;
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.6;

@@ -301,7 +301,7 @@ const groupedEntries = computed(() => {
 <style scoped>
 .tl-group {
   position: relative;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 /* 时间轴竖线：贯穿同一天的记录（对齐节点中心：item padding-left 12 + 节点半宽 21） */
@@ -323,7 +323,7 @@ const groupedEntries = computed(() => {
   font-size: 13px;
   font-weight: 700;
   color: var(--text-secondary);
-  margin: 0 4px 8px;
+  margin: 0 4px 6px;
   padding: 0 6px;
   background: var(--bg);
   border-radius: 999px;
@@ -350,9 +350,9 @@ const groupedEntries = computed(() => {
 .tl-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 16px;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 14px;
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -368,13 +368,13 @@ const groupedEntries = computed(() => {
 }
 
 .tl-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.03);
 }

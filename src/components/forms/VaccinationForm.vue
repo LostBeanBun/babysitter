@@ -109,7 +109,7 @@ async function submit() {
 
     <div class="form-field">
       <label class="form-label">{{ t('vaccination.dateLabel') }}</label>
-      <input v-model="date" type="date" class="form-input" />
+      <input v-model="date" type="date" :placeholder="t('common.selectDate')" class="form-input" />
     </div>
 
     <p class="form-label">{{ t('vaccination.statusLabel') }}</p>

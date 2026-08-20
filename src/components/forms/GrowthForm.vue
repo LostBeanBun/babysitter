@@ -73,7 +73,7 @@ async function submit() {
   <div class="growth-form">
     <div class="form-field">
       <label class="form-label">{{ t('growth.dateLabel') }}</label>
-      <input v-model="date" type="date" class="form-input" />
+      <input v-model="date" type="date" :placeholder="t('common.selectDate')" class="form-input" />
     </div>
 
     <div class="form-field">

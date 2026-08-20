@@ -86,7 +86,7 @@ const mergedOption = computed<EChartsOption>(() => {
 
 <style scoped>
 .chart-card {
-  padding: 16px;
+  padding: 12px;
   min-width: 0;
 }
 

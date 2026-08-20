@@ -280,6 +280,88 @@ async function confirmClearAll() {
       <button class="btn btn-outline btn-block" @click="openAddBaby">+ {{ t('settings.addBaby') }}</button>
     </div>
 
+    <!-- 提醒设置 -->
+    <p class="section-title">{{ t('settings.reminderSectionTitle') }}</p>
+    <div class="card">
+      <p class="data-tip">{{ t('settings.reminderTip') }}</p>
+      <div v-for="r in reminderRows" :key="r.type" class="reminder-block">
+        <div class="reminder-row">
+          <div class="reminder-info">
+            <p class="reminder-title">{{ r.title }}</p>
+            <p class="reminder-sub">{{ r.sub }}</p>
+          </div>
+          <button
+            class="switch"
+            :class="{ on: reminders[r.type].enabled }"
+            role="switch"
+            :aria-checked="reminders[r.type].enabled"
+            @click="toggleReminder(r.type)"
+          >
+            <span class="switch-knob"></span>
+          </button>
+        </div>
+        <div v-if="reminders[r.type].enabled" class="reminder-param">
+          <template v-if="r.type === 'feed'">
+            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
+            <input
+              v-model.number="reminders.feed.intervalHours"
+              type="number"
+              min="0"
+              step="0.5"
+              :placeholder="t('reminders.intervalPh', { n: '2.5' })"
+              class="form-input reminder-param-input"
+              @change="persistReminders"
+            />
+            <p class="reminder-param-hint">{{ t('reminders.feed.hint') }}</p>
+          </template>
+          <template v-else-if="r.type === 'sleep'">
+            <label class="reminder-param-label">{{ t('reminders.sleepTimeLabel') }}</label>
+            <input
+              v-model="reminders.sleep.time"
+              type="time"
+              :placeholder="t('common.selectTime')"
+              class="form-input reminder-param-input"
+              @change="persistReminders"
+            />
+          </template>
+          <template v-else-if="r.type === 'medication'">
+            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
+            <input
+              v-model.number="reminders.medication.intervalHours"
+              type="number"
+              min="1"
+              step="1"
+              :placeholder="t('reminders.intervalPh', { n: '6' })"
+              class="form-input reminder-param-input"
+              @change="persistReminders"
+            />
+            <p class="reminder-param-hint">{{ t('reminders.medication.hint') }}</p>
+          </template>
+          <template v-else-if="r.type === 'diaper'">
+            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
+            <input
+              v-model.number="reminders.diaper.intervalHours"
+              type="number"
+              min="1"
+              step="1"
+              :placeholder="t('reminders.intervalPh', { n: '6' })"
+              class="form-input reminder-param-input"
+              @change="persistReminders"
+            />
+            <p class="reminder-param-hint">{{ t('reminders.diaper.hint') }}</p>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分享给朋友 -->
+    <p class="section-title">{{ t('settings.shareSection') }}</p>
+    <div class="card">
+      <p class="data-tip">{{ t('settings.shareTip') }}</p>
+      <button class="btn btn-primary btn-block" @click="handleShare">{{ t('settings.shareBtn') }}</button>
+      <p v-if="shareFeedback" class="export-ok">{{ shareFeedback }}</p>
+    </div>
+
     <!-- 数据管理 -->
     <p class="section-title">{{ t('settings.dataManage') }}</p>
     <div class="card">
@@ -309,84 +391,6 @@ async function confirmClearAll() {
       <button class="btn btn-danger-soft btn-block" @click="clearAllConfirm = true">
         {{ t('settings.clearAll') }}
       </button>
-    </div>
-
-    <!-- 提醒设置 -->
-    <p class="section-title">{{ t('settings.reminderSectionTitle') }}</p>
-    <div class="card">
-      <p class="data-tip">{{ t('settings.reminderTip') }}</p>
-      <div v-for="r in reminderRows" :key="r.type" class="reminder-block">
-        <div class="reminder-row">
-          <div class="reminder-info">
-            <p class="reminder-title">{{ r.title }}</p>
-            <p class="reminder-sub">{{ r.sub }}</p>
-          </div>
-          <button
-            class="switch"
-            :class="{ on: reminders[r.type].enabled }"
-            role="switch"
-            :aria-checked="reminders[r.type].enabled"
-            @click="toggleReminder(r.type)"
-          >
-            <span class="switch-knob"></span>
-          </button>
-        </div>
-        <div v-if="reminders[r.type].enabled" class="reminder-param">
-          <template v-if="r.type === 'feed'">
-            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
-            <input
-              v-model.number="reminders.feed.intervalHours"
-              type="number"
-              min="0"
-              step="0.5"
-              class="form-input reminder-param-input"
-              @change="persistReminders"
-            />
-            <p class="reminder-param-hint">{{ t('reminders.feed.hint') }}</p>
-          </template>
-          <template v-else-if="r.type === 'sleep'">
-            <label class="reminder-param-label">{{ t('reminders.sleepTimeLabel') }}</label>
-            <input
-              v-model="reminders.sleep.time"
-              type="time"
-              class="form-input reminder-param-input"
-              @change="persistReminders"
-            />
-          </template>
-          <template v-else-if="r.type === 'medication'">
-            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
-            <input
-              v-model.number="reminders.medication.intervalHours"
-              type="number"
-              min="1"
-              step="1"
-              class="form-input reminder-param-input"
-              @change="persistReminders"
-            />
-            <p class="reminder-param-hint">{{ t('reminders.medication.hint') }}</p>
-          </template>
-          <template v-else-if="r.type === 'diaper'">
-            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
-            <input
-              v-model.number="reminders.diaper.intervalHours"
-              type="number"
-              min="1"
-              step="1"
-              class="form-input reminder-param-input"
-              @change="persistReminders"
-            />
-            <p class="reminder-param-hint">{{ t('reminders.diaper.hint') }}</p>
-          </template>
-        </div>
-      </div>
-    </div>
-
-    <!-- 分享给朋友 -->
-    <p class="section-title">{{ t('settings.shareSection') }}</p>
-    <div class="card">
-      <p class="data-tip">{{ t('settings.shareTip') }}</p>
-      <button class="btn btn-primary btn-block" @click="handleShare">{{ t('settings.shareBtn') }}</button>
-      <p v-if="shareFeedback" class="export-ok">{{ shareFeedback }}</p>
     </div>
 
     <!-- 关于 -->
@@ -435,7 +439,7 @@ async function confirmClearAll() {
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('settings.birthDate') }} *</label>
-        <input v-model="babyBirthDate" type="date" class="form-input" />
+        <input v-model="babyBirthDate" type="date" :placeholder="t('common.selectDate')" class="form-input" />
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('settings.avatarLabel') }}</label>
@@ -494,15 +498,15 @@ async function confirmClearAll() {
 .baby-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .baby-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 16px;
   border: 1.5px solid var(--border);
   background: var(--surface);
@@ -601,7 +605,7 @@ async function confirmClearAll() {
 .data-tip {
   font-size: 12px;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   line-height: 1.6;
 }
 
@@ -633,17 +637,17 @@ async function confirmClearAll() {
 .reminder-hint {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 12px;
+  margin-top: 10px;
   line-height: 1.7;
 }
 
 .reminder-block {
-  padding: 4px 0 12px;
+  padding: 4px 0 10px;
 }
 
 .reminder-block + .reminder-block {
   border-top: 1px dashed var(--border);
-  padding-top: 12px;
+  padding-top: 10px;
 }
 
 .reminder-param {
@@ -651,8 +655,8 @@ async function confirmClearAll() {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
-  padding: 10px 12px;
+  margin-top: 8px;
+  padding: 8px 10px;
   background: var(--surface-2);
   border-radius: 10px;
 }

@@ -140,11 +140,11 @@ async function submit() {
     <div class="time-row">
       <div class="form-field">
         <label class="form-label">{{ t('pump.startLabel') }}</label>
-        <input v-model="startTime" type="datetime-local" class="form-input" />
+        <input v-model="startTime" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('pump.endLabel') }}</label>
-        <input v-model="endTime" type="datetime-local" class="form-input" />
+        <input v-model="endTime" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
       </div>
     </div>
 
@@ -201,8 +201,8 @@ async function submit() {
 .timer-box {
   background: var(--surface-2);
   border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 12px;
+  margin-bottom: 12px;
   text-align: center;
 }
 

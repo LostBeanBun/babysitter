@@ -158,11 +158,11 @@ async function submit() {
     <div class="time-row">
       <div class="form-field">
         <label class="form-label">{{ t('feed.startLabel') }}</label>
-        <input v-model="startTime" type="datetime-local" class="form-input" />
+        <input v-model="startTime" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
       </div>
       <div v-if="isBreast" class="form-field">
         <label class="form-label">{{ t('feed.endLabel') }}</label>
-        <input v-model="endTime" type="datetime-local" class="form-input" />
+        <input v-model="endTime" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
       </div>
     </div>
 
@@ -218,8 +218,8 @@ async function submit() {
 .timer-box {
   background: var(--surface-2);
   border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 12px;
+  margin-bottom: 12px;
   text-align: center;
 }
 
