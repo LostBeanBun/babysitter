@@ -125,6 +125,8 @@ const filter = ref<
 
 /** 按日期筛选：null=全部，否则为单日 0 点时间戳 */
 const dateFilter = ref<number | null>(null)
+/** 日期面板展开状态 */
+const dateOpen = ref(false)
 
 function matchDate(ts: number): boolean {
   const d = dateFilter.value
