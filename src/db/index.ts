@@ -10,10 +10,11 @@ import type {
   Medication,
   Vaccination,
   Temperature,
+  Milestone,
 } from '@/types'
 
 /** 应用内数据库版本（导出文件结构版本，升级时同步递增） */
-export const DB_VERSION = 3
+export const DB_VERSION = 4
 
 export interface BabySitterDB extends Dexie {
   babies: EntityTable<Baby, 'id'>
@@ -26,6 +27,7 @@ export interface BabySitterDB extends Dexie {
   medications: EntityTable<Medication, 'id'>
   vaccinations: EntityTable<Vaccination, 'id'>
   temperatures: EntityTable<Temperature, 'id'>
+  milestones: EntityTable<Milestone, 'id'>
 }
 
 export const db = new Dexie('babysitter') as BabySitterDB
@@ -52,6 +54,11 @@ db.version(3).stores({
   temperatures: '++id, babyId, [babyId+time], time',
 })
 
+// v4：新增里程碑记录表
+db.version(4).stores({
+  milestones: '++id, babyId, [babyId+time], time',
+})
+
 /** 清理某宝宝的全部数据 */
 export async function clearBabyData(babyId: number): Promise<void> {
   await db.transaction(
@@ -66,6 +73,7 @@ export async function clearBabyData(babyId: number): Promise<void> {
       db.medications,
       db.vaccinations,
       db.temperatures,
+      db.milestones,
     ],
     async () => {
       await db.feedings.where('babyId').equals(babyId).delete()
@@ -77,6 +85,7 @@ export async function clearBabyData(babyId: number): Promise<void> {
       await db.medications.where('babyId').equals(babyId).delete()
       await db.vaccinations.where('babyId').equals(babyId).delete()
       await db.temperatures.where('babyId').equals(babyId).delete()
+      await db.milestones.where('babyId').equals(babyId).delete()
     },
   )
 }
@@ -96,6 +105,7 @@ export async function clearAllData(): Promise<void> {
       db.medications,
       db.vaccinations,
       db.temperatures,
+      db.milestones,
     ],
     async () => {
       await Promise.all([
@@ -109,6 +119,7 @@ export async function clearAllData(): Promise<void> {
         db.medications.clear(),
         db.vaccinations.clear(),
         db.temperatures.clear(),
+        db.milestones.clear(),
       ])
     },
   )
@@ -125,8 +136,9 @@ export async function countAllRecords(): Promise<{
   medications: number
   vaccinations: number
   temperatures: number
+  milestones: number
 }> {
-  const [feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures] =
+  const [feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures, milestones] =
     await Promise.all([
       db.feedings.count(),
       db.diapers.count(),
@@ -137,8 +149,20 @@ export async function countAllRecords(): Promise<{
       db.medications.count(),
       db.vaccinations.count(),
       db.temperatures.count(),
+      db.milestones.count(),
     ])
-  return { feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures }
+  return {
+    feedings,
+    diapers,
+    pumpings,
+    sleeps,
+    growths,
+    solidFoods,
+    medications,
+    vaccinations,
+    temperatures,
+    milestones,
+  }
 }
 
 /** 便捷：按宝宝 + 时间范围查询（半开区间 [start, end)） */

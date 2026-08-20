@@ -11,6 +11,7 @@ import type {
   Medication,
   Vaccination,
   Temperature,
+  Milestone,
 } from '@/types'
 import {
   FEED_TYPE_LABELS,
@@ -20,12 +21,24 @@ import {
   PUMP_SIDE_LABELS,
   SLEEP_TYPE_LABELS,
   TEMP_METHOD_LABELS,
+  MILESTONE_TYPE_LABELS,
+  MILESTONE_TYPE_LIST,
 } from '@/constants'
 import { formatTime, formatDuration, formatAmount, formatDate } from '@/utils/format'
 
 const { t, locale } = useI18n()
 
-export type TimelineKind = 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature'
+export type TimelineKind =
+  | 'feeding'
+  | 'diaper'
+  | 'pumping'
+  | 'sleep'
+  | 'growth'
+  | 'solidFood'
+  | 'medication'
+  | 'vaccination'
+  | 'temperature'
+  | 'milestone'
 
 /** 各记录类型的统一主色（时间轴/图标标识） */
 const KIND_COLORS: Record<TimelineKind, string> = {
@@ -38,6 +51,7 @@ const KIND_COLORS: Record<TimelineKind, string> = {
   medication: '#D86A8A',
   vaccination: '#6AB0D8',
   temperature: '#E8A45A',
+  milestone: '#E8B86A',
 }
 
 export interface TimelineEntry {
@@ -53,7 +67,7 @@ export interface TimelineEntry {
   duration?: number
   /** 自定义时间显示（如疫苗用日期） */
   timeLabel?: string
-  raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature
+  raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature | Milestone
 }
 
 const props = defineProps<{
@@ -66,6 +80,7 @@ const props = defineProps<{
   medications?: Medication[]
   vaccinations?: Vaccination[]
   temperatures?: Temperature[]
+  milestones?: Milestone[]
   /** 是否按天分组显示（默认按时间倒序扁平显示） */
   grouped?: boolean
   /** 正在等待删除确认的条目 key（`kind-id`，与列表 key 一致，用于高亮选中的删除目标） */
@@ -230,6 +245,21 @@ const entries = computed<TimelineEntry[]>(() => {
       title: t('timeline.temperature'),
       detail: detailParts.join(' · '),
       raw: tmp,
+    })
+  }
+
+  for (const ms of props.milestones ?? []) {
+    const item = MILESTONE_TYPE_LIST.find((x) => x.value === ms.type)
+    list.push({
+      id: ms.id!,
+      kind: 'milestone',
+      time: ms.time,
+      icon: item?.icon ?? '🌟',
+      color: item?.color ?? '#E8B86A',
+      kindColor: KIND_COLORS.milestone,
+      title: t(MILESTONE_TYPE_LABELS[ms.type]),
+      detail: ms.notes?.trim() || t('common.recorded'),
+      raw: ms,
     })
   }
 

@@ -24,6 +24,7 @@ const recordCounts = ref({
   medications: 0,
   vaccinations: 0,
   temperatures: 0,
+  milestones: 0,
 })
 const babyModal = ref<{ mode: 'add' | 'edit'; id?: number } | null>(null)
 const babyName = ref('')
@@ -223,6 +224,7 @@ async function handleImportFile(e: Event) {
         medications: result.medications,
         vaccinations: result.vaccinations,
         temperatures: result.temperatures,
+        milestones: result.milestones,
       }),
     )
     recordCounts.value = await countAllRecords()
@@ -251,6 +253,7 @@ async function confirmClearAll() {
       medications: 0,
       vaccinations: 0,
       temperatures: 0,
+      milestones: 0,
     }
     clearAllConfirm.value = false
   } finally {
@@ -383,6 +386,7 @@ async function confirmClearAll() {
         <span>{{ t('log.filters.medication') }} {{ t('common.records', { n: recordCounts.medications }) }}</span>
         <span>{{ t('log.filters.vaccination') }} {{ t('common.records', { n: recordCounts.vaccinations }) }}</span>
         <span>{{ t('log.filters.temperature') }} {{ t('common.records', { n: recordCounts.temperatures }) }}</span>
+        <span>{{ t('log.filters.milestone') }} {{ t('common.records', { n: recordCounts.milestones }) }}</span>
       </div>
       <button class="btn btn-primary btn-block" :disabled="activeBaby === undefined" @click="handleExportJson">
         <span class="btn-label">{{

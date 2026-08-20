@@ -183,6 +183,30 @@ export interface Temperature {
   updatedAt: number
 }
 
+/** 里程碑类型 */
+export type MilestoneType =
+  | 'roll' // 翻身
+  | 'sit' // 独坐
+  | 'crawl' // 爬行
+  | 'stand' // 站立
+  | 'walk' // 独走
+  | 'first_word' // 开口说话
+  | 'tooth' // 长牙
+  | 'wave' // 挥手再见
+  | 'other' // 其他
+
+/** 里程碑记录（翻身/独坐/爬行/说话/长牙等发育节点） */
+export interface Milestone {
+  id?: number
+  babyId: number
+  type: MilestoneType
+  /** 发生时间 */
+  time: number
+  notes?: string
+  createdAt: number
+  updatedAt: number
+}
+
 /** 导出文件的元信息 */
 export interface ExportMeta {
   app: 'babysitter'
@@ -202,4 +226,5 @@ export interface ExportFile {
   medications?: Medication[]
   vaccinations?: Vaccination[]
   temperatures?: Temperature[]
+  milestones?: Milestone[]
 }

@@ -10,6 +10,7 @@ import { useSolidFoodStore } from '@/stores/solidFood'
 import { useMedicationStore } from '@/stores/medication'
 import { useVaccinationStore } from '@/stores/vaccination'
 import { useTemperatureStore } from '@/stores/temperature'
+import { useMilestoneStore } from '@/stores/milestone'
 import PageHeader from '@/components/common/PageHeader.vue'
 import TimelineList, { type TimelineEntry } from '@/components/timeline/TimelineList.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -22,7 +23,10 @@ import SolidFoodForm from '@/components/forms/SolidFoodForm.vue'
 import MedicationForm from '@/components/forms/MedicationForm.vue'
 import VaccinationForm from '@/components/forms/VaccinationForm.vue'
 import TemperatureForm from '@/components/forms/TemperatureForm.vue'
+import MilestoneForm from '@/components/forms/MilestoneForm.vue'
 import { formatTime } from '@/utils/format'
+import { MILESTONE_TYPE_LABELS } from '@/constants'
+import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import type {
   Feeding,
   DiaperChange,
@@ -33,6 +37,7 @@ import type {
   Medication,
   Vaccination,
   Temperature,
+  Milestone,
   FeedType,
   DiaperType,
   DiaperColor,
@@ -41,6 +46,7 @@ import type {
   SleepType,
   VaccinationStatus,
   TemperatureMethod,
+  MilestoneType,
 } from '@/types'
 
 type FeedingFormProps = {
@@ -88,6 +94,7 @@ type TemperatureFormProps = {
   method?: TemperatureMethod
   notes?: string
 }
+type MilestoneFormProps = { id: number; time: number; type: MilestoneType; notes?: string }
 
 const feedingStore = useFeedingStore()
 const diaperStore = useDiaperStore()
@@ -98,35 +105,85 @@ const solidFoodStore = useSolidFoodStore()
 const medicationStore = useMedicationStore()
 const vaccinationStore = useVaccinationStore()
 const temperatureStore = useTemperatureStore()
+const milestoneStore = useMilestoneStore()
 
 const { t } = useI18n()
 
 // 类型筛选
-const filter = ref<'all' | 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature'>(
-  'all',
-)
+const filter = ref<
+  | 'all'
+  | 'feeding'
+  | 'diaper'
+  | 'pumping'
+  | 'sleep'
+  | 'growth'
+  | 'solidFood'
+  | 'medication'
+  | 'vaccination'
+  | 'temperature'
+  | 'milestone'
+>('all')
 
-const filteredFeedings = computed(() =>
-  filter.value === 'all' || filter.value === 'feeding' ? feedingStore.feedings : [],
-)
-const filteredDiapers = computed(() => (filter.value === 'all' || filter.value === 'diaper' ? diaperStore.diapers : []))
-const filteredPumpings = computed(() =>
-  filter.value === 'all' || filter.value === 'pumping' ? pumpingStore.pumpings : [],
-)
-const filteredSleeps = computed(() => (filter.value === 'all' || filter.value === 'sleep' ? sleepStore.sleeps : []))
-const filteredGrowths = computed(() => (filter.value === 'all' || filter.value === 'growth' ? growthStore.growths : []))
-const filteredSolidFoods = computed(() =>
-  filter.value === 'all' || filter.value === 'solidFood' ? solidFoodStore.solidFoods : [],
-)
-const filteredMedications = computed(() =>
-  filter.value === 'all' || filter.value === 'medication' ? medicationStore.medications : [],
-)
-const filteredVaccinations = computed(() =>
-  filter.value === 'all' || filter.value === 'vaccination' ? vaccinationStore.vaccinations : [],
-)
-const filteredTemperatures = computed(() =>
-  filter.value === 'all' || filter.value === 'temperature' ? temperatureStore.temperatures : [],
-)
+/** 记录搜索关键词（匹配备注/食物/药品/疫苗名等） */
+const searchQuery = ref('')
+
+function matchQuery(record: { notes?: string; food?: string; name?: string; dose?: string }, extraFields?: string[]): boolean {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return true
+  const fields = [record.notes ?? '', record.food ?? '', record.name ?? '', record.dose ?? '', ...(extraFields ?? [])]
+  return fields.some((f) => f.toLowerCase().includes(q))
+}
+
+/** 删除撤销：过滤待删除记录 */
+const { isPending, scheduleDelete } = useDeleteUndo()
+
+function keep<T extends { id?: number }>(items: T[], kind: string): T[] {
+  return items.filter((x) => !isPending({ kind, id: x.id! }))
+}
+
+const filteredFeedings = computed(() => {
+  if (filter.value !== 'all' && filter.value !== 'feeding') return []
+  return keep(feedingStore.feedings.filter((f) => matchQuery(f)), 'feeding')
+})
+const filteredDiapers = computed(() => {
+  if (filter.value !== 'all' && filter.value !== 'diaper') return []
+  return keep(diaperStore.diapers.filter((d) => matchQuery(d)), 'diaper')
+})
+const filteredPumpings = computed(() => {
+  if (filter.value !== 'all' && filter.value !== 'pumping') return []
+  return keep(pumpingStore.pumpings.filter((p) => matchQuery(p)), 'pumping')
+})
+const filteredSleeps = computed(() => {
+  if (filter.value !== 'all' && filter.value !== 'sleep') return []
+  return keep(sleepStore.sleeps.filter((s) => matchQuery(s)), 'sleep')
+})
+const filteredGrowths = computed(() => {
+  if (filter.value !== 'all' && filter.value !== 'growth') return []
+  return keep(growthStore.growths.filter((g) => matchQuery(g)), 'growth')
+})
+const filteredSolidFoods = computed(() => {
+  if (filter.value !== 'all' && filter.value !== 'solidFood') return []
+  return keep(solidFoodStore.solidFoods.filter((sf) => matchQuery(sf)), 'solidFood')
+})
+const filteredMedications = computed(() => {
+  if (filter.value !== 'all' && filter.value !== 'medication') return []
+  return keep(medicationStore.medications.filter((m) => matchQuery(m)), 'medication')
+})
+const filteredVaccinations = computed(() => {
+  if (filter.value !== 'all' && filter.value !== 'vaccination') return []
+  return keep(vaccinationStore.vaccinations.filter((v) => matchQuery(v)), 'vaccination')
+})
+const filteredTemperatures = computed(() => {
+  if (filter.value !== 'all' && filter.value !== 'temperature') return []
+  return keep(temperatureStore.temperatures.filter((tmp) => matchQuery(tmp)), 'temperature')
+})
+const filteredMilestones = computed(() => {
+  if (filter.value !== 'all' && filter.value !== 'milestone') return []
+  return keep(
+    milestoneStore.milestones.filter((ms) => matchQuery(ms, [t(MILESTONE_TYPE_LABELS[ms.type])])),
+    'milestone',
+  )
+})
 
 const hasAny = computed(
   () =>
@@ -138,7 +195,8 @@ const hasAny = computed(
       filteredSolidFoods.value.length +
       filteredMedications.value.length +
       filteredVaccinations.value.length +
-      filteredTemperatures.value.length >
+      filteredTemperatures.value.length +
+      filteredMilestones.value.length >
     0,
 )
 
@@ -154,6 +212,7 @@ const modalState = ref<{
     | 'medication'
     | 'vaccination'
     | 'temperature'
+    | 'milestone'
   editing?: TimelineEntry
 } | null>(null)
 const confirmDelete = ref<TimelineEntry | null>(null)
@@ -169,6 +228,12 @@ function onDelete(entry: TimelineEntry) {
 async function confirmDeleteAction() {
   const e = confirmDelete.value
   if (!e) return
+  scheduleDelete(e, () => removeEntry(e), t('common.deletedToast'), t('common.undo'))
+  confirmDelete.value = null
+}
+
+/** 真实删除（3 秒撤销窗口结束后执行） */
+async function removeEntry(e: TimelineEntry) {
   if (e.kind === 'feeding') await feedingStore.remove(e.id)
   else if (e.kind === 'diaper') await diaperStore.remove(e.id)
   else if (e.kind === 'pumping') await pumpingStore.remove(e.id)
@@ -177,8 +242,8 @@ async function confirmDeleteAction() {
   else if (e.kind === 'solidFood') await solidFoodStore.remove(e.id)
   else if (e.kind === 'medication') await medicationStore.remove(e.id)
   else if (e.kind === 'vaccination') await vaccinationStore.remove(e.id)
-  else await temperatureStore.remove(e.id)
-  confirmDelete.value = null
+  else if (e.kind === 'temperature') await temperatureStore.remove(e.id)
+  else await milestoneStore.remove(e.id)
 }
 
 function onSaved() {
@@ -236,8 +301,12 @@ const editPayload = computed(() => {
     const v = e.raw as Vaccination
     return { id: e.id, date: v.date, name: v.name, dose: v.dose, status: v.status, notes: v.notes }
   }
-  const tmp = e.raw as Temperature
-  return { id: e.id, time: tmp.time, value: tmp.value, method: tmp.method, notes: tmp.notes }
+  if (e.kind === 'temperature') {
+    const tmp = e.raw as Temperature
+    return { id: e.id, time: tmp.time, value: tmp.value, method: tmp.method, notes: tmp.notes }
+  }
+  const ms = e.raw as Milestone
+  return { id: e.id, time: ms.time, type: ms.type, notes: ms.notes }
 })
 
 const filters = [
@@ -251,6 +320,7 @@ const filters = [
   { key: 'medication' as const, labelKey: 'log.filters.medication' },
   { key: 'vaccination' as const, labelKey: 'log.filters.vaccination' },
   { key: 'temperature' as const, labelKey: 'log.filters.temperature' },
+  { key: 'milestone' as const, labelKey: 'log.filters.milestone' },
 ]
 
 const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter.value)?.labelKey ?? 'log.filters.all'))
@@ -267,6 +337,25 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
       </select>
     </div>
 
+    <div class="search-row">
+      <input
+        v-model="searchQuery"
+        type="search"
+        class="form-input search-input"
+        :placeholder="t('log.searchPlaceholder')"
+        :aria-label="t('log.searchPlaceholder')"
+      />
+      <button
+        v-if="searchQuery"
+        type="button"
+        class="search-clear"
+        :aria-label="t('common.clear')"
+        @click="searchQuery = ''"
+      >
+        ✕
+      </button>
+    </div>
+
     <div class="card">
       <TimelineList
         v-if="hasAny"
@@ -279,6 +368,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
         :medications="filteredMedications"
         :vaccinations="filteredVaccinations"
         :temperatures="filteredTemperatures"
+        :milestones="filteredMilestones"
         :deleting-key="confirmDelete ? confirmDelete.kind + '-' + confirmDelete.id : null"
         grouped
         @edit="onEdit"
@@ -349,6 +439,12 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
         @saved="onSaved"
         @cancelled="modalState = null"
       />
+      <MilestoneForm
+        v-else-if="modalState?.kind === 'milestone'"
+        :editing="modalState?.editing ? (editPayload as MilestoneFormProps) : undefined"
+        @saved="onSaved"
+        @cancelled="modalState = null"
+      />
     </BaseModal>
 
     <BaseModal :show="confirmDelete !== null" :title="t('common.deleteRecord')" @close="confirmDelete = null">
@@ -389,6 +485,38 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   min-width: 0;
   border-radius: 12px;
   box-shadow: var(--shadow-xs);
+}
+
+.search-row {
+  position: relative;
+  padding: 0 4px 14px;
+}
+
+.search-input {
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+  padding-right: 40px;
+}
+
+.search-clear {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+}
+
+.search-clear:active {
+  background: var(--surface-3);
 }
 
 .empty-inline {

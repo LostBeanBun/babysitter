@@ -368,6 +368,13 @@ input[type='time']::-webkit-date-and-time-value {
   box-shadow: 0 0 0 3.5px var(--primary-soft);
 }
 
+/* 键盘导航可见焦点环（鼠标点击不显示，仅 Tab/键盘操作时高亮） */
+:focus-visible {
+  outline: 2.5px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 .form-input::placeholder,
 .form-textarea::placeholder {
   color: var(--text-muted);

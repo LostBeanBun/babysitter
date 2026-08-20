@@ -11,6 +11,7 @@ import { useSolidFoodStore } from '@/stores/solidFood'
 import { useMedicationStore } from '@/stores/medication'
 import { useVaccinationStore } from '@/stores/vaccination'
 import { useTemperatureStore } from '@/stores/temperature'
+import { useMilestoneStore } from '@/stores/milestone'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatCard from '@/components/common/StatCard.vue'
 import TimelineList, { type TimelineEntry } from '@/components/timeline/TimelineList.vue'
@@ -24,6 +25,7 @@ import SolidFoodForm from '@/components/forms/SolidFoodForm.vue'
 import MedicationForm from '@/components/forms/MedicationForm.vue'
 import VaccinationForm from '@/components/forms/VaccinationForm.vue'
 import TemperatureForm from '@/components/forms/TemperatureForm.vue'
+import MilestoneForm from '@/components/forms/MilestoneForm.vue'
 import { startOfDay, formatDuration, formatAmount, formatTime, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { MS_PER_DAY, BABY_AVATARS, FEED_TYPE_LABELS } from '@/constants'
 import {
@@ -34,6 +36,7 @@ import {
 } from '@/utils/feedingGuide'
 import { checkReminders } from '@/utils/reminderScheduler'
 import { dailyGuide } from '@/utils/dailyGuides'
+import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import type {
   Feeding,
   DiaperChange,
@@ -44,6 +47,7 @@ import type {
   Medication,
   Vaccination,
   Temperature,
+  Milestone,
   FeedType,
   DiaperType,
   DiaperColor,
@@ -52,6 +56,7 @@ import type {
   SleepType,
   VaccinationStatus,
   TemperatureMethod,
+  MilestoneType,
   BabyGender,
 } from '@/types'
 
@@ -101,6 +106,7 @@ type TemperatureFormProps = {
   method?: TemperatureMethod
   notes?: string
 }
+type MilestoneFormProps = { id: number; time: number; type: MilestoneType; notes?: string }
 
 const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
@@ -112,6 +118,7 @@ const solidFoodStore = useSolidFoodStore()
 const medicationStore = useMedicationStore()
 const vaccinationStore = useVaccinationStore()
 const temperatureStore = useTemperatureStore()
+const milestoneStore = useMilestoneStore()
 
 const { t, locale } = useI18n()
 
@@ -155,32 +162,62 @@ const todayStart = computed(() => startOfDay(now.value))
 const todayEnd = computed(() => todayStart.value + MS_PER_DAY - 1)
 
 // 今日数据（按时间过滤）
+const { isPending, scheduleDelete } = useDeleteUndo()
+
+function keep<T extends { id?: number }>(items: T[], kind: string): T[] {
+  return items.filter((x) => !isPending({ kind, id: x.id! }))
+}
+
 const todayFeedings = computed(() =>
-  feedingStore.feedings.filter((f) => f.startTime >= todayStart.value && f.startTime <= todayEnd.value),
+  keep(
+    feedingStore.feedings.filter((f) => f.startTime >= todayStart.value && f.startTime <= todayEnd.value),
+    'feeding',
+  ),
 )
 const todayDiapers = computed(() =>
-  diaperStore.diapers.filter((d) => d.time >= todayStart.value && d.time <= todayEnd.value),
+  keep(diaperStore.diapers.filter((d) => d.time >= todayStart.value && d.time <= todayEnd.value), 'diaper'),
 )
 const todayPumpings = computed(() =>
-  pumpingStore.pumpings.filter((p) => p.startTime >= todayStart.value && p.startTime <= todayEnd.value),
+  keep(
+    pumpingStore.pumpings.filter((p) => p.startTime >= todayStart.value && p.startTime <= todayEnd.value),
+    'pumping',
+  ),
 )
 const todaySleeps = computed(() =>
-  sleepStore.sleeps.filter((s) => s.endTime >= todayStart.value && s.startTime <= todayEnd.value),
+  keep(
+    sleepStore.sleeps.filter((s) => s.endTime >= todayStart.value && s.startTime <= todayEnd.value),
+    'sleep',
+  ),
 )
 const todayGrowths = computed(() =>
-  growthStore.growths.filter((g) => g.date >= todayStart.value && g.date <= todayEnd.value),
+  keep(growthStore.growths.filter((g) => g.date >= todayStart.value && g.date <= todayEnd.value), 'growth'),
 )
 const todaySolidFoods = computed(() =>
-  solidFoodStore.solidFoods.filter((s) => s.time >= todayStart.value && s.time <= todayEnd.value),
+  keep(solidFoodStore.solidFoods.filter((s) => s.time >= todayStart.value && s.time <= todayEnd.value), 'solidFood'),
 )
 const todayMedications = computed(() =>
-  medicationStore.medications.filter((m) => m.time >= todayStart.value && m.time <= todayEnd.value),
+  keep(
+    medicationStore.medications.filter((m) => m.time >= todayStart.value && m.time <= todayEnd.value),
+    'medication',
+  ),
 )
 const todayVaccinations = computed(() =>
-  vaccinationStore.vaccinations.filter((v) => v.date >= todayStart.value && v.date <= todayEnd.value),
+  keep(
+    vaccinationStore.vaccinations.filter((v) => v.date >= todayStart.value && v.date <= todayEnd.value),
+    'vaccination',
+  ),
 )
 const todayTemperatures = computed(() =>
-  temperatureStore.temperatures.filter((tmp) => tmp.time >= todayStart.value && tmp.time <= todayEnd.value),
+  keep(
+    temperatureStore.temperatures.filter((tmp) => tmp.time >= todayStart.value && tmp.time <= todayEnd.value),
+    'temperature',
+  ),
+)
+const todayMilestones = computed(() =>
+  keep(
+    milestoneStore.milestones.filter((ms) => ms.time >= todayStart.value && ms.time <= todayEnd.value),
+    'milestone',
+  ),
 )
 
 // —— 疫苗提醒（今日页卡片：近 14 天内的待接种项）——
@@ -318,6 +355,8 @@ function generateSummary() {
     lines.push(t('dashboard.summaryMedication', { n: todayMedications.value.length }))
   if (todayTemperatures.value.length > 0)
     lines.push(t('dashboard.summaryTemperature', { n: todayTemperatures.value.length }))
+  if (todayMilestones.value.length > 0)
+    lines.push(t('dashboard.summaryMilestone', { n: todayMilestones.value.length }))
   dailySummary.value = lines.join('\n')
   summaryCopied.value = false
   summaryOpen.value = true
@@ -345,6 +384,7 @@ const modalState = ref<{
     | 'medication'
     | 'vaccination'
     | 'temperature'
+    | 'milestone'
   editing?: TimelineEntry
 } | null>(null)
 const confirmDelete = ref<TimelineEntry | null>(null)
@@ -359,7 +399,8 @@ function openAdd(
     | 'solidFood'
     | 'medication'
     | 'vaccination'
-    | 'temperature',
+    | 'temperature'
+    | 'milestone',
 ) {
   modalState.value = { kind }
 }
@@ -375,6 +416,12 @@ function onDelete(entry: TimelineEntry) {
 async function confirmDeleteAction() {
   const e = confirmDelete.value
   if (!e) return
+  scheduleDelete(e, () => removeEntry(e), t('common.deletedToast'), t('common.undo'))
+  confirmDelete.value = null
+}
+
+/** 真实删除（3 秒撤销窗口结束后执行） */
+async function removeEntry(e: TimelineEntry) {
   if (e.kind === 'feeding') await feedingStore.remove(e.id)
   else if (e.kind === 'diaper') await diaperStore.remove(e.id)
   else if (e.kind === 'pumping') await pumpingStore.remove(e.id)
@@ -383,8 +430,8 @@ async function confirmDeleteAction() {
   else if (e.kind === 'solidFood') await solidFoodStore.remove(e.id)
   else if (e.kind === 'medication') await medicationStore.remove(e.id)
   else if (e.kind === 'vaccination') await vaccinationStore.remove(e.id)
-  else await temperatureStore.remove(e.id)
-  confirmDelete.value = null
+  else if (e.kind === 'temperature') await temperatureStore.remove(e.id)
+  else await milestoneStore.remove(e.id)
 }
 
 function onSaved() {
@@ -443,8 +490,12 @@ const editPayload = computed(() => {
     const v = e.raw as Vaccination
     return { id: e.id, date: v.date, name: v.name, dose: v.dose, status: v.status, notes: v.notes }
   }
-  const tmp = e.raw as Temperature
-  return { id: e.id, time: tmp.time, value: tmp.value, method: tmp.method, notes: tmp.notes }
+  if (e.kind === 'temperature') {
+    const tmp = e.raw as Temperature
+    return { id: e.id, time: tmp.time, value: tmp.value, method: tmp.method, notes: tmp.notes }
+  }
+  const ms = e.raw as Milestone
+  return { id: e.id, time: ms.time, type: ms.type, notes: ms.notes }
 })
 </script>
 
@@ -534,6 +585,10 @@ const editPayload = computed(() => {
           <span class="quick-icon">🌡️</span>
           <span class="quick-label">{{ t('log.filters.temperature') }}</span>
         </button>
+        <button class="quick-btn milestone" @click="openAdd('milestone')">
+          <span class="quick-icon">🌟</span>
+          <span class="quick-label">{{ t('log.filters.milestone') }}</span>
+        </button>
       </div>
 
       <!-- 奶睡一键（与快捷记录同组） -->
@@ -595,7 +650,8 @@ const editPayload = computed(() => {
               todaySolidFoods.length +
               todayMedications.length +
               todayVaccinations.length +
-              todayTemperatures.length >
+              todayTemperatures.length +
+              todayMilestones.length >
             0
           "
           :feedings="todayFeedings"
@@ -607,6 +663,7 @@ const editPayload = computed(() => {
           :medications="todayMedications"
           :vaccinations="todayVaccinations"
           :temperatures="todayTemperatures"
+          :milestones="todayMilestones"
           :deleting-key="confirmDelete ? confirmDelete.kind + '-' + confirmDelete.id : null"
           @edit="onEdit"
           @delete="onDelete"
@@ -676,6 +733,12 @@ const editPayload = computed(() => {
           @saved="onSaved"
           @cancelled="modalState = null"
         />
+        <MilestoneForm
+          v-else-if="modalState?.kind === 'milestone'"
+          :editing="modalState?.editing ? (editPayload as MilestoneFormProps) : undefined"
+          @saved="onSaved"
+          @cancelled="modalState = null"
+        />
       </BaseModal>
 
       <!-- 删除确认 -->
@@ -698,9 +761,11 @@ const editPayload = computed(() => {
                             ? 'log.filters.solidFood'
                             : confirmDelete?.kind === 'medication'
                               ? 'log.filters.medication'
-                              : confirmDelete?.kind === 'vaccination'
-                                ? 'log.filters.vaccination'
-                                : 'log.filters.temperature',
+: confirmDelete?.kind === 'vaccination'
+                              ? 'log.filters.vaccination'
+                              : confirmDelete?.kind === 'temperature'
+                                ? 'log.filters.temperature'
+                                : 'log.filters.milestone',
               ),
             })
           }}
@@ -1168,6 +1233,10 @@ const editPayload = computed(() => {
 
 .quick-btn.temperature .quick-icon {
   background: linear-gradient(135deg, #fdf0da, #f5ddae);
+}
+
+.quick-btn.milestone .quick-icon {
+  background: linear-gradient(135deg, #fdf3dd, #f5e2b4);
 }
 
 .quick-label {

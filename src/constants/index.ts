@@ -6,6 +6,7 @@ import type {
   PumpSide,
   SleepType,
   TemperatureMethod,
+  MilestoneType,
 } from '@/types'
 
 /** 喂养类型标签（i18n key，配合 t() 使用） */
@@ -96,6 +97,32 @@ export const TEMP_METHOD_LIST: { value: TemperatureMethod; label: string; icon: 
   { value: 'ear', label: 'temperature.methods.ear', icon: '👂' },
   { value: 'forehead', label: 'temperature.methods.forehead', icon: '🤒' },
   { value: 'rectal', label: 'temperature.methods.rectal', icon: '🌡️' },
+]
+
+/** 里程碑类型标签（i18n key） */
+export const MILESTONE_TYPE_LABELS: Record<MilestoneType, string> = {
+  roll: 'milestone.types.roll',
+  sit: 'milestone.types.sit',
+  crawl: 'milestone.types.crawl',
+  stand: 'milestone.types.stand',
+  walk: 'milestone.types.walk',
+  first_word: 'milestone.types.first_word',
+  tooth: 'milestone.types.tooth',
+  wave: 'milestone.types.wave',
+  other: 'milestone.types.other',
+}
+
+/** 里程碑类型列表（表单按钮组 + 时间线图标） */
+export const MILESTONE_TYPE_LIST: { value: MilestoneType; label: string; icon: string; color: string }[] = [
+  { value: 'roll', label: 'milestone.types.roll', icon: '🤸', color: '#E8B86A' },
+  { value: 'sit', label: 'milestone.types.sit', icon: '🧘', color: '#E8B86A' },
+  { value: 'crawl', label: 'milestone.types.crawl', icon: '🐾', color: '#E8B86A' },
+  { value: 'stand', label: 'milestone.types.stand', icon: '🧍', color: '#E8B86A' },
+  { value: 'walk', label: 'milestone.types.walk', icon: '🚶', color: '#E8B86A' },
+  { value: 'first_word', label: 'milestone.types.first_word', icon: '🗣️', color: '#E8B86A' },
+  { value: 'tooth', label: 'milestone.types.tooth', icon: '🦷', color: '#E8B86A' },
+  { value: 'wave', label: 'milestone.types.wave', icon: '👋', color: '#E8B86A' },
+  { value: 'other', label: 'milestone.types.other', icon: '🌟', color: '#E8B86A' },
 ]
 
 /** 主题色（统计图表统一使用） */

@@ -1,0 +1,162 @@
+import { describe, it, expect } from 'vitest'
+import {
+  buildDailySeries,
+  aggregateRange,
+  compareRanges,
+  getComparisonRange,
+} from '@/services/stats'
+import type { Feeding, Sleep, DiaperChange, Pumping } from '@/types'
+import { startOfDay } from '@/utils/format'
+
+const DAY = 24 * 3600 * 1000
+
+function feed(partial: Partial<Feeding>): Feeding {
+  return {
+    babyId: 1,
+    type: 'bottle_formula',
+    startTime: 0,
+    amount: 100,
+    createdAt: 0,
+    updatedAt: 0,
+    ...partial,
+  }
+}
+
+function sleep(partial: Partial<Sleep>): Sleep {
+  return {
+    babyId: 1,
+    type: 'nap',
+    startTime: 0,
+    endTime: 3600_000,
+    createdAt: 0,
+    updatedAt: 0,
+    ...partial,
+  }
+}
+
+function diaper(partial: Partial<DiaperChange>): DiaperChange {
+  return {
+    babyId: 1,
+    type: 'wet',
+    time: 0,
+    createdAt: 0,
+    updatedAt: 0,
+    ...partial,
+  }
+}
+
+function pumping(partial: Partial<Pumping>): Pumping {
+  return {
+    babyId: 1,
+    side: 'left',
+    startTime: 0,
+    amount: 80,
+    duration: 15 * 60_000,
+    createdAt: 0,
+    updatedAt: 0,
+    ...partial,
+  }
+}
+
+describe('stats aggregation', () => {
+  const now = new Date(2026, 7, 20, 12, 0).getTime()
+  const day0 = startOfDay(now)
+  const day1 = day0 + DAY
+
+  it('buildDailySeries 按天分桶聚合喂养', () => {
+    const days = buildDailySeries(
+      [
+        feed({ type: 'bottle_formula', startTime: day0 + 1, amount: 120 }),
+        feed({ type: 'bottle_breastmilk', startTime: day0 + 2, amount: 60 }),
+        feed({ type: 'breast_both', startTime: day1 + 1 }),
+      ],
+      [],
+      [],
+      [],
+      day0,
+      day1 + DAY,
+    )
+    expect(days.length).toBe(2)
+    const d0 = days[0]
+    expect(d0.feedCount).toBe(2)
+    expect(d0.breastCount).toBe(0)
+    expect(d0.bottleCount).toBe(2)
+    expect(d0.totalMilkAmount).toBe(180)
+    expect(d0.formulaAmount).toBe(120)
+    expect(d0.breastMilkAmount).toBe(60)
+    const d1 = days[1]
+    expect(d1.feedCount).toBe(1)
+    expect(d1.breastCount).toBe(1)
+    expect(d1.totalMilkAmount).toBe(0)
+  })
+
+  it('buildDailySeries 睡眠跨天按开始时间归当天', () => {
+    const days = buildDailySeries([], [], [], [sleep({ startTime: day0 + 20 * 3600_000, endTime: day0 + 26 * 3600_000 })], day0, day1 + DAY)
+    expect(days[0].sleepMs).toBe(6 * 3600_000)
+    expect(days[0].napCount).toBe(1)
+    expect(days[1].sleepMs).toBe(0)
+  })
+
+  it('buildDailySeries 尿布 wet/dirty/both 分别计数', () => {
+    const days = buildDailySeries(
+      [],
+      [diaper({ type: 'wet', time: day0 + 1 }), diaper({ type: 'dirty', time: day0 + 2 }), diaper({ type: 'both', time: day0 + 3 })],
+      [],
+      [],
+      day0,
+      day1,
+    )
+    expect(days[0].diaperCount).toBe(3)
+    expect(days[0].wetCount).toBe(2)
+    expect(days[0].dirtyCount).toBe(2)
+  })
+
+  it('buildDailySeries 吸奶聚合奶量与时长', () => {
+    const days = buildDailySeries([], [], [pumping({ startTime: day0 + 1, amount: 80, duration: 20 * 60_000 })], [], day0, day1)
+    expect(days[0].pumpCount).toBe(1)
+    expect(days[0].pumpAmount).toBe(80)
+    expect(days[0].pumpMs).toBe(20 * 60_000)
+  })
+
+  it('aggregateRange 汇总多日数据', () => {
+    const agg = aggregateRange(
+      [feed({ startTime: day0, amount: 100 }), feed({ startTime: day1, amount: 50 })],
+      [],
+      [],
+      [],
+      day0,
+      day1 + DAY,
+    )
+    expect(agg.dayCount).toBe(2)
+    expect(agg.totalMilkAmount).toBe(150)
+    expect(agg.feedCount).toBe(2)
+    expect(agg.formulaAmount).toBe(150)
+  })
+
+  it('compareRanges 计算变化百分比与每日均值', () => {
+    const current = aggregateRange([feed({ startTime: day0, amount: 120 })], [], [], [], day0, day1 + DAY)
+    const previous = aggregateRange([feed({ startTime: day0 - DAY, amount: 60 })], [], [], [], day0 - DAY, day0)
+    const result = compareRanges(current, previous)
+    const milk = result.find((r) => r.key === 'totalMilkAmount')!
+    expect(milk.current).toBe(120)
+    expect(milk.previous).toBe(60)
+    expect(milk.change).toBe(100)
+    expect(milk.dailyAvg).toBe(60)
+  })
+
+  it('compareRanges previous 为 0 时 change 为 null', () => {
+    const current = aggregateRange([feed({ startTime: day0, amount: 120 })], [], [], [], day0, day1 + DAY)
+    const previous = aggregateRange([], [], [], [], day0 - DAY, day0)
+    const result = compareRanges(current, previous)
+    expect(result.find((r) => r.key === 'totalMilkAmount')!.change).toBeNull()
+  })
+
+  it('getComparisonRange 生成当前与上一等长区间', () => {
+    const r = getComparisonRange('7d', now)!
+    expect(r).not.toBeNull()
+    const curLen = r.current[1] - r.current[0]
+    const prevLen = r.previous[1] - r.previous[0]
+    expect(curLen).toBe(prevLen)
+    expect(r.previous[1]).toBe(r.current[0])
+  })
+})

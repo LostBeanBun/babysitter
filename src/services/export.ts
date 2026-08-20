@@ -13,6 +13,7 @@ import type {
   Medication,
   Vaccination,
   Temperature,
+  Milestone,
 } from '@/types'
 import { downloadBlob, formatDate, formatTime } from '@/utils/format'
 import {
@@ -23,6 +24,7 @@ import {
   PUMP_SIDE_LABELS,
   SLEEP_TYPE_LABELS,
   TEMP_METHOD_LABELS,
+  MILESTONE_TYPE_LABELS,
 } from '@/constants'
 
 const t = i18n.global.t
@@ -41,7 +43,7 @@ function toCsv(rows: (string | number | undefined | null)[][]): string {
 
 /** 导出全量数据为 JSON 备份文件 */
 export async function exportAllJson(): Promise<void> {
-  const [babies, feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures] =
+  const [babies, feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures, milestones] =
     await Promise.all([
       db.babies.toArray(),
       db.feedings.toArray(),
@@ -53,6 +55,7 @@ export async function exportAllJson(): Promise<void> {
       db.medications.toArray(),
       db.vaccinations.toArray(),
       db.temperatures.toArray(),
+      db.milestones.toArray(),
     ])
   const meta: ExportMeta = { app: 'babysitter', version: DB_VERSION, exportedAt: new Date().toISOString() }
   const payload: ExportFile = {
@@ -67,6 +70,7 @@ export async function exportAllJson(): Promise<void> {
     medications,
     vaccinations,
     temperatures,
+    milestones,
   }
   const filename = t('exportCsv.backupFileName', { app: t('app.name'), stamp: formatDate(Date.now()) })
   downloadBlob(JSON.stringify(payload, null, 2), filename, 'application/json;charset=utf-8')
@@ -86,6 +90,7 @@ export async function importAllJson(
   medications: number
   vaccinations: number
   temperatures: number
+  milestones: number
 }> {
   const text = await file.text()
   let payload: ExportFile
@@ -107,9 +112,10 @@ export async function importAllJson(
   const medications = (payload.medications ?? []) as Medication[]
   const vaccinations = (payload.vaccinations ?? []) as Vaccination[]
   const temperatures = (payload.temperatures ?? []) as Temperature[]
+  const milestones = (payload.milestones ?? []) as Milestone[]
 
   // 校验基本结构
-  const bad = [...feedings, ...diapers, ...pumpings, ...sleeps, ...growths, ...solidFoods, ...medications, ...temperatures].some(
+  const bad = [...feedings, ...diapers, ...pumpings, ...sleeps, ...growths, ...solidFoods, ...medications, ...temperatures, ...milestones].some(
     (r) => typeof r.babyId !== 'number',
   )
   if (bad) throw new Error(t('exportCsv.incompleteData'))
@@ -127,6 +133,7 @@ export async function importAllJson(
       db.medications,
       db.vaccinations,
       db.temperatures,
+      db.milestones,
     ],
     async () => {
       await Promise.all([
@@ -140,6 +147,7 @@ export async function importAllJson(
         db.medications.clear(),
         db.vaccinations.clear(),
         db.temperatures.clear(),
+        db.milestones.clear(),
       ])
       await Promise.all([
         db.babies.bulkAdd(babies),
@@ -152,6 +160,7 @@ export async function importAllJson(
         db.medications.bulkAdd(medications),
         db.vaccinations.bulkAdd(vaccinations),
         db.temperatures.bulkAdd(temperatures),
+        db.milestones.bulkAdd(milestones),
       ])
     },
   )
@@ -166,12 +175,13 @@ export async function importAllJson(
     medications: medications.length,
     vaccinations: vaccinations.length,
     temperatures: temperatures.length,
+    milestones: milestones.length,
   }
 }
 
-/** 按宝宝导出 CSV（九类记录合并为单个文件，统一宽表结构） */
+/** 按宝宝导出 CSV（十类记录合并为单个文件，统一宽表结构） */
 export async function exportBabyCsvs(baby: Baby): Promise<void> {
-  const [feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures] =
+  const [feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures, milestones] =
     await Promise.all([
       db.feedings.where('babyId').equals(baby.id!).sortBy('startTime'),
       db.diapers.where('babyId').equals(baby.id!).sortBy('time'),
@@ -182,6 +192,7 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
       db.medications.where('babyId').equals(baby.id!).sortBy('time'),
       db.vaccinations.where('babyId').equals(baby.id!).sortBy('date'),
       db.temperatures.where('babyId').equals(baby.id!).sortBy('time'),
+      db.milestones.where('babyId').equals(baby.id!).sortBy('time'),
     ])
 
   type Row = (string | number | undefined | null)[]
@@ -347,6 +358,22 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
       '',
       '',
       tmp.notes ?? '',
+    ])
+  }
+
+  // 里程碑
+  for (const ms of milestones) {
+    rows.push([
+      t('exportCsv.recordTypes.milestone'),
+      formatDate(ms.time),
+      formatTime(ms.time),
+      '',
+      '',
+      t(MILESTONE_TYPE_LABELS[ms.type]),
+      '',
+      '',
+      '',
+      ms.notes ?? '',
     ])
   }
 
