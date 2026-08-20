@@ -2,6 +2,10 @@
 import { RouterView } from 'vue-router'
 import TabBar from '@/components/common/TabBar.vue'
 import ToastContainer from '@/components/common/ToastContainer.vue'
+import { useReminderLoop } from '@/composables/useReminderLoop'
+
+// 全局提醒循环：任何路由下每分钟检查提醒并发送系统通知
+useReminderLoop()
 </script>
 
 <template>

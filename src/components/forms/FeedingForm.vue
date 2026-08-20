@@ -7,6 +7,7 @@ import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/form
 import { useFeedingStore } from '@/stores/feeding'
 import FormTimer from '@/components/common/FormTimer.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
+import FormActions from '@/components/common/FormActions.vue'
 
 const { t } = useI18n()
 
@@ -148,12 +149,7 @@ async function submit() {
 
     <FormNotes v-model="notes" :label="t('feed.notesLabel')" :placeholder="t('common.optional')" />
 
-    <div class="form-actions">
-      <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>
-      <button type="button" class="btn btn-primary" @click="submit">
-        {{ props.editing ? t('common.saveEdit') : t('common.save') }}
-      </button>
-    </div>
+    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
   </div>
 </template>
 
@@ -204,15 +200,5 @@ async function submit() {
   .time-row {
     grid-template-columns: 1fr;
   }
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.form-actions .btn {
-  flex: 1;
 }
 </style>

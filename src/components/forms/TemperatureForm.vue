@@ -6,6 +6,7 @@ import { TEMP_METHOD_LIST } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useTemperatureStore } from '@/stores/temperature'
 import FormNotes from '@/components/common/FormNotes.vue'
+import FormActions from '@/components/common/FormActions.vue'
 
 const { t } = useI18n()
 
@@ -92,12 +93,7 @@ async function submit() {
 
     <FormNotes v-model="notes" :label="t('temperature.notesLabel')" :placeholder="t('common.optional')" />
 
-    <div class="form-actions">
-      <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>
-      <button type="button" class="btn btn-primary" @click="submit">
-        {{ props.editing ? t('common.saveEdit') : t('common.save') }}
-      </button>
-    </div>
+    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
   </div>
 </template>
 
@@ -153,15 +149,5 @@ async function submit() {
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.form-actions .btn {
-  flex: 1;
 }
 </style>

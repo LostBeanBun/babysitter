@@ -6,6 +6,7 @@ import { DIAPER_TYPE_LIST, DIAPER_COLOR_LABELS, DIAPER_COLOR_DOTS, DIAPER_AMOUNT
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useDiaperStore } from '@/stores/diaper'
 import FormNotes from '@/components/common/FormNotes.vue'
+import FormActions from '@/components/common/FormActions.vue'
 
 const { t } = useI18n()
 
@@ -105,12 +106,7 @@ async function submit() {
 
     <FormNotes v-model="notes" :label="t('diaper.notesLabel')" :placeholder="t('common.optional')" />
 
-    <div class="form-actions">
-      <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>
-      <button type="button" class="btn btn-primary" @click="submit">
-        {{ props.editing ? t('common.saveEdit') : t('common.save') }}
-      </button>
-    </div>
+    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
   </div>
 </template>
 
@@ -201,15 +197,5 @@ async function submit() {
   background: var(--primary-soft);
   color: var(--primary-dark);
   font-weight: 600;
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.form-actions .btn {
-  flex: 1;
 }
 </style>

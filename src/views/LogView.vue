@@ -324,6 +324,12 @@ const filters = [
 ]
 
 const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter.value)?.labelKey ?? 'log.filters.all'))
+
+/** 新增记录：默认选中当前筛选类型（'all' 时默认喂养），复用同一弹窗 */
+function openAdd(kind?: typeof filter.value) {
+  const k = kind && kind !== 'all' ? kind : 'feeding'
+  modalState.value = { kind: k }
+}
 </script>
 
 <template>
@@ -335,6 +341,9 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
       <select id="filter-select" v-model="filter" class="form-input filter-select">
         <option v-for="f in filters" :key="f.key" :value="f.key">{{ t(f.labelKey) }}</option>
       </select>
+      <button type="button" class="btn btn-primary filter-add-btn" @click="openAdd(filter)">
+        + {{ t('log.addRecord') }}
+      </button>
     </div>
 
     <div class="search-row">
@@ -485,6 +494,13 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   min-width: 0;
   border-radius: 12px;
   box-shadow: var(--shadow-xs);
+}
+
+.filter-add-btn {
+  flex-shrink: 0;
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+  white-space: nowrap;
 }
 
 .search-row {

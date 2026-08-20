@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
@@ -29,7 +29,6 @@ import TemperatureForm from '@/components/forms/TemperatureForm.vue'
 import MilestoneForm from '@/components/forms/MilestoneForm.vue'
 import { startOfDay, formatTime, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { MS_PER_DAY, FEED_TYPE_LABELS } from '@/constants'
-import { checkReminders } from '@/utils/reminderScheduler'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import type {
   Feeding,
@@ -186,21 +185,6 @@ const todayMilestones = computed(() =>
     'milestone',
   ),
 )
-
-// —— 提醒调度（喂奶/睡眠/用药/疫苗/尿布，默认关闭，由用户自行开启）——
-const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
-watch(now, () => {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return
-  const hits = checkReminders({
-    now: now.value,
-    baby: activeBaby.value,
-    feedings: feedingStore.feedings,
-    medications: medicationStore.medications,
-    vaccinations: vaccinationStore.vaccinations,
-    diapers: diaperStore.diapers,
-  })
-  hits.forEach((h) => new Notification(h.title, { body: h.body, tag: h.tag }))
-})
 
 // —— 奶睡一键（组合记录喂养 + 睡眠）——
 const sleepFeedOpen = ref(false)

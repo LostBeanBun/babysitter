@@ -8,6 +8,7 @@ import { whoData, ageInMonths, type WhoField, type WhoPercentileKey } from '@/co
 import { estimatePercentile } from '@/utils/growthPercentile'
 import { isDark } from '@/composables/useTheme'
 import { CHART_COLORS } from '@/constants'
+import { startOfDay } from '@/utils/format'
 import type { BabyGender, GrowthRecord } from '@/types'
 
 const props = defineProps<{
@@ -30,7 +31,13 @@ const splitLineColor = computed(() => (isDark.value ? '#2b251f' : '#f5ece2'))
 const growthInfoOpen = ref(false)
 
 const whoPoints = computed(() => whoData(props.gender))
-const growthRecords = computed(() => [...props.records].sort((a, b) => a.date - b.date))
+/** 按日合并：同一天多次测量取当天最后一条，曲线图以「日」为单位展示 */
+const growthRecords = computed(() => {
+  const byDay = new Map<number, GrowthRecord>()
+  const sorted = [...props.records].sort((a, b) => a.date - b.date)
+  sorted.forEach((g) => byDay.set(startOfDay(g.date), g))
+  return [...byDay.values()].sort((a, b) => a.date - b.date)
+})
 /** 有出生日期才能换算月龄/绘制参考线 */
 const hasBirthDate = computed(() => Boolean(props.birthDate))
 
