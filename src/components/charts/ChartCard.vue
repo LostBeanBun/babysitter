@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onUnmounted, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import VChart from 'vue-echarts'
 import './echartsSetup'
@@ -19,6 +19,31 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const style = computed(() => ({ height: props.height ?? '260px' }))
+
+/** vue-echarts 实例引用（exposed 直接转发 echarts 实例方法，如 dispatchAction） */
+const chartRef = useTemplateRef<{ dispatchAction: (payload: Record<string, unknown>) => void }>('chartRef')
+
+/** 触摸松开后延时隐藏 tooltip 的定时器 */
+let hideTimer: number | undefined
+
+/**
+ * 移动端手指松开后延时隐藏 tooltip：
+ * echarts 在触屏上 tap 会固定显示 tooltip，不会自动消失。
+ * 这里在 touchend 后延时 500ms 主动 hideTip，形成「松开即消失」的默认体验。
+ *
+ * 通过模板 @touchend 绑定在 wrapper（普通 div）上，
+ * Vue 会在 v-else 分支渲染/卸载时自动绑定与解绑。
+ */
+function onTouchEnd() {
+  window.clearTimeout(hideTimer)
+  hideTimer = window.setTimeout(() => {
+    chartRef.value?.dispatchAction({ type: 'hideTip' })
+  }, 500)
+}
+
+onUnmounted(() => {
+  window.clearTimeout(hideTimer)
+})
 
 /** 判断单个 series 是否存在有效数据点（null/undefined/0 均视为无数据） */
 function seriesHasData(s: unknown): boolean {
@@ -80,7 +105,9 @@ const mergedOption = computed<EChartsOption>(() => {
     <div v-if="isEmpty" class="chart-empty" :style="style">
       <p class="chart-empty-text">{{ t('stats.noData') }}</p>
     </div>
-    <VChart v-else :option="mergedOption" :style="style" autoresize />
+    <div v-else class="chart-wrap" @touchend="onTouchEnd">
+      <VChart ref="chartRef" :option="mergedOption" :style="style" autoresize />
+    </div>
   </div>
 </template>
 
