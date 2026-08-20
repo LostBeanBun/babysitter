@@ -74,3 +74,10 @@ export function fromDateTimeLocal(value: string): number | undefined {
   const ts = new Date(value).getTime()
   return isNaN(ts) ? undefined : ts
 }
+
+/** 解析 "YYYY-MM-DD HH:mm" 或 "YYYY-MM-DD" 为时间戳（无效返回 undefined） */
+export function parseDate(value: string): number | undefined {
+  if (!value) return undefined
+  const ts = new Date(value).getTime()
+  return isNaN(ts) ? undefined : ts
+}

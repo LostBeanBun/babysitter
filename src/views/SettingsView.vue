@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
-import { exportAllJson, exportAllBabiesCsv, importAllJson } from '@/services/export'
+import { exportBabyCsvs, exportAllBabiesCsv, importAllCsv } from '@/services/export'
 import { BABY_AVATARS } from '@/constants'
 import { loadReminders, saveReminders, type ReminderConfig, type ReminderType } from '@/utils/reminderScheduler'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -195,14 +195,17 @@ function babyAge(b: Baby): string {
   return t('settings.ageYears', { years, months: months % 12 })
 }
 
-async function handleExportJson() {
-  await exportAllJson()
+async function handleExportBabyCsv() {
+  if (!activeBaby) return
+  await exportBabyCsvs(activeBaby)
   exportSuccess.value = true
   setTimeout(() => (exportSuccess.value = false), 3000)
 }
 
-async function handleExportCsv() {
+async function handleExportAllCsv() {
   await exportAllBabiesCsv()
+  exportSuccess.value = true
+  setTimeout(() => (exportSuccess.value = false), 3000)
 }
 
 async function handleImportFile(e: Event) {
@@ -211,7 +214,7 @@ async function handleImportFile(e: Event) {
   if (!file) return
   importBusy.value = true
   try {
-    const result = await importAllJson(file)
+    const result = await importAllCsv(file)
     alert(
       t('settings.importSuccess', {
         babies: result.babies,
@@ -388,16 +391,16 @@ async function confirmClearAll() {
         <span>{{ t('log.filters.temperature') }} {{ t('common.records', { n: recordCounts.temperatures }) }}</span>
         <span>{{ t('log.filters.milestone') }} {{ t('common.records', { n: recordCounts.milestones }) }}</span>
       </div>
-      <button class="btn btn-primary btn-block" :disabled="activeBaby === undefined" @click="handleExportJson">
+      <button class="btn btn-primary btn-block" :disabled="activeBaby === undefined" @click="handleExportBabyCsv">
         <span class="btn-label">{{
-          activeBaby ? t('settings.exportBabyJson', { name: activeBaby.name }) : t('common.noBaby')
+          activeBaby ? t('settings.exportBabyCsv', { name: activeBaby.name }) : t('common.noBaby')
         }}</span>
       </button>
-      <button class="btn btn-outline btn-block" @click="handleExportCsv">{{ t('settings.exportAllCsv') }}</button>
+      <button class="btn btn-outline btn-block" @click="handleExportAllCsv">{{ t('settings.exportAllCsv') }}</button>
       <button class="btn btn-outline btn-block" :disabled="importBusy" @click="importFileRef?.click()">
-        {{ importBusy ? t('common.importing') : t('common.importJson') }}
+        {{ importBusy ? t('common.importing') : t('common.importCsv') }}
       </button>
-      <input ref="importFileRef" type="file" accept="application/json,.json" hidden @change="handleImportFile" />
+      <input ref="importFileRef" type="file" accept=".csv,text/csv" hidden @change="handleImportFile" />
       <p v-if="exportSuccess" class="export-ok">{{ t('settings.exportOk') }}</p>
       <button class="btn btn-danger-soft btn-block" @click="clearAllConfirm = true">
         {{ t('settings.clearAll') }}

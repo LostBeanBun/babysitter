@@ -15,7 +15,7 @@ import type {
   Temperature,
   Milestone,
 } from '@/types'
-import { downloadBlob, formatDate, formatTime } from '@/utils/format'
+import { downloadBlob, formatDate, formatTime, parseDate } from '@/utils/format'
 import {
   FEED_TYPE_LABELS,
   DIAPER_TYPE_LABELS,
@@ -444,4 +444,420 @@ export async function exportAllBabiesCsv(): Promise<void> {
     t('exportCsv.allBabiesFileName', { stamp }),
     'text/csv;charset=utf-8',
   )
+}
+
+/** CSV 记录类型映射（中英文表头 -> 内部类型标识） */
+const RECORD_TYPE_MAP: Record<string, string> = {
+  [t('exportCsv.recordTypes.feeding')]: 'feeding',
+  [t('exportCsv.recordTypes.diaper')]: 'diaper',
+  [t('exportCsv.recordTypes.pump')]: 'pumping',
+  [t('exportCsv.recordTypes.sleep')]: 'sleep',
+  [t('exportCsv.recordTypes.growth')]: 'growth',
+  [t('exportCsv.recordTypes.solidFood')]: 'solidFood',
+  [t('exportCsv.recordTypes.medication')]: 'medication',
+  [t('exportCsv.recordTypes.vaccination')]: 'vaccination',
+  [t('exportCsv.recordTypes.temperature')]: 'temperature',
+  [t('exportCsv.recordTypes.milestone')]: 'milestone',
+  // English fallbacks (in case locale differs)
+  Feeding: 'feeding',
+  Diaper: 'diaper',
+  Pumping: 'pumping',
+  Sleep: 'sleep',
+  Growth: 'growth',
+  'Solid Food': 'solidFood',
+  Medication: 'medication',
+  Vaccination: 'vaccination',
+  Temperature: 'temperature',
+  Milestone: 'milestone',
+}
+
+/** 反向映射：内部类型 -> 表头标签（用于导出，已在 buildBabyCsvRows 中使用） */
+
+/** 解析 CSV 文本（支持 BOM、引号转义、字段内逗号/换行） */
+export function parseCsv(text: string): string[][] {
+  // 移除 BOM
+  const content = text.replace(/^\ufeff/, '')
+  const rows: string[][] = []
+  let row: string[] = []
+  let field = ''
+  let inQuotes = false
+  let i = 0
+
+  while (i < content.length) {
+    const ch = content[i]
+    const next = content[i + 1]
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (next === '"') {
+          // 转义的双引号
+          field += '"'
+          i += 2
+          continue
+        }
+        // 结束引号
+        inQuotes = false
+      } else {
+        field += ch
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true
+      } else if (ch === ',') {
+        row.push(field)
+        field = ''
+      } else if (ch === '\n' || ch === '\r') {
+        row.push(field)
+        rows.push(row)
+        row = []
+        field = ''
+        // 处理 \r\n
+        if (ch === '\r' && next === '\n') i++
+      } else {
+        field += ch
+      }
+    }
+    i++
+  }
+  // 最后一行
+  row.push(field)
+  rows.push(row)
+  return rows
+}
+
+/** 将 CSV 行映射为具体记录对象 */
+function mapCsvRowToRecord(
+  row: string[],
+  headers: string[],
+  babyId: number,
+  now: number,
+): { kind: string; data: any } | null {
+  const obj: Record<string, string> = {}
+  headers.forEach((h, idx) => {
+    obj[h] = row[idx] ?? ''
+  })
+
+  const typeLabel = obj[t('exportCsv.recordType')] ?? obj['记录类型'] ?? obj['Record Type']
+  const kind = RECORD_TYPE_MAP[typeLabel]
+  if (!kind) return null
+
+  const dateStr = obj[t('exportCsv.date')] ?? obj['日期'] ?? obj['Date']
+  const timeStr = obj[t('exportCsv.time')] ?? obj['时间'] ?? obj['Time']
+  const endDateStr = obj[t('exportCsv.endDate')] ?? obj['结束日期'] ?? obj['End Date']
+  const endTimeStr = obj[t('exportCsv.endTime')] ?? obj['结束时间'] ?? obj['End Time']
+  const item = obj[t('exportCsv.item')] ?? obj['项目'] ?? obj['Item']
+  const value = obj[t('exportCsv.value')] ?? obj['数值'] ?? obj['Value']
+  const duration = obj[t('exportCsv.duration')] ?? obj['时长'] ?? obj['Duration']
+  const status = obj[t('exportCsv.status')] ?? obj['状态'] ?? obj['Status']
+  const notes = obj[t('exportCsv.notes')] ?? obj['备注'] ?? obj['Notes']
+
+  // 解析日期时间
+  const parseDateTime = (date: string, time: string): number => {
+    if (!date) return 0
+    const d = parseDate(`${date} ${time || '00:00'}`)
+    return d ?? new Date(`${date}T${time || '00:00'}`).getTime()
+  }
+
+  const startTime = parseDateTime(dateStr, timeStr)
+  const endTime = parseDateTime(endDateStr, endTimeStr)
+
+  if (!startTime) return null
+
+  const base = { babyId, createdAt: now, updatedAt: now }
+
+  switch (kind) {
+    case 'feeding': {
+      const feedTypeLabelsRev: Record<string, any> = {}
+      Object.entries(FEED_TYPE_LABELS).forEach(([k, v]) => { feedTypeLabelsRev[v] = k })
+      return {
+        kind,
+        data: {
+          ...base,
+          type: feedTypeLabelsRev[item] || 'bottle_formula',
+          startTime,
+          endTime: endTime || undefined,
+          duration: duration ? parseInt(duration) * 60000 : undefined,
+          amount: value ? parseFloat(value) : undefined,
+          notes: notes || undefined,
+        },
+      }
+    }
+    case 'diaper': {
+      const diaperTypeLabelsRev: Record<string, any> = {}
+      Object.entries(DIAPER_TYPE_LABELS).forEach(([k, v]) => { diaperTypeLabelsRev[v] = k })
+      const diaperColorLabelsRev: Record<string, any> = {}
+      Object.entries(DIAPER_COLOR_LABELS).forEach(([k, v]) => { diaperColorLabelsRev[v] = k })
+      const diaperAmountLabelsRev: Record<string, any> = {}
+      Object.entries(DIAPER_AMOUNT_LABELS).forEach(([k, v]) => { diaperAmountLabelsRev[v] = k })
+      // value 可能包含 "color · amount"
+      const parts = value.split('·').map((p) => p.trim())
+      return {
+        kind,
+        data: {
+          ...base,
+          type: diaperTypeLabelsRev[item] || 'wet',
+          time: startTime,
+          color: parts[0] ? diaperColorLabelsRev[parts[0]] : undefined,
+          amount: parts[1] ? diaperAmountLabelsRev[parts[1]] : undefined,
+          notes: notes || undefined,
+        },
+      }
+    }
+    case 'pumping': {
+      const pumpSideLabelsRev: Record<string, any> = {}
+      Object.entries(PUMP_SIDE_LABELS).forEach(([k, v]) => { pumpSideLabelsRev[v] = k })
+      return {
+        kind,
+        data: {
+          ...base,
+          side: pumpSideLabelsRev[item] || 'both',
+          startTime,
+          endTime: endTime || undefined,
+          duration: duration ? parseInt(duration) * 60000 : undefined,
+          amount: value ? parseFloat(value) : undefined,
+          notes: notes || undefined,
+        },
+      }
+    }
+    case 'sleep': {
+      const sleepTypeLabelsRev: Record<string, any> = {}
+      Object.entries(SLEEP_TYPE_LABELS).forEach(([k, v]) => { sleepTypeLabelsRev[v] = k })
+      return {
+        kind,
+        data: {
+          ...base,
+          type: sleepTypeLabelsRev[item] || 'nap',
+          startTime,
+          endTime: endTime || startTime + 60 * 60000,
+          notes: notes || undefined,
+        },
+      }
+    }
+    case 'growth': {
+      // value 格式: "8.5 kg · 70.2 cm · 44 cm（头围）"
+      const weightMatch = value.match(/([\d.]+)\s*kg/)
+      const heightMatch = value.match(/([\d.]+)\s*cm(?!.*头围)/)
+      const headMatch = value.match(/([\d.]+)\s*cm.*头围/)
+      return {
+        kind,
+        data: {
+          ...base,
+          date: startOfDay(startTime),
+          weight: weightMatch ? parseFloat(weightMatch[1]) : undefined,
+          height: heightMatch ? parseFloat(heightMatch[1]) : undefined,
+          headCircumference: headMatch ? parseFloat(headMatch[1]) : undefined,
+          notes: notes || undefined,
+        },
+      }
+    }
+    case 'solidFood': {
+      return {
+        kind,
+        data: {
+          ...base,
+          time: startTime,
+          food: item,
+          amount: value || undefined,
+          notes: notes || undefined,
+        },
+      }
+    }
+    case 'medication': {
+      return {
+        kind,
+        data: {
+          ...base,
+          time: startTime,
+          name: item,
+          dose: value || undefined,
+          notes: notes || undefined,
+        },
+      }
+    }
+    case 'vaccination': {
+      const statusMap: Record<string, 'planned' | 'done'> = {}
+      statusMap[t('vaccination.statusDone')] = 'done'
+      statusMap[t('vaccination.statusPlanned')] = 'planned'
+      statusMap['Done'] = 'done'
+      statusMap['Planned'] = 'planned'
+      return {
+        kind,
+        data: {
+          ...base,
+          date: startOfDay(startTime),
+          name: item,
+          dose: value || undefined,
+          status: statusMap[status] || 'planned',
+          notes: notes || undefined,
+        },
+      }
+    }
+    case 'temperature': {
+      const tempMethodLabelsRev: Record<string, any> = {}
+      Object.entries(TEMP_METHOD_LABELS).forEach(([k, v]) => { tempMethodLabelsRev[v] = k })
+      const tempMatch = value.match(/([\d.]+)\s*℃?/)
+      return {
+        kind,
+        data: {
+          ...base,
+          time: startTime,
+          method: item ? tempMethodLabelsRev[item] : undefined,
+          value: tempMatch ? parseFloat(tempMatch[1]) : 0,
+          notes: notes || undefined,
+        },
+      }
+    }
+    case 'milestone': {
+      const milestoneTypeLabelsRev: Record<string, any> = {}
+      Object.entries(MILESTONE_TYPE_LABELS).forEach(([k, v]) => { milestoneTypeLabelsRev[v] = k })
+      return {
+        kind,
+        data: {
+          ...base,
+          type: milestoneTypeLabelsRev[item] || 'other',
+          time: startTime,
+          notes: notes || undefined,
+        },
+      }
+    }
+  }
+  return null
+}
+
+/** 导入 CSV 备份（覆盖当前数据） */
+export async function importAllCsv(
+  file: File,
+): Promise<{
+  babies: number
+  feedings: number
+  diapers: number
+  pumpings: number
+  sleeps: number
+  growths: number
+  solidFoods: number
+  medications: number
+  vaccinations: number
+  temperatures: number
+  milestones: number
+}> {
+  const text = await file.text()
+  const rows = parseCsv(text)
+  if (rows.length < 2) throw new Error(t('exportCsv.invalidFile'))
+
+  const headers = rows[0]
+  const hasBabyNameCol = headers[0] === t('exportCsv.babyName') || headers[0] === '宝宝名' || headers[0] === 'Baby Name'
+
+  // 收集所有记录
+  const babiesMap = new Map<string, { name: string; id: number }>()
+  const recordBuckets: Record<string, any[]> = {
+    feedings: [],
+    diapers: [],
+    pumpings: [],
+    sleeps: [],
+    growths: [],
+    solidFoods: [],
+    medications: [],
+    vaccinations: [],
+    temperatures: [],
+    milestones: [],
+  }
+
+  const now = Date.now()
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i]
+    if (row.every((c) => c === '')) continue // 跳过空行
+
+    const babyName = hasBabyNameCol ? row[0] : ''
+    let babyId: number
+
+    if (babyName) {
+      if (!babiesMap.has(babyName)) {
+        // 创建新宝宝（临时 ID，后续统一分配）
+        const tempId = -(babiesMap.size + 1)
+        babiesMap.set(babyName, { name: babyName, id: tempId })
+      }
+      babyId = babiesMap.get(babyName)!.id
+    } else {
+      // 无宝宝名列，使用第一个宝宝或创建默认
+      if (babiesMap.size === 0) {
+        babiesMap.set('默认宝宝', { name: '默认宝宝', id: -1 })
+      }
+      babyId = babiesMap.values().next().value!.id
+    }
+
+    const mapped = mapCsvRowToRecord(row, headers, babyId, now)
+    if (mapped) {
+      recordBuckets[mapped.kind].push(mapped.data)
+    }
+  }
+
+  // 分配真实 babyId（先写入 babies，获取自增 ID，再关联记录）
+  const babyIdMap = new Map<number, number>() // tempId -> realId
+  const babyNames = Array.from(babiesMap.entries())
+  if (babyNames.length === 0) throw new Error(t('exportCsv.noBaby'))
+
+  // 清空并重新写入
+  await db.transaction(
+    'rw',
+    [
+      db.babies,
+      db.feedings,
+      db.diapers,
+      db.pumpings,
+      db.sleeps,
+      db.growths,
+      db.solidFoods,
+      db.medications,
+      db.vaccinations,
+      db.temperatures,
+      db.milestones,
+    ],
+    async () => {
+      // 先清空
+      await Promise.all([
+        db.babies.clear(),
+        db.feedings.clear(),
+        db.diapers.clear(),
+        db.pumpings.clear(),
+        db.sleeps.clear(),
+        db.growths.clear(),
+        db.solidFoods.clear(),
+        db.medications.clear(),
+        db.vaccinations.clear(),
+        db.temperatures.clear(),
+        db.milestones.clear(),
+      ])
+
+      // 写入 babies，获取真实 ID
+      for (const [, { name, id: tempId }] of babyNames) {
+        const realId = await db.babies.add({ name, avatarColor: '#FF6B6B', createdAt: now, updatedAt: now })
+        babyIdMap.set(tempId, realId)
+      }
+
+      // 替换记录中的 babyId 并批量写入
+      for (const [kind, records] of Object.entries(recordBuckets)) {
+        if (records.length === 0) continue
+        const withRealId = records.map((r) => ({
+          ...r,
+          babyId: babyIdMap.get(r.babyId) ?? babyIdMap.values().next().value!,
+        }))
+        await db[kind as keyof typeof db].bulkAdd(withRealId as any)
+      }
+    },
+  )
+
+  return {
+    babies: babyNames.length,
+    feedings: recordBuckets.feedings.length,
+    diapers: recordBuckets.diapers.length,
+    pumpings: recordBuckets.pumpings.length,
+    sleeps: recordBuckets.sleeps.length,
+    growths: recordBuckets.growths.length,
+    solidFoods: recordBuckets.solidFoods.length,
+    medications: recordBuckets.medications.length,
+    vaccinations: recordBuckets.vaccinations.length,
+    temperatures: recordBuckets.temperatures.length,
+    milestones: recordBuckets.milestones.length,
+  }
 }
