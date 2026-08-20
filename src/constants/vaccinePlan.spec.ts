@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   planDateFromBirth,
   buildVaccineCalendar,
-  buildPendingVaccinePlans,
   VACCINE_PLAN,
   SELF_PAID_VACCINE_PLAN,
 } from '@/constants/vaccinePlan'
@@ -72,25 +71,5 @@ describe('buildVaccineCalendar', () => {
     // 72 月龄的剂次仍在未来
     const last = items.find((i) => i.months === 72)
     expect(last?.status).toBe('upcoming')
-  })
-})
-
-describe('buildPendingVaccinePlans', () => {
-  it('生成全部未记录的剂次为 planned', () => {
-    const plans = buildPendingVaccinePlans('2025-01-15', [])
-    expect(plans.length).toBe(VACCINE_PLAN.length + SELF_PAID_VACCINE_PLAN.length)
-    expect(plans.every((p) => p.status === 'planned')).toBe(true)
-  })
-
-  it('跳过已存在的记录', () => {
-    const plans = buildPendingVaccinePlans('2025-01-15', [
-      makeVacc({ name: '乙肝疫苗', dose: '第 1 剂', status: 'done' }),
-    ])
-    expect(plans.some((p) => p.name === '乙肝疫苗' && p.dose === '第 1 剂')).toBe(false)
-  })
-
-  it('每个生成项带有效的日期时间戳', () => {
-    const plans = buildPendingVaccinePlans('2025-01-15', [])
-    expect(plans.every((p) => typeof p.date === 'number' && p.date > 0)).toBe(true)
   })
 })

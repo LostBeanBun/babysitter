@@ -221,7 +221,11 @@ const filteredMedications = computed(() => {
 })
 const filteredVaccinations = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'vaccination') return []
-  return keep(vaccinationStore.vaccinations.filter((v) => matchDate(v.date)), 'vaccination')
+  // 记录页只展示实际接种记录（done），planned 待接种计划/提醒不混入时间线
+  return keep(
+    vaccinationStore.vaccinations.filter((v) => v.status === 'done' && matchDate(v.date)),
+    'vaccination',
+  )
 })
 const filteredTemperatures = computed(() => {
   if (filter.value !== 'all' && filter.value !== 'temperature') return []

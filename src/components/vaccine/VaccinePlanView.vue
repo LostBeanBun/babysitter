@@ -3,14 +3,13 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   buildVaccineCalendar,
-  buildPendingVaccinePlans,
   type VaccineCalendarItem,
   type VaccinePlanCategory,
 } from '@/constants/vaccinePlan'
 import { useBabyStore } from '@/stores/baby'
 import { useVaccinationStore } from '@/stores/vaccination'
 
-/** 疫苗计划日历：按宝宝出生日期展示建议接种时间线，支持一键生成待接种计划 */
+/** 疫苗计划日历：按宝宝出生日期展示建议接种时间线 */
 const { t } = useI18n()
 const babyStore = useBabyStore()
 const vaccinationStore = useVaccinationStore()
@@ -33,27 +32,6 @@ const summary = computed(() => {
     pending: items.filter((i) => i.status === 'due' || i.status === 'overdue' || i.status === 'upcoming').length,
   }
 })
-
-const generating = ref(false)
-const generatedMsg = ref('')
-
-async function generatePlans() {
-  const baby = activeBaby.value
-  if (!baby?.birthDate) return
-  generating.value = true
-  generatedMsg.value = ''
-  try {
-    const pending = buildPendingVaccinePlans(baby.birthDate, vaccinationStore.vaccinations)
-    if (pending.length === 0) {
-      generatedMsg.value = t('vaccinePlan.nonePending')
-      return
-    }
-    await Promise.all(pending.map((p) => vaccinationStore.add(p)))
-    generatedMsg.value = t('vaccinePlan.generated', { n: pending.length })
-  } finally {
-    generating.value = false
-  }
-}
 
 function statusBadgeClass(item: VaccineCalendarItem): string {
   switch (item.status) {
@@ -127,11 +105,6 @@ function statusLabel(item: VaccineCalendarItem): string {
         </div>
         <p v-if="visibleItems.length === 0" class="plan-empty">{{ t('vaccinePlan.empty') }}</p>
       </div>
-
-      <button class="btn btn-outline btn-block" :disabled="generating || summary.pending === 0" @click="generatePlans">
-        {{ generating ? t('vaccinePlan.generating') : t('vaccinePlan.generateBtn') }}
-      </button>
-      <p v-if="generatedMsg" class="plan-msg">{{ generatedMsg }}</p>
     </template>
 
     <p v-else class="plan-empty">{{ t('vaccinePlan.needBirthDate') }}</p>
@@ -252,11 +225,5 @@ function statusLabel(item: VaccineCalendarItem): string {
   color: var(--text-muted);
   text-align: center;
   padding: 12px 0;
-}
-
-.plan-msg {
-  font-size: 13px;
-  color: var(--primary);
-  font-weight: 600;
 }
 </style>

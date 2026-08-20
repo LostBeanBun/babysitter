@@ -139,15 +139,3 @@ export function buildVaccineCalendar(birthDate: string, existing: Vaccination[])
     (a, b) => a.planTs - b.planTs || a.category.localeCompare(b.category),
   )
 }
-
-/** 从疫苗日历生成待接种计划记录（跳过已存在记录/计划的剂次） */
-export function buildPendingVaccinePlans(birthDate: string, existing: Vaccination[]): Array<{ date: number; name: string; dose: string; status: 'planned' }> {
-  return buildVaccineCalendar(birthDate, existing)
-    .filter((item) => !item.exists && item.status !== 'done')
-    .map((item) => ({
-      date: item.planTs,
-      name: item.name,
-      dose: item.dose,
-      status: 'planned' as const,
-    }))
-}
