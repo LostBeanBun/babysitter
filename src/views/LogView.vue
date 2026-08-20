@@ -123,65 +123,28 @@ const filter = ref<
   | 'milestone'
 >('all')
 
-/** 按日期筛选：null=全部，否则 { start, end } 为当天 0 点时间戳（含边界） */
-const dateRange = ref<{ start: number; end: number } | null>(null)
-/** 日期面板展开状态（与搜索展开互斥） */
-const dateOpen = ref(false)
-/** 快捷预设：'all' | 'today' | 'week' | 'month' | 'custom' */
-const datePreset = ref<'all' | 'today' | 'week' | 'month' | 'custom'>('all')
+/** 按日期筛选：null=全部，否则为单日 0 点时间戳 */
+const dateFilter = ref<number | null>(null)
 
 function matchDate(ts: number): boolean {
-  const r = dateRange.value
-  if (!r) return true
+  const d = dateFilter.value
+  if (!d) return true
   const day = startOfDay(ts)
-  return day >= r.start && day <= r.end
+  return day === d
 }
 
-function presetRange(preset: 'today' | 'week' | 'month') {
-  const now = new Date()
-  const end = startOfDay(now.getTime())
-  const days = preset === 'today' ? 0 : preset === 'week' ? 6 : 29
-  const start = end - days * 86_400_000
-  return { start, end }
-}
+const customDate = ref('')
 
-function applyDatePreset(preset: 'all' | 'today' | 'week' | 'month') {
-  datePreset.value = preset
-  dateRange.value = preset === 'all' ? null : presetRange(preset)
-  dateOpen.value = false
+function applyDateFilter() {
+  if (!customDate.value) return
+  const ts = new Date(`${customDate.value}T00:00:00`).getTime()
+  if (isNaN(ts)) return
+  dateFilter.value = ts
 }
 
 function clearDateFilter() {
-  datePreset.value = 'all'
-  dateRange.value = null
-  dateOpen.value = false
-}
-
-/** 切换日期面板 */
-function toggleDatePanel() {
-  dateOpen.value = !dateOpen.value
-}
-
-/** 快捷预设选项 */
-const datePresets: { key: 'all' | 'today' | 'week' | 'month'; labelKey: string }[] = [
-  { key: 'all', labelKey: 'log.dateAll' },
-  { key: 'today', labelKey: 'log.dateToday' },
-  { key: 'week', labelKey: 'log.dateWeek' },
-  { key: 'month', labelKey: 'log.dateMonth' },
-]
-
-/** 自定义起止日期（YYYY-MM-DD） */
-const customStart = ref('')
-const customEnd = ref('')
-
-function applyCustomRange() {
-  if (!customStart.value || !customEnd.value) return
-  const s = new Date(`${customStart.value}T00:00:00`).getTime()
-  const e = new Date(`${customEnd.value}T00:00:00`).getTime()
-  if (isNaN(s) || isNaN(e) || s > e) return
-  datePreset.value = 'custom'
-  dateRange.value = { start: s, end: e }
-  dateOpen.value = false
+  dateFilter.value = null
+  customDate.value = ''
 }
 
 /** 删除撤销：过滤待删除记录 */
@@ -392,38 +355,17 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
         </select>
       </template>
       <div v-else class="date-wrap">
-        <div class="date-presets">
-          <button
-            v-for="p in datePresets"
-            :key="p.key"
-            type="button"
-            class="date-preset"
-            :class="{ active: datePreset === p.key }"
-            @click="applyDatePreset(p.key)"
-          >
-            {{ t(p.labelKey) }}
-          </button>
-        </div>
         <div class="date-custom">
           <input
-            v-model="customStart"
+            v-model="customDate"
             type="date"
             class="form-input date-input"
-            :aria-label="t('log.dateStart')"
-            :title="t('log.dateStart')"
-            @change="applyCustomRange"
-          />
-          <span class="date-sep">–</span>
-          <input
-            v-model="customEnd"
-            type="date"
-            class="form-input date-input"
-            :aria-label="t('log.dateEnd')"
-            :title="t('log.dateEnd')"
-            @change="applyCustomRange"
+            :aria-label="t('log.dateFilter')"
+            :title="t('log.dateFilter')"
+            @change="applyDateFilter"
           />
           <button
-            v-if="dateRange"
+            v-if="dateFilter !== null"
             type="button"
             class="date-clear"
             :aria-label="t('log.dateClear')"
@@ -437,10 +379,10 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
       <button
         type="button"
         class="date-toggle"
-        :class="{ active: dateOpen, filtered: dateRange !== null }"
+        :class="{ active: dateOpen, filtered: dateFilter !== null }"
         :title="t('log.dateFilter')"
         :aria-label="t('log.dateFilter')"
-        @click="toggleDatePanel"
+        @click="dateOpen = !dateOpen"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="19" height="19" aria-hidden="true">
           <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -580,17 +522,6 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   box-shadow: var(--shadow-xs);
 }
 
-@keyframes search-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .date-toggle {
   position: relative;
   width: 40px;
@@ -635,40 +566,6 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 .date-wrap {
   flex: 1;
   min-width: 0;
-  animation: search-in 0.18s ease-out;
-}
-
-.date-presets {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.date-preset {
-  min-height: 0;
-  padding: 5px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  transition:
-    color 0.15s ease,
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.date-preset:hover {
-  color: var(--primary);
-  border-color: var(--primary);
-}
-
-.date-preset.active {
-  color: var(--primary);
-  background: var(--primary-soft);
-  border-color: var(--primary);
-  font-weight: 600;
 }
 
 .date-custom {

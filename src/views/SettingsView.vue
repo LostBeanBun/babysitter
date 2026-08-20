@@ -9,7 +9,6 @@ import { loadReminders, saveReminders, type ReminderConfig, type ReminderType } 
 import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ReminderParam from '@/components/settings/ReminderParam.vue'
-import VaccinePlanView from '@/components/vaccine/VaccinePlanView.vue'
 import type { Baby, BabyGender } from '@/types'
 
 const babyStore = useBabyStore()
@@ -363,12 +362,6 @@ async function confirmClearAll() {
           />
         </div>
       </div>
-    </div>
-
-    <!-- 疫苗计划日历 -->
-    <p class="section-title">{{ t('settings.vaccinePlanSection') }}</p>
-    <div class="card">
-      <VaccinePlanView />
     </div>
 
     <!-- 分享给朋友 -->
