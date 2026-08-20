@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FeedType } from '@/types'
 import { FEED_TYPE_LIST } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/format'
 import { useFeedingStore } from '@/stores/feeding'
+import FormTimer from '@/components/common/FormTimer.vue'
+import FormNotes from '@/components/common/FormNotes.vue'
 
 const { t } = useI18n()
 
@@ -30,32 +32,31 @@ const notes = ref(props.editing?.notes ?? '')
 const startTime = ref(toDateTimeLocal(props.editing?.startTime ?? Date.now()))
 const endTime = ref(props.editing?.endTime ? toDateTimeLocal(props.editing.endTime) : '')
 
-// 计时器状态
-const timerRunning = ref(false)
-const timerStartTs = ref(0)
-const elapsedMs = ref(0)
-let timerId: number | undefined
+// 计时器回调：由 FormTimer 组件驱动
+const timerFinished = ref(false)
 
-function startTimer() {
-  timerRunning.value = true
-  timerStartTs.value = Date.now()
-  elapsedMs.value = 0
-  timerId = window.setInterval(() => {
-    elapsedMs.value = Date.now() - timerStartTs.value
-  }, 1000)
+function onTimerStart() {
+  startTime.value = toDateTimeLocal(Date.now())
 }
 
-function stopTimer() {
-  timerRunning.value = false
-  if (timerId) clearInterval(timerId)
-  timerId = undefined
-  startTime.value = toDateTimeLocal(timerStartTs.value)
-  endTime.value = toDateTimeLocal(Date.now())
+function onTimerStop({ start, end }: { start: number; end: number }) {
+  timerFinished.value = true
+  startTime.value = toDateTimeLocal(start)
+  endTime.value = toDateTimeLocal(end)
 }
 
-onUnmounted(() => {
-  if (timerId) clearInterval(timerId)
-})
+/** 编辑既有亲喂记录时回显时长 */
+const editingRecordedText = computed(() =>
+  t('feed.recordedDuration', { duration: props.editing?.duration ? formatDuration(props.editing.duration) : '—' }),
+)
+
+/** 计时结束后回显起止区间 */
+const finishedText = computed(() =>
+  t('feed.recordedRange', {
+    start: startTime.value.replace('T', ' '),
+    end: endTime.value ? t('feed.endRange', { end: endTime.value.replace('T', ' ') }) : '',
+  }),
+)
 
 async function submit() {
   const start = fromDateTimeLocal(startTime.value) ?? Date.now()
@@ -105,39 +106,18 @@ async function submit() {
     </div>
 
     <!-- 亲喂计时 -->
-    <template v-if="isBreast">
-      <div class="timer-box">
-        <template v-if="!timerRunning && !props.editing">
-          <button type="button" class="btn btn-primary btn-lg timer-start" @click="startTimer">
-            {{ t('feed.startTimer') }}
-          </button>
-          <p class="timer-hint">{{ t('feed.timerHint') }}</p>
-        </template>
-        <template v-else-if="timerRunning">
-          <div class="timer-display">{{ formatDuration(elapsedMs) }}</div>
-          <button type="button" class="btn btn-soft btn-lg" @click="stopTimer">{{ t('feed.stopTimer') }}</button>
-        </template>
-        <template v-else-if="props.editing">
-          <div class="timer-done">
-            {{
-              t('feed.recordedDuration', {
-                duration: props.editing.duration ? formatDuration(props.editing.duration) : '—',
-              })
-            }}
-          </div>
-        </template>
-        <template v-else>
-          <div class="timer-done">
-            {{
-              t('feed.recordedRange', {
-                start: startTime.replace('T', ' '),
-                end: endTime ? t('feed.endRange', { end: endTime.replace('T', ' ') }) : '',
-              })
-            }}
-          </div>
-        </template>
-      </div>
-    </template>
+    <FormTimer
+      v-if="isBreast"
+      :editing="!!props.editing"
+      :recorded-text="editingRecordedText"
+      :finished="timerFinished"
+      :finished-text="finishedText"
+      :start-label="t('feed.startTimer')"
+      :stop-label="t('feed.stopTimer')"
+      :hint="t('feed.timerHint')"
+      @start="onTimerStart"
+      @stop="onTimerStop"
+    />
 
     <!-- 瓶喂奶量 -->
     <template v-else>
@@ -166,10 +146,7 @@ async function submit() {
       </div>
     </div>
 
-    <div class="form-field">
-      <label class="form-label">{{ t('feed.notesLabel') }}</label>
-      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
-    </div>
+    <FormNotes v-model="notes" :label="t('feed.notesLabel')" :placeholder="t('common.optional')" />
 
     <div class="form-actions">
       <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>
@@ -213,41 +190,6 @@ async function submit() {
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
-}
-
-.timer-box {
-  background: var(--surface-2);
-  border-radius: var(--radius);
-  padding: 12px;
-  margin-bottom: 12px;
-  text-align: center;
-}
-
-.timer-start {
-  width: 100%;
-}
-
-.timer-hint {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 8px;
-}
-
-.timer-display {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--primary);
-  font-variant-numeric: tabular-nums;
-  margin-bottom: 12px;
-}
-
-.timer-done {
-  font-size: 13px;
-  color: var(--text-secondary);
-  padding: 6px 0;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  line-height: 1.5;
 }
 
 .time-row {

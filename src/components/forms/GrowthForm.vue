@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useGrowthStore } from '@/stores/growth'
+import FormNotes from '@/components/common/FormNotes.vue'
 
 const { t } = useI18n()
 
@@ -115,10 +116,7 @@ async function submit() {
       />
     </div>
 
-    <div class="form-field">
-      <label class="form-label">{{ t('growth.notesLabel') }}</label>
-      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
-    </div>
+    <FormNotes v-model="notes" :label="t('growth.notesLabel')" :placeholder="t('common.optional')" />
 
     <div class="form-actions">
       <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>

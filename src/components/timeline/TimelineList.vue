@@ -304,18 +304,6 @@ const groupedEntries = computed(() => {
   margin-bottom: 12px;
 }
 
-/* 时间轴竖线：贯穿同一天的记录（对齐节点中心：item padding-left 12 + 节点半宽 21） */
-.tl-group::before {
-  content: '';
-  position: absolute;
-  left: 32px;
-  top: 34px;
-  bottom: 6px;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--border);
-}
-
 .tl-day {
   position: relative;
   z-index: 1;
@@ -329,17 +317,15 @@ const groupedEntries = computed(() => {
   border-radius: 999px;
 }
 
-/* 时间轴节点：不透明底色遮住轴线，同类型统一主色描边 */
 .tl-timeline-item {
   position: relative;
   gap: 12px;
 }
 
+/* 时间轴节点：同类型统一主色描边圆点 */
 .tl-timeline-item .tl-timeline-node {
   background: var(--bg);
-  box-shadow:
-    inset 0 0 0 1.5px currentColor,
-    0 0 0 3px var(--bg);
+  box-shadow: inset 0 0 0 1.5px currentColor;
   flex-shrink: 0;
 }
 

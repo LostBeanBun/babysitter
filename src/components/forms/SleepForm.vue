@@ -1,10 +1,12 @@
 ﻿<script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { SleepType } from '@/types'
 import { SLEEP_TYPE_LABELS } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/format'
 import { useSleepStore } from '@/stores/sleep'
+import FormTimer from '@/components/common/FormTimer.vue'
+import FormNotes from '@/components/common/FormNotes.vue'
 
 const { t } = useI18n()
 
@@ -22,31 +24,22 @@ const endTime = ref(
   props.editing?.endTime ? toDateTimeLocal(props.editing.endTime) : toDateTimeLocal(Date.now() + 3600_000),
 )
 
-const timerRunning = ref(false)
-const timerStartTs = ref(0)
-const elapsedMs = ref(0)
-let timerId: number | undefined
-
-function startTimer() {
-  timerRunning.value = true
-  timerStartTs.value = Date.now()
-  elapsedMs.value = 0
-  timerId = window.setInterval(() => {
-    elapsedMs.value = Date.now() - timerStartTs.value
-  }, 1000)
+// 计时器回调：由 FormTimer 组件驱动
+function onTimerStart() {
+  startTime.value = toDateTimeLocal(Date.now())
 }
 
-function stopTimer() {
-  timerRunning.value = false
-  if (timerId) clearInterval(timerId)
-  timerId = undefined
-  startTime.value = toDateTimeLocal(timerStartTs.value)
-  endTime.value = toDateTimeLocal(Date.now())
+function onTimerStop({ start, end }: { start: number; end: number }) {
+  startTime.value = toDateTimeLocal(start)
+  endTime.value = toDateTimeLocal(end)
 }
 
-onUnmounted(() => {
-  if (timerId) clearInterval(timerId)
-})
+/** 编辑既有睡眠记录时回显时长 */
+const recordedText = computed(() =>
+  t('sleep.recordedDuration', {
+    duration: formatDuration((props.editing?.endTime ?? 0) - (props.editing?.startTime ?? 0)),
+  }),
+)
 
 async function submit() {
   const start = fromDateTimeLocal(startTime.value)
@@ -90,25 +83,15 @@ async function submit() {
       </button>
     </div>
 
-    <div class="timer-box">
-      <template v-if="!timerRunning && !props.editing">
-        <button type="button" class="btn btn-primary btn-lg timer-start" @click="startTimer">
-          {{ t('sleep.startTimer') }}
-        </button>
-        <p class="timer-hint">{{ t('sleep.timerHint') }}</p>
-      </template>
-      <template v-else-if="timerRunning">
-        <div class="timer-display">{{ formatDuration(elapsedMs) }}</div>
-        <button type="button" class="btn btn-soft btn-lg" @click="stopTimer">{{ t('sleep.stopTimer') }}</button>
-      </template>
-      <template v-else-if="props.editing">
-        <div class="timer-done">
-          {{
-            t('sleep.recordedDuration', { duration: formatDuration(props.editing.endTime - props.editing.startTime) })
-          }}
-        </div>
-      </template>
-    </div>
+    <FormTimer
+      :editing="!!props.editing"
+      :recorded-text="recordedText"
+      :start-label="t('sleep.startTimer')"
+      :stop-label="t('sleep.stopTimer')"
+      :hint="t('sleep.timerHint')"
+      @start="onTimerStart"
+      @stop="onTimerStop"
+    />
 
     <div class="time-row">
       <div class="form-field">
@@ -121,10 +104,7 @@ async function submit() {
       </div>
     </div>
 
-    <div class="form-field">
-      <label class="form-label">{{ t('sleep.notesLabel') }}</label>
-      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
-    </div>
+    <FormNotes v-model="notes" :label="t('sleep.notesLabel')" :placeholder="t('common.optional')" />
 
     <div class="form-actions">
       <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>
@@ -169,41 +149,6 @@ async function submit() {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
-}
-
-.timer-box {
-  background: var(--surface-2);
-  border-radius: var(--radius);
-  padding: 12px;
-  margin-bottom: 12px;
-  text-align: center;
-}
-
-.timer-start {
-  width: 100%;
-}
-
-.timer-hint {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 8px;
-}
-
-.timer-display {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--primary);
-  font-variant-numeric: tabular-nums;
-  margin-bottom: 12px;
-}
-
-.timer-done {
-  font-size: 13px;
-  color: var(--text-secondary);
-  padding: 6px 0;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  line-height: 1.5;
 }
 
 .time-row {

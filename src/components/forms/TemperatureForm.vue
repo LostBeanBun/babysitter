@@ -5,6 +5,7 @@ import type { TemperatureMethod } from '@/types'
 import { TEMP_METHOD_LIST } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useTemperatureStore } from '@/stores/temperature'
+import FormNotes from '@/components/common/FormNotes.vue'
 
 const { t } = useI18n()
 
@@ -89,10 +90,7 @@ async function submit() {
       <input v-model="time" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
     </div>
 
-    <div class="form-field">
-      <label class="form-label">{{ t('temperature.notesLabel') }}</label>
-      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
-    </div>
+    <FormNotes v-model="notes" :label="t('temperature.notesLabel')" :placeholder="t('common.optional')" />
 
     <div class="form-actions">
       <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useSolidFoodStore } from '@/stores/solidFood'
+import FormNotes from '@/components/common/FormNotes.vue'
 
 const { t } = useI18n()
 
@@ -64,10 +65,7 @@ async function submit() {
       <input v-model="time" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
     </div>
 
-    <div class="form-field">
-      <label class="form-label">{{ t('solidFood.notesLabel') }}</label>
-      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
-    </div>
+    <FormNotes v-model="notes" :label="t('solidFood.notesLabel')" :placeholder="t('common.optional')" />
 
     <div class="form-actions">
       <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>

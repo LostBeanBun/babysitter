@@ -8,6 +8,7 @@ import { BABY_AVATARS } from '@/constants'
 import { loadReminders, saveReminders, type ReminderConfig, type ReminderType } from '@/utils/reminderScheduler'
 import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import ReminderParam from '@/components/settings/ReminderParam.vue'
 import type { Baby, BabyGender } from '@/types'
 
 const babyStore = useBabyStore()
@@ -107,6 +108,16 @@ async function toggleReminder(type: ReminderType) {
 
 function persistReminders() {
   saveReminders(reminders.value)
+}
+
+/** 间隔类提醒参数更新（组件统一回调，转 number 后写回配置） */
+function setIntervalReminder(type: 'feed' | 'medication' | 'diaper', v: number | string) {
+  reminders.value[type].intervalHours = typeof v === 'number' ? v : Number(v)
+}
+
+/** 时间类提醒参数更新 */
+function setSleepTime(v: number | string) {
+  reminders.value.sleep.time = String(v)
 }
 
 const reminderRows = computed(() => [
@@ -300,56 +311,52 @@ async function confirmClearAll() {
             <span class="switch-knob"></span>
           </button>
         </div>
-        <div v-if="reminders[r.type].enabled" class="reminder-param">
-          <template v-if="r.type === 'feed'">
-            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
-            <input
-              v-model.number="reminders.feed.intervalHours"
-              type="number"
-              min="0"
-              step="0.5"
-              :placeholder="t('reminders.intervalPh', { n: '2.5' })"
-              class="form-input reminder-param-input"
-              @change="persistReminders"
-            />
-            <p class="reminder-param-hint">{{ t('reminders.feed.hint') }}</p>
-          </template>
-          <template v-else-if="r.type === 'sleep'">
-            <label class="reminder-param-label">{{ t('reminders.sleepTimeLabel') }}</label>
-            <input
-              v-model="reminders.sleep.time"
-              type="time"
-              :placeholder="t('common.selectTime')"
-              class="form-input reminder-param-input"
-              @change="persistReminders"
-            />
-          </template>
-          <template v-else-if="r.type === 'medication'">
-            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
-            <input
-              v-model.number="reminders.medication.intervalHours"
-              type="number"
-              min="1"
-              step="1"
-              :placeholder="t('reminders.intervalPh', { n: '6' })"
-              class="form-input reminder-param-input"
-              @change="persistReminders"
-            />
-            <p class="reminder-param-hint">{{ t('reminders.medication.hint') }}</p>
-          </template>
-          <template v-else-if="r.type === 'diaper'">
-            <label class="reminder-param-label">{{ t('reminders.intervalLabel') }}</label>
-            <input
-              v-model.number="reminders.diaper.intervalHours"
-              type="number"
-              min="1"
-              step="1"
-              :placeholder="t('reminders.intervalPh', { n: '6' })"
-              class="form-input reminder-param-input"
-              @change="persistReminders"
-            />
-            <p class="reminder-param-hint">{{ t('reminders.diaper.hint') }}</p>
-          </template>
+        <div v-if="reminders[r.type].enabled && r.type !== 'vaccination'" class="reminder-param">
+          <ReminderParam
+            v-if="r.type === 'feed'"
+            mode="interval"
+            :label="t('reminders.intervalLabel')"
+            :model-value="reminders.feed.intervalHours"
+            :min="0"
+            :step="0.5"
+            :placeholder="t('reminders.intervalPh', { n: '2.5' })"
+            :hint="t('reminders.feed.hint')"
+            @update:model-value="(v) => setIntervalReminder('feed', v)"
+            @change="persistReminders"
+          />
+          <ReminderParam
+            v-else-if="r.type === 'sleep'"
+            mode="time"
+            :label="t('reminders.sleepTimeLabel')"
+            :model-value="reminders.sleep.time"
+            :placeholder="t('common.selectTime')"
+            @update:model-value="setSleepTime"
+            @change="persistReminders"
+          />
+          <ReminderParam
+            v-else-if="r.type === 'medication'"
+            mode="interval"
+            :label="t('reminders.intervalLabel')"
+            :model-value="reminders.medication.intervalHours"
+            :min="1"
+            :step="1"
+            :placeholder="t('reminders.intervalPh', { n: '6' })"
+            :hint="t('reminders.medication.hint')"
+            @update:model-value="(v) => setIntervalReminder('medication', v)"
+            @change="persistReminders"
+          />
+          <ReminderParam
+            v-else-if="r.type === 'diaper'"
+            mode="interval"
+            :label="t('reminders.intervalLabel')"
+            :model-value="reminders.diaper.intervalHours"
+            :min="1"
+            :step="1"
+            :placeholder="t('reminders.intervalPh', { n: '6' })"
+            :hint="t('reminders.diaper.hint')"
+            @update:model-value="(v) => setIntervalReminder('diaper', v)"
+            @change="persistReminders"
+          />
         </div>
       </div>
     </div>
@@ -659,26 +666,6 @@ async function confirmClearAll() {
   padding: 8px 10px;
   background: var(--surface-2);
   border-radius: 10px;
-}
-
-.reminder-param-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.reminder-param-input {
-  width: 88px;
-  min-height: 34px;
-  padding: 4px 8px;
-  border-radius: 8px;
-}
-
-.reminder-param-hint {
-  width: 100%;
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.6;
 }
 
 .switch {

@@ -13,6 +13,7 @@ import {
   type VaccinePlanCategory,
 } from '@/constants/vaccinePlan'
 import BaseModal from '@/components/common/BaseModal.vue'
+import FormNotes from '@/components/common/FormNotes.vue'
 
 const { t } = useI18n()
 
@@ -128,10 +129,7 @@ async function submit() {
       </button>
     </div>
 
-    <div class="form-field">
-      <label class="form-label">{{ t('vaccination.notesLabel') }}</label>
-      <input v-model="notes" type="text" :placeholder="t('common.optional')" class="form-input" />
-    </div>
+    <FormNotes v-model="notes" :label="t('vaccination.notesLabel')" :placeholder="t('common.optional')" />
 
     <div class="form-actions">
       <button type="button" class="btn btn-outline" @click="emit('cancelled')">{{ t('common.cancel') }}</button>

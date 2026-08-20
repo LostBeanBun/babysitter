@@ -58,7 +58,7 @@ const rangeEnd = computed(() => range.value.getRange(now.value)[1])
 const growthInfoOpen = ref(false)
 
 // 概览 tab：对比 / 汇总
-const overviewTab = ref<'compare' | 'summary'>('compare')
+const activeView = ref<'summary' | 'trend' | 'compare'>('summary')
 
 // 每日序列（趋势图数据）
 const days = computed<DayAggregate[]>(() =>
@@ -602,153 +602,164 @@ const hcOption = computed<EChartsOption>(() => ({
       </select>
     </div>
 
-    <!-- 概览：与上一周期对比 / 区间汇总（tab 切换） -->
-    <div class="card overview-card">
-      <div class="overview-tabs" role="tablist">
-        <button
-          class="overview-tab"
-          :class="{ active: overviewTab === 'compare' }"
-          role="tab"
-          :aria-selected="overviewTab === 'compare'"
-          @click="overviewTab = 'compare'"
-        >
-          {{ t('stats.compareTitle') }}
-        </button>
-        <button
-          class="overview-tab"
-          :class="{ active: overviewTab === 'summary' }"
-          role="tab"
-          :aria-selected="overviewTab === 'summary'"
-          @click="overviewTab = 'summary'"
-        >
-          {{ t('stats.summaryTitle', { range: rangeLabel }) }}
-        </button>
-      </div>
+    <!-- 页面级视图切换：总览 / 趋势 / 对比 -->
+    <div class="overview-tabs page-tabs" role="tablist">
+      <button
+        class="overview-tab"
+        :class="{ active: activeView === 'summary' }"
+        role="tab"
+        :aria-selected="activeView === 'summary'"
+        @click="activeView = 'summary'"
+      >
+        {{ t('stats.tabSummary') }}
+      </button>
+      <button
+        class="overview-tab"
+        :class="{ active: activeView === 'trend' }"
+        role="tab"
+        :aria-selected="activeView === 'trend'"
+        @click="activeView = 'trend'"
+      >
+        {{ t('stats.tabTrend') }}
+      </button>
+      <button
+        class="overview-tab"
+        :class="{ active: activeView === 'compare' }"
+        role="tab"
+        :aria-selected="activeView === 'compare'"
+        @click="activeView = 'compare'"
+      >
+        {{ t('stats.tabCompare') }}
+      </button>
+    </div>
 
-      <div v-if="overviewTab === 'compare'" class="overview-body">
-        <span class="overview-sub">{{ t('stats.compareSub', { range: rangeLabel }) }}</span>
-        <div class="compare-grid">
-          <div v-for="c in comparisons" :key="c.key" class="compare-item">
-            <p class="compare-label">{{ t(c.label) }}</p>
-            <p class="compare-value">{{ formatComparisonValue(c, c.current) }}</p>
-            <div class="compare-change-row">
-              <span class="compare-change" :class="c.change === null ? 'none' : c.change >= 0 ? 'up' : 'down'">
-                {{ c.change === null ? '—' : formatPercentChange(c.change) }}
-              </span>
-              <span class="compare-prev"
-                >{{ formatComparisonValue(c, c.previous) }} → {{ formatComparisonValue(c, c.current) }}</span
-              >
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="overview-body">
-        <span class="overview-sub">{{ t('stats.summarySub', { n: summaryDays }) }}</span>
-        <div class="summary-grid">
-          <div v-for="s in summaryItems" :key="s.label" class="summary-item">
-            <p class="summary-label">{{ s.label }}</p>
-            <p class="summary-value">{{ s.value }}</p>
-            <p class="summary-sub">{{ s.sub }}</p>
-          </div>
+    <!-- 总览：区间汇总 -->
+    <div v-if="activeView === 'summary'" class="card overview-card">
+      <span class="overview-sub">{{ t('stats.summarySub', { n: summaryDays }) }}</span>
+      <div class="summary-grid">
+        <div v-for="s in summaryItems" :key="s.label" class="summary-item">
+          <p class="summary-label">{{ s.label }}</p>
+          <p class="summary-value">{{ s.value }}</p>
+          <p class="summary-sub">{{ s.sub }}</p>
         </div>
       </div>
     </div>
 
-    <!-- 趋势图 -->
-    <ChartCard
-      :title="t('stats.charts.milkTitle')"
-      :subtitle="`${rangeLabel} · ${t('stats.charts.milkSub')}`"
-      :option="milkOption"
-    />
-    <ChartCard :title="t('stats.charts.sleepTitle')" :subtitle="rangeLabel" :option="sleepOption" />
-    <ChartCard
-      :title="t('stats.charts.diaperTitle')"
-      :subtitle="`${rangeLabel} · ${t('stats.charts.diaperSub')}`"
-      :option="diaperOption"
-    />
-    <ChartCard :title="t('stats.charts.pumpTitle')" :subtitle="rangeLabel" :option="pumpOption" />
-    <ChartCard
-      :title="t('stats.charts.temperatureTitle')"
-      :subtitle="`${rangeLabel} · ${t('stats.charts.temperatureSub')}`"
-      :option="temperatureOption"
-    />
+    <!-- 趋势：趋势图 + 成长曲线 -->
+    <template v-else-if="activeView === 'trend'">
+      <ChartCard
+        :title="t('stats.charts.milkTitle')"
+        :subtitle="`${rangeLabel} · ${t('stats.charts.milkSub')}`"
+        :option="milkOption"
+      />
+      <ChartCard :title="t('stats.charts.sleepTitle')" :subtitle="rangeLabel" :option="sleepOption" />
+      <ChartCard
+        :title="t('stats.charts.diaperTitle')"
+        :subtitle="`${rangeLabel} · ${t('stats.charts.diaperSub')}`"
+        :option="diaperOption"
+      />
+      <ChartCard :title="t('stats.charts.pumpTitle')" :subtitle="rangeLabel" :option="pumpOption" />
+      <ChartCard
+        :title="t('stats.charts.temperatureTitle')"
+        :subtitle="`${rangeLabel} · ${t('stats.charts.temperatureSub')}`"
+        :option="temperatureOption"
+      />
 
-    <!-- 成长曲线 -->
-    <p class="section-title">{{ t('stats.growthSection') }}</p>
-    <template v-if="hasBirthDate">
-      <ChartCard
-        v-if="weightPoints.length > 0"
-        :title="t('stats.growthTitle')"
-        :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
-        :option="weightOption"
-      >
-        <template #title-action>
-          <button class="growth-info-btn" :aria-label="t('stats.whoInfoTitle')" @click="growthInfoOpen = true">?</button>
-        </template>
-      </ChartCard>
-      <ChartCard
-        v-else-if="hasGrowthData"
-        :title="t('stats.growthTitle')"
-        :subtitle="t('stats.growthEmpty')"
-        :option="{
-          grid: { top: 40 },
-          xAxis: { type: 'value', axisLabel: { show: false } },
-          yAxis: { type: 'value', axisLabel: { show: false } },
-          series: [],
-        }"
-      />
-      <ChartCard
-        v-if="heightPoints.length > 0"
-        :title="t('stats.heightTitle')"
-        :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
-        :option="heightOption"
-      >
-        <template #title-action>
-          <button class="growth-info-btn" :aria-label="t('stats.whoInfoTitle')" @click="growthInfoOpen = true">?</button>
-        </template>
-      </ChartCard>
-      <ChartCard
-        v-else-if="hasGrowthData"
-        :title="t('stats.heightTitle')"
-        :subtitle="t('stats.heightEmpty')"
-        :option="{
-          grid: { top: 40 },
-          xAxis: { type: 'value', axisLabel: { show: false } },
-          yAxis: { type: 'value', axisLabel: { show: false } },
-          series: [],
-        }"
-      />
-      <ChartCard
-        v-if="hcPoints.length > 0"
-        :title="t('stats.hcTitle')"
-        :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
-        :option="hcOption"
-      >
-        <template #title-action>
-          <button class="growth-info-btn" :aria-label="t('stats.whoInfoTitle')" @click="growthInfoOpen = true">?</button>
-        </template>
-      </ChartCard>
-      <ChartCard
-        v-else-if="hasGrowthData"
-        :title="t('stats.hcTitle')"
-        :subtitle="t('stats.hcEmpty')"
-        :option="{
-          grid: { top: 40 },
-          xAxis: { type: 'value', axisLabel: { show: false } },
-          yAxis: { type: 'value', axisLabel: { show: false } },
-          series: [],
-        }"
-      />
-      <div v-if="!hasGrowthData" class="card empty-inline">
-        {{ t('stats.growthEmptyBoth') }}
+      <!-- 成长曲线 -->
+      <p class="section-title">{{ t('stats.growthSection') }}</p>
+      <template v-if="hasBirthDate">
+        <ChartCard
+          v-if="weightPoints.length > 0"
+          :title="t('stats.growthTitle')"
+          :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
+          :option="weightOption"
+        >
+          <template #title-action>
+            <button class="growth-info-btn" :aria-label="t('stats.whoInfoTitle')" @click="growthInfoOpen = true">?</button>
+          </template>
+        </ChartCard>
+        <ChartCard
+          v-else-if="hasGrowthData"
+          :title="t('stats.growthTitle')"
+          :subtitle="t('stats.growthEmpty')"
+          :option="{
+            grid: { top: 40 },
+            xAxis: { type: 'value', axisLabel: { show: false } },
+            yAxis: { type: 'value', axisLabel: { show: false } },
+            series: [],
+          }"
+        />
+        <ChartCard
+          v-if="heightPoints.length > 0"
+          :title="t('stats.heightTitle')"
+          :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
+          :option="heightOption"
+        >
+          <template #title-action>
+            <button class="growth-info-btn" :aria-label="t('stats.whoInfoTitle')" @click="growthInfoOpen = true">?</button>
+          </template>
+        </ChartCard>
+        <ChartCard
+          v-else-if="hasGrowthData"
+          :title="t('stats.heightTitle')"
+          :subtitle="t('stats.heightEmpty')"
+          :option="{
+            grid: { top: 40 },
+            xAxis: { type: 'value', axisLabel: { show: false } },
+            yAxis: { type: 'value', axisLabel: { show: false } },
+            series: [],
+          }"
+        />
+        <ChartCard
+          v-if="hcPoints.length > 0"
+          :title="t('stats.hcTitle')"
+          :subtitle="t('stats.growthSub', { name: activeBaby?.name ?? '' })"
+          :option="hcOption"
+        >
+          <template #title-action>
+            <button class="growth-info-btn" :aria-label="t('stats.whoInfoTitle')" @click="growthInfoOpen = true">?</button>
+          </template>
+        </ChartCard>
+        <ChartCard
+          v-else-if="hasGrowthData"
+          :title="t('stats.hcTitle')"
+          :subtitle="t('stats.hcEmpty')"
+          :option="{
+            grid: { top: 40 },
+            xAxis: { type: 'value', axisLabel: { show: false } },
+            yAxis: { type: 'value', axisLabel: { show: false } },
+            series: [],
+          }"
+        />
+        <div v-if="!hasGrowthData" class="card empty-inline">
+          {{ t('stats.growthEmptyBoth') }}
+        </div>
+      </template>
+      <div v-else class="card empty-inline">
+        {{ t('stats.growthCta', { name: activeBaby?.name ?? t('common.baby') }) }}
       </div>
+
+      <p class="note-text">{{ t('stats.noteText') }}</p>
     </template>
-    <div v-else class="card empty-inline">
-      {{ t('stats.growthCta', { name: activeBaby?.name ?? t('common.baby') }) }}
-    </div>
 
-    <p class="note-text">{{ t('stats.noteText') }}</p>
+    <!-- 对比：与上一周期对比 -->
+    <div v-else class="card overview-card">
+      <span class="overview-sub">{{ t('stats.compareSub', { range: rangeLabel }) }}</span>
+      <div class="compare-grid">
+        <div v-for="c in comparisons" :key="c.key" class="compare-item">
+          <p class="compare-label">{{ t(c.label) }}</p>
+          <p class="compare-value">{{ formatComparisonValue(c, c.current) }}</p>
+          <div class="compare-change-row">
+            <span class="compare-change" :class="c.change === null ? 'none' : c.change >= 0 ? 'up' : 'down'">
+              {{ c.change === null ? '—' : formatPercentChange(c.change) }}
+            </span>
+            <span class="compare-prev"
+              >{{ formatComparisonValue(c, c.previous) }} → {{ formatComparisonValue(c, c.current) }}</span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
 
     <BaseModal :show="growthInfoOpen" :title="t('stats.whoInfoTitle')" @close="growthInfoOpen = false">
       <div class="who-info">

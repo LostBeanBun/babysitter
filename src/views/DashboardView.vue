@@ -199,6 +199,14 @@ function vaccineDaysLeft(date: number): number {
 // 今日汇总
 const totalMilk = computed(() => todayFeedings.value.reduce((sum, f) => sum + (f.amount ?? 0), 0))
 const feedCount = computed(() => todayFeedings.value.length)
+/** 今日泵出总量（吸奶产出） */
+const pumpTotal = computed(() => todayPumpings.value.reduce((s, p) => s + (p.amount ?? 0), 0))
+/** 今日瓶喂母乳消耗量 */
+const bottleBreastmilkTotal = computed(() =>
+  todayFeedings.value.filter((f) => f.type === 'bottle_breastmilk').reduce((s, f) => s + (f.amount ?? 0), 0),
+)
+/** 母乳库存 = 泵出 − 瓶喂母乳消耗（可为负：消耗多于泵出） */
+const breastStock = computed(() => pumpTotal.value - bottleBreastmilkTotal.value)
 const lastFeeding = computed(() => {
   const sorted = [...feedingStore.feedings].sort((a, b) => b.startTime - a.startTime)
   return sorted[0]
@@ -293,10 +301,10 @@ const summaryCopied = ref(false)
 function generateSummary() {
   const d = new Date(now.value)
   const dateLabel = new Intl.DateTimeFormat(locale.value, { month: 'long', day: 'numeric' }).format(d)
-  const pumpTotal = todayPumpings.value.reduce((s, p) => s + (p.amount ?? 0), 0)
+  const pumpSum = pumpTotal.value
   const feedAmountPart =
     totalMilk.value > 0 ? t('dashboard.summaryFeedAmount', { amount: formatAmount(totalMilk.value) }) : ''
-  const pumpAmountPart = pumpTotal > 0 ? t('dashboard.summaryPumpAmount', { amount: formatAmount(pumpTotal) }) : ''
+  const pumpAmountPart = pumpSum > 0 ? t('dashboard.summaryPumpAmount', { amount: formatAmount(pumpSum) }) : ''
   const lines = [
     t('dashboard.daySummary', { name: activeBaby.value?.name ?? t('common.baby'), date: dateLabel }),
     t('dashboard.summaryFeed', { n: feedCount.value, amount: feedAmountPart }),
@@ -487,7 +495,7 @@ const editPayload = computed(() => {
         </div>
       </div>
 
-      <!-- 快捷记录（高频操作置顶） -->
+      <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>
       <div class="quick-actions">
         <button class="quick-btn feed" @click="openAdd('feeding')">
@@ -498,13 +506,13 @@ const editPayload = computed(() => {
           <span class="quick-icon">🧷</span>
           <span class="quick-label">{{ t('log.filters.diaper') }}</span>
         </button>
-        <button class="quick-btn pump" @click="openAdd('pumping')">
-          <span class="quick-icon">🎀</span>
-          <span class="quick-label">{{ t('log.filters.pumping') }}</span>
-        </button>
         <button class="quick-btn sleep" @click="openAdd('sleep')">
           <span class="quick-icon">😴</span>
           <span class="quick-label">{{ t('log.filters.sleep') }}</span>
+        </button>
+        <button class="quick-btn pump" @click="openAdd('pumping')">
+          <span class="quick-icon">🎀</span>
+          <span class="quick-label">{{ t('log.filters.pumping') }}</span>
         </button>
         <button class="quick-btn growth" @click="openAdd('growth')">
           <span class="quick-icon">📏</span>
@@ -549,6 +557,7 @@ const editPayload = computed(() => {
           :value="formatAmount(totalMilk) || '0 ml'"
           :sub="[
             t('common.times', { n: feedCount }),
+            t('dashboard.milkStock', { pumped: formatAmount(pumpTotal), stock: formatAmount(breastStock) }),
             guide ? t('dashboard.guideMilk', { value: guide.milk }) : undefined,
           ]"
           icon="🥛"
@@ -567,16 +576,6 @@ const editPayload = computed(() => {
           :sub="guide ? t('dashboard.guideDiaper', { value: guide.diaper }) : undefined"
           icon="🧷"
           color="#9A8FC8"
-        />
-        <StatCard
-          :label="t('dashboard.statPump')"
-          :value="t('common.times', { n: todayPumpings.length })"
-          :sub="[
-            formatAmount(todayPumpings.reduce((s, p) => s + (p.amount ?? 0), 0)) || undefined,
-            guide ? t('dashboard.guidePump', { value: guide.pump }) : undefined,
-          ]"
-          icon="🎀"
-          color="#D8A8C8"
         />
       </div>
 
