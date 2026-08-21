@@ -196,8 +196,8 @@ function babyAge(b: Baby): string {
 }
 
 async function handleExportBabyCsv() {
-  if (!activeBaby) return
-  await exportBabyCsvs(activeBaby)
+  if (!activeBaby.value) return
+  await exportBabyCsvs(activeBaby.value)
   exportSuccess.value = true
   setTimeout(() => (exportSuccess.value = false), 3000)
 }

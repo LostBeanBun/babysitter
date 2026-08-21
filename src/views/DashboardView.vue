@@ -336,13 +336,7 @@ const editPayload = computed(() => {
     </div>
 
     <template v-else>
-      <!-- 今日概览（提醒条 + 统计卡） -->
-      <div class="section-row">
-        <p class="section-title">{{ t('dashboard.todayOverview') }}</p>
-        <button class="btn btn-sm btn-outline" @click="todayOverviewRef?.generateSummary()">
-          <span>📋</span> {{ t('dashboard.summaryButton') }}
-        </button>
-      </div>
+      <!-- 今日概览（提醒条 + 统计卡 + 小结按钮） -->
       <TodayOverview ref="todayOverviewRef" :now="now" @add="openAdd('vaccination')" />
 
       <!-- 快捷记录 -->
