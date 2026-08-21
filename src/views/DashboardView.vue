@@ -120,7 +120,6 @@ onUnmounted(() => window.clearInterval(nowTimer))
 const hasBaby = computed(() => babyStore.babies.length > 0)
 
 const onboardingOpen = ref(false)
-const todayOverviewRef = ref<InstanceType<typeof TodayOverview> | null>(null)
 
 const { scheduleDelete } = useDeleteUndo()
 
@@ -193,7 +192,7 @@ const modalState = ref<{
     timeLabel?: string
     raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature | Milestone
   } | null
-}>(null)
+} | null>(null)
 const confirmDelete = ref<{
   kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone'
   id: number
@@ -337,7 +336,7 @@ const editPayload = computed(() => {
 
     <template v-else>
       <!-- 今日概览（提醒条 + 统计卡 + 小结按钮） -->
-      <TodayOverview ref="todayOverviewRef" :now="now" @add="openAdd('vaccination')" />
+      <TodayOverview :now="now" @add="openAdd('vaccination')" />
 
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>

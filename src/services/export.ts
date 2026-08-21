@@ -13,7 +13,7 @@ import type {
   Temperature,
   Milestone,
 } from '@/types'
-import { downloadBlob, formatDate, formatTime, parseDate } from '@/utils/format'
+import { downloadBlob, formatDate, formatTime, parseDate, startOfDay } from '@/utils/format'
 
 const t = i18n.global.t
 
@@ -765,17 +765,17 @@ export async function importAllCsv(
       ])
 
       for (const [, { name, id: tempId }] of babyNames) {
-        const realId = await db.babies.add({ name, avatarColor: '#FF6B6B', createdAt: now, updatedAt: now })
+        const realId = (await db.babies.add({ name, avatarColor: '#FF6B6B', createdAt: now }))!
         babyIdMap.set(tempId, realId)
       }
 
       for (const [kind, records] of Object.entries(recordBuckets)) {
         if (records.length === 0) continue
         const withRealId = records.map((r) => ({
-          ...r,
-          babyId: babyIdMap.get(r.babyId) ?? babyIdMap.values().next().value!,
+          ...(r as Record<string, unknown>),
+          babyId: babyIdMap.get((r as Record<string, unknown>).babyId as number) ?? babyIdMap.values().next().value!,
         }))
-        await db[kind as keyof typeof db].bulkAdd(withRealId)
+        await (db as Record<string, any>)[kind].bulkAdd(withRealId)
       }
     },
   )
