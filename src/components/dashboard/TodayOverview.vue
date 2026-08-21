@@ -11,12 +11,7 @@ import { useVaccinationStore } from '@/stores/vaccination'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import { startOfDay, formatDuration, formatAmount } from '@/utils/format'
 import { MS_PER_DAY } from '@/constants'
-import {
-  recommendedIntervalMs,
-  recommendedIntervalLabel,
-  avgFeedingIntervalMs,
-  sinceLastFeedingMs,
-} from '@/utils/feedingGuide'
+import { recommendedIntervalMs, recommendedIntervalLabel } from '@/utils/feedingGuide'
 import { dailyGuide } from '@/utils/dailyGuides'
 
 /** 今日概览：喂奶/疫苗提醒条 + 统计卡 + 每日小结（数据按 now 实时重算） */
@@ -103,28 +98,17 @@ const sleepTotal = computed(() =>
   }, 0),
 )
 
+// —— 喂奶提醒 ——
+const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
 const lastFeeding = computed(() => {
   const sorted = [...feedingStore.feedings].sort((a, b) => b.startTime - a.startTime)
   return sorted[0]
 })
-const lastFeedingLabel = computed(() => {
-  if (!lastFeeding.value) return t('common.none')
-  const mins = Math.round((props.now - lastFeeding.value.startTime) / 60000)
-  if (mins < 60) return t('dashboard.lastFeedMin', { n: mins })
-  const h = Math.floor(mins / 60)
-  const m = mins % 60
-  return m === 0 ? t('dashboard.lastFeedHour', { n: h }) : t('dashboard.lastFeedHourMin', { n: h, m })
-})
-
-// —— 喂奶间隔分析 ——
-const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
+const sinceMs = computed(() => (lastFeeding.value ? (props.now - lastFeeding.value.startTime) : null))
 const recommendedMs = computed(() => recommendedIntervalMs(activeBaby.value))
-const avgGapMs = computed(() => avgFeedingIntervalMs(feedingStore.feedings.map((f) => f.startTime)))
+const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommendedMs.value)
 /** 按月龄的每日参考数据（无出生日期时为 null） */
 const guide = computed(() => dailyGuide(activeBaby.value))
-const sinceMs = computed(() => (lastFeeding.value ? sinceLastFeedingMs(lastFeeding.value.startTime, props.now) : null))
-/** 超过建议间隔时提示（实际提醒是否弹出由提醒配置决定） */
-const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommendedMs.value)
 
 </script>
 
@@ -187,13 +171,6 @@ const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommen
       <p class="section-title">{{ t('dashboard.todayOverview') }}</p>
       <div class="stats-grid">
       <StatCard
-        :label="t('dashboard.statLastFeed')"
-        :value="lastFeedingLabel"
-        :sub="lastFeeding ? [t('feed.suggested', { label: recommendedIntervalLabel(activeBaby) }), avgGapMs != null ? t('dashboard.avgIntervalInline', { value: formatDuration(avgGapMs) }) : undefined] : undefined"
-        icon="🍼"
-        color="#E8906C"
-      />
-      <StatCard
         :label="t('dashboard.statMilk')"
         :value="formatAmount(totalMilk) || '0 ml'"
         :sub="[
@@ -225,29 +202,29 @@ const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommen
 <style scoped>
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .feed-reminder-banner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: linear-gradient(135deg, var(--primary-soft), var(--accent-yellow-soft));
   border: 1px solid rgba(238, 122, 85, 0.28);
   border-radius: var(--radius-lg);
-  padding: 11px 14px;
-  margin-bottom: 10px;
+  padding: 9px 12px;
+  margin-bottom: 8px;
   box-shadow: var(--shadow-xs);
 }
 
 .feed-reminder-banner .fr-icon {
-  font-size: 28px;
+  font-size: 24px;
   flex-shrink: 0;
 }
 
 .feed-reminder-banner .fr-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
 }
@@ -258,21 +235,21 @@ const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommen
 }
 
 .feed-reminder-banner .fr-sub {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 /* 提醒条右上角关闭按钮（喂奶/疫苗共用） */
 .banner-close {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   min-height: 0;
   margin-left: auto;
   flex-shrink: 0;
   border-radius: 50%;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -295,12 +272,12 @@ const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommen
 .vaccine-banner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: linear-gradient(135deg, var(--accent-blue-soft), var(--surface));
   border: 1px solid rgba(130, 174, 222, 0.32);
   border-radius: var(--radius-lg);
-  padding: 11px 14px;
-  margin-bottom: 10px;
+  padding: 9px 12px;
+  margin-bottom: 8px;
   cursor: pointer;
   box-shadow: var(--shadow-xs);
   transition:
@@ -314,12 +291,12 @@ const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommen
 }
 
 .vaccine-banner .vb-icon {
-  font-size: 28px;
+  font-size: 24px;
   flex-shrink: 0;
 }
 
 .vaccine-banner .vb-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
 }
@@ -330,43 +307,38 @@ const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommen
 }
 
 .vaccine-banner .vb-sub {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
-  margin-top: 3px;
+  margin-top: 2px;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 14px;
+  gap: 3px 12px;
 }
 
 .vb-days {
   color: var(--accent-blue);
   font-weight: 700;
-  margin-left: 4px;
+  margin-left: 3px;
 }
 
-/* 统一卡片高度：网格内不受全局 .card + .card 相邻外边距规则影响，
-   避免同一行卡片因 margin-top 差异导致高度参差不齐 */
+/* 统一卡片高度：网格内不受全局 .card + .card 相邻外边距规则影响 */
 .stats-grid .stat-card {
   margin: 0;
-  min-height: 84px;
+  min-height: 72px;
+  padding: 10px;
+  gap: 8px;
 }
 
-/* 小屏下统计卡单列展示：双列时图标占位过大、数值与说明文字被挤压换行 */
+/* 小屏下统计卡单列展示 */
 @media (max-width: 520px) {
   .stats-grid {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 6px;
   }
 
   .stats-grid .stat-card {
-    min-height: 80px;
-  }
-}
-
-/* PC/平板：统计卡 3 列避免单卡过宽 */
-@media (min-width: 900px) {
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
+    min-height: 64px;
+    padding: 9px;
   }
 }
 </style>

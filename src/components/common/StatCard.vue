@@ -35,8 +35,8 @@ defineProps<{
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px;
+  gap: 8px;
+  padding: 10px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: var(--surface);
@@ -54,13 +54,13 @@ defineProps<{
 }
 
 .stat-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 21px;
+  font-size: 18px;
   flex-shrink: 0;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
@@ -70,7 +70,7 @@ defineProps<{
 }
 
 .stat-value {
-  font-size: 21px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.2;
   color: var(--text);
@@ -101,18 +101,18 @@ defineProps<{
 
 @media (max-width: 400px) {
   .stat-card {
-    padding: 11px;
-    gap: 8px;
+    padding: 8px;
+    gap: 6px;
   }
 
   .stat-icon {
-    width: 38px;
-    height: 38px;
-    font-size: 19px;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
   }
 
   .stat-value {
-    font-size: 18px;
+    font-size: 16px;
   }
 }
 </style>
