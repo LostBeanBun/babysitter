@@ -13,7 +13,6 @@ import { useVaccinationStore } from '@/stores/vaccination'
 import { useTemperatureStore } from '@/stores/temperature'
 import { useMilestoneStore } from '@/stores/milestone'
 import PageHeader from '@/components/common/PageHeader.vue'
-import TimelineList, { type TimelineEntry } from '@/components/timeline/TimelineList.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import OnboardingModal from '@/components/dashboard/OnboardingModal.vue'
 import TodayOverview from '@/components/dashboard/TodayOverview.vue'
@@ -27,8 +26,8 @@ import MedicationForm from '@/components/forms/MedicationForm.vue'
 import VaccinationForm from '@/components/forms/VaccinationForm.vue'
 import TemperatureForm from '@/components/forms/TemperatureForm.vue'
 import MilestoneForm from '@/components/forms/MilestoneForm.vue'
-import { startOfDay, formatTime, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
-import { MS_PER_DAY, FEED_TYPE_LABELS } from '@/constants'
+import { formatTime, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
+import { FEED_TYPE_LABELS } from '@/constants'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import type {
   Feeding,
@@ -121,70 +120,8 @@ onUnmounted(() => window.clearInterval(nowTimer))
 const hasBaby = computed(() => babyStore.babies.length > 0)
 
 const onboardingOpen = ref(false)
-const todayOverviewRef = ref<InstanceType<typeof TodayOverview> | null>(null)
 
-// 今日范围
-const todayStart = computed(() => startOfDay(now.value))
-const todayEnd = computed(() => todayStart.value + MS_PER_DAY - 1)
-
-// 今日数据（按时间过滤）
-const { isPending, scheduleDelete } = useDeleteUndo()
-
-function keep<T extends { id?: number }>(items: T[], kind: string): T[] {
-  return items.filter((x) => !isPending({ kind, id: x.id! }))
-}
-
-const todayFeedings = computed(() =>
-  keep(
-    feedingStore.feedings.filter((f) => f.startTime >= todayStart.value && f.startTime <= todayEnd.value),
-    'feeding',
-  ),
-)
-const todayDiapers = computed(() =>
-  keep(diaperStore.diapers.filter((d) => d.time >= todayStart.value && d.time <= todayEnd.value), 'diaper'),
-)
-const todayPumpings = computed(() =>
-  keep(
-    pumpingStore.pumpings.filter((p) => p.startTime >= todayStart.value && p.startTime <= todayEnd.value),
-    'pumping',
-  ),
-)
-const todaySleeps = computed(() =>
-  keep(
-    sleepStore.sleeps.filter((s) => s.endTime >= todayStart.value && s.startTime <= todayEnd.value),
-    'sleep',
-  ),
-)
-const todayGrowths = computed(() =>
-  keep(growthStore.growths.filter((g) => g.date >= todayStart.value && g.date <= todayEnd.value), 'growth'),
-)
-const todaySolidFoods = computed(() =>
-  keep(solidFoodStore.solidFoods.filter((s) => s.time >= todayStart.value && s.time <= todayEnd.value), 'solidFood'),
-)
-const todayMedications = computed(() =>
-  keep(
-    medicationStore.medications.filter((m) => m.time >= todayStart.value && m.time <= todayEnd.value),
-    'medication',
-  ),
-)
-const todayVaccinations = computed(() =>
-  keep(
-    vaccinationStore.vaccinations.filter((v) => v.date >= todayStart.value && v.date <= todayEnd.value),
-    'vaccination',
-  ),
-)
-const todayTemperatures = computed(() =>
-  keep(
-    temperatureStore.temperatures.filter((tmp) => tmp.time >= todayStart.value && tmp.time <= todayEnd.value),
-    'temperature',
-  ),
-)
-const todayMilestones = computed(() =>
-  keep(
-    milestoneStore.milestones.filter((ms) => ms.time >= todayStart.value && ms.time <= todayEnd.value),
-    'milestone',
-  ),
-)
+const { scheduleDelete } = useDeleteUndo()
 
 // —— 奶睡一键（组合记录喂养 + 睡眠）——
 const sleepFeedOpen = ref(false)
@@ -243,9 +180,31 @@ const modalState = ref<{
     | 'vaccination'
     | 'temperature'
     | 'milestone'
-  editing?: TimelineEntry
+  editing?: {
+    kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone'
+    id: number
+    time: number
+    kindColor: string
+    icon: string
+    color: string
+    title: string
+    detail: string
+    timeLabel?: string
+    raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature | Milestone
+  } | null
+}>(null)
+const confirmDelete = ref<{
+  kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone'
+  id: number
+  time: number
+  kindColor: string
+  icon: string
+  color: string
+  title: string
+  detail: string
+  timeLabel?: string
+  raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature | Milestone
 } | null>(null)
-const confirmDelete = ref<TimelineEntry | null>(null)
 
 function openAdd(
   kind:
@@ -263,14 +222,6 @@ function openAdd(
   modalState.value = { kind }
 }
 
-function onEdit(entry: TimelineEntry) {
-  modalState.value = { kind: entry.kind, editing: entry }
-}
-
-function onDelete(entry: TimelineEntry) {
-  confirmDelete.value = entry
-}
-
 async function confirmDeleteAction() {
   const e = confirmDelete.value
   if (!e) return
@@ -279,7 +230,18 @@ async function confirmDeleteAction() {
 }
 
 /** 真实删除（3 秒撤销窗口结束后执行） */
-async function removeEntry(e: TimelineEntry) {
+async function removeEntry(e: {
+  kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone'
+  id: number
+  time: number
+  kindColor: string
+  icon: string
+  color: string
+  title: string
+  detail: string
+  timeLabel?: string
+  raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature | Milestone
+}) {
   if (e.kind === 'feeding') await feedingStore.remove(e.id)
   else if (e.kind === 'diaper') await diaperStore.remove(e.id)
   else if (e.kind === 'pumping') await pumpingStore.remove(e.id)
@@ -374,7 +336,7 @@ const editPayload = computed(() => {
 
     <template v-else>
       <!-- 今日概览（提醒条 + 统计卡） -->
-      <TodayOverview ref="todayOverviewRef" :now="now" @add="openAdd('vaccination')" />
+      <TodayOverview :now="now" @add="openAdd('vaccination')" />
 
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>
@@ -426,45 +388,6 @@ const editPayload = computed(() => {
         <span class="sf-btn-icon">🍼😴</span>
         <span>{{ t('dashboard.sleepFeedButton') }}</span>
       </button>
-
-      <!-- 今日记录 -->
-      <div class="section-row">
-        <p class="section-title">{{ t('dashboard.todayRecords') }}</p>
-        <button class="btn btn-sm btn-outline" @click="todayOverviewRef?.generateSummary()">{{ t('dashboard.summaryButton') }}</button>
-      </div>
-      <div class="card">
-        <TimelineList
-          v-if="
-            todayFeedings.length +
-              todayDiapers.length +
-              todayPumpings.length +
-              todaySleeps.length +
-              todayGrowths.length +
-              todaySolidFoods.length +
-              todayMedications.length +
-              todayVaccinations.length +
-              todayTemperatures.length +
-              todayMilestones.length >
-            0
-          "
-          :feedings="todayFeedings"
-          :diapers="todayDiapers"
-          :pumpings="todayPumpings"
-          :sleeps="todaySleeps"
-          :growths="todayGrowths"
-          :solid-foods="todaySolidFoods"
-          :medications="todayMedications"
-          :vaccinations="todayVaccinations"
-          :temperatures="todayTemperatures"
-          :milestones="todayMilestones"
-          :deleting-key="confirmDelete ? confirmDelete.kind + '-' + confirmDelete.id : null"
-          @edit="onEdit"
-          @delete="onDelete"
-        />
-        <div v-else class="empty-inline">
-          <p>{{ t('dashboard.noRecords') }}</p>
-        </div>
-      </div>
 
       <!-- 记录弹窗 -->
       <BaseModal

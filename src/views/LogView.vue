@@ -128,6 +128,16 @@ const dateFilter = ref<number | null>(null)
 /** 日期面板展开状态 */
 const dateOpen = ref(false)
 
+const todayStart = computed(() => startOfDay(Date.now()))
+
+/** 当前日期筛选的显示标签 */
+const dateFilterLabel = computed(() => {
+  if (!dateFilter.value) return ''
+  if (dateFilter.value === todayStart.value) return t('log.dateToday')
+  const d = new Date(dateFilter.value)
+  return `${d.getMonth() + 1}/${d.getDate()}`
+})
+
 function matchDate(ts: number): boolean {
   const d = dateFilter.value
   if (!d) return true
@@ -355,6 +365,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
         <select id="filter-select" v-model="filter" class="form-input filter-select">
           <option v-for="f in filters" :key="f.key" :value="f.key">{{ t(f.labelKey) }}</option>
         </select>
+        <span v-if="dateFilter !== null" class="date-selected-label">{{ dateFilterLabel }}</span>
       </template>
       <div v-else class="date-wrap">
         <div class="date-custom">
@@ -563,6 +574,17 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 .date-toggle.filtered {
   color: var(--primary);
   border-color: var(--primary);
+}
+
+.date-selected-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+  flex-shrink: 0;
 }
 
 .date-wrap {
