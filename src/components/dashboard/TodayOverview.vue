@@ -2,17 +2,11 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import StatCard from '@/components/common/StatCard.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
 import { usePumpingStore } from '@/stores/pumping'
 import { useSleepStore } from '@/stores/sleep'
-import { useGrowthStore } from '@/stores/growth'
-import { useSolidFoodStore } from '@/stores/solidFood'
-import { useMedicationStore } from '@/stores/medication'
-import { useTemperatureStore } from '@/stores/temperature'
-import { useMilestoneStore } from '@/stores/milestone'
 import { useVaccinationStore } from '@/stores/vaccination'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import { startOfDay, formatDuration, formatAmount } from '@/utils/format'
@@ -40,17 +34,12 @@ function dismissReminder(kind: 'feed' | 'vaccine') {
   dismissed.value = { ...dismissed.value, [kind]: true }
 }
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
 const diaperStore = useDiaperStore()
 const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
-const growthStore = useGrowthStore()
-const solidFoodStore = useSolidFoodStore()
-const medicationStore = useMedicationStore()
-const temperatureStore = useTemperatureStore()
-const milestoneStore = useMilestoneStore()
 const vaccinationStore = useVaccinationStore()
 const { isPending } = useDeleteUndo()
 
@@ -82,33 +71,7 @@ const todaySleeps = computed(() =>
     'sleep',
   ),
 )
-const todayGrowths = computed(() =>
-  keep(growthStore.growths.filter((g) => g.date >= todayStart.value && g.date <= todayEnd.value), 'growth'),
-)
-const todaySolidFoods = computed(() =>
-  keep(solidFoodStore.solidFoods.filter((s) => s.time >= todayStart.value && s.time <= todayEnd.value), 'solidFood'),
-)
-const todayMedications = computed(() =>
-  keep(
-    medicationStore.medications.filter((m) => m.time >= todayStart.value && m.time <= todayEnd.value),
-    'medication',
-  ),
-)
-const todayTemperatures = computed(() =>
-  keep(
-    temperatureStore.temperatures.filter((tmp) => tmp.time >= todayStart.value && tmp.time <= todayEnd.value),
-    'temperature',
-  ),
-)
-const todayMilestones = computed(() =>
-  keep(
-    milestoneStore.milestones.filter((ms) => ms.time >= todayStart.value && ms.time <= todayEnd.value),
-    'milestone',
-  ),
-)
-
-// —— 疫苗提醒（近 14 天内的待接种项）——
-const upcomingVaccinations = computed(() => {
+  const upcomingVaccinations = computed(() => {
   const cutoff = todayStart.value - 14 * MS_PER_DAY
   return vaccinationStore.vaccinations
     .filter((v) => v.status === 'planned' && v.date >= cutoff)
@@ -163,49 +126,6 @@ const sinceMs = computed(() => (lastFeeding.value ? sinceLastFeedingMs(lastFeedi
 /** 超过建议间隔时提示（实际提醒是否弹出由提醒配置决定） */
 const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommendedMs.value)
 
-// —— 每日小结 ——
-const summaryOpen = ref(false)
-const dailySummary = ref('')
-const summaryCopied = ref(false)
-
-function generateSummary() {
-  const d = new Date(props.now)
-  const dateLabel = new Intl.DateTimeFormat(locale.value, { month: 'long', day: 'numeric' }).format(d)
-  const pumpSum = pumpTotal.value
-  const feedAmountPart =
-    totalMilk.value > 0 ? t('dashboard.summaryFeedAmount', { amount: formatAmount(totalMilk.value) }) : ''
-  const pumpAmountPart = pumpSum > 0 ? t('dashboard.summaryPumpAmount', { amount: formatAmount(pumpSum) }) : ''
-  const lines = [
-    t('dashboard.daySummary', { name: activeBaby.value?.name ?? t('common.baby'), date: dateLabel }),
-    t('dashboard.summaryFeed', { n: feedCount.value, amount: feedAmountPart }),
-    t('dashboard.summarySleep', { duration: formatDuration(sleepTotal.value) }),
-    t('dashboard.summaryDiaper', { n: todayDiapers.value.length }),
-    t('dashboard.summaryPump', { n: todayPumpings.value.length, amount: pumpAmountPart }),
-    t('dashboard.summaryGrowth', { n: todayGrowths.value.length }),
-  ]
-  if (todaySolidFoods.value.length > 0) lines.push(t('dashboard.summarySolidFood', { n: todaySolidFoods.value.length }))
-  if (todayMedications.value.length > 0)
-    lines.push(t('dashboard.summaryMedication', { n: todayMedications.value.length }))
-  if (todayTemperatures.value.length > 0)
-    lines.push(t('dashboard.summaryTemperature', { n: todayTemperatures.value.length }))
-  if (todayMilestones.value.length > 0)
-    lines.push(t('dashboard.summaryMilestone', { n: todayMilestones.value.length }))
-  dailySummary.value = lines.join('\n')
-  summaryCopied.value = false
-  summaryOpen.value = true
-}
-
-async function copySummary() {
-  try {
-    await navigator.clipboard.writeText(dailySummary.value)
-    summaryCopied.value = true
-    setTimeout(() => (summaryCopied.value = false), 2000)
-  } catch {
-    alert(t('dashboard.copyFailed'))
-  }
-}
-
-defineExpose({ generateSummary })
 </script>
 
 <template>
@@ -263,9 +183,9 @@ defineExpose({ generateSummary })
       </button>
     </div>
 
-    <!-- 统计卡 -->
-    <p class="section-title">{{ t('dashboard.todayOverview') }}</p>
-    <div class="stats-grid">
+<!-- 统计卡 -->
+      <p class="section-title">{{ t('dashboard.todayOverview') }}</p>
+      <div class="stats-grid">
       <StatCard
         :label="t('dashboard.statLastFeed')"
         :value="lastFeedingLabel"
@@ -299,17 +219,6 @@ defineExpose({ generateSummary })
         color="#9A8FC8"
       />
     </div>
-
-    <!-- 今日小结弹窗 -->
-    <BaseModal :show="summaryOpen" :title="t('dashboard.summaryTitle')" @close="summaryOpen = false">
-      <pre class="summary-text">{{ dailySummary }}</pre>
-      <div class="form-actions">
-        <button class="btn btn-outline" @click="summaryOpen = false">{{ t('common.close') }}</button>
-        <button class="btn btn-primary" @click="copySummary">
-          {{ summaryCopied ? t('common.copied') : t('dashboard.summaryCopy') }}
-        </button>
-      </div>
-    </BaseModal>
   </div>
 </template>
 
@@ -318,28 +227,6 @@ defineExpose({ generateSummary })
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
-}
-
-.summary-text {
-  font-size: 13px;
-  line-height: 1.9;
-  color: var(--text);
-  background: var(--surface-2);
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: inherit;
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.form-actions .btn {
-  flex: 1;
 }
 
 .feed-reminder-banner {
