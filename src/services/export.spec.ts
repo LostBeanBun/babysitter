@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { csvEscape, toCsv, buildBabyCsvRows, exportBabyCsvs, exportAllBabiesCsv, type BabyCsvData } from '@/services/export'
+import { csvEscape, toCsv, buildBabyCsvRows, exportBabyCsvs, exportAllBabiesCsv, parseCsv, importAllCsv, type BabyCsvData } from '@/services/export'
 import type { Feeding, Baby } from '@/types'
 
 const { mockDb, downloadSpy } = vi.hoisted(() => {
@@ -10,6 +10,7 @@ const { mockDb, downloadSpy } = vi.hoisted(() => {
     })),
     clear: vi.fn<() => Promise<void>>(async () => {}),
     bulkAdd: vi.fn<(items: unknown[]) => Promise<void>>(async () => {}),
+    add: vi.fn<() => Promise<number>>(async () => 1),
   })
   const mockDb = {
     babies: makeTable(),
@@ -23,6 +24,9 @@ const { mockDb, downloadSpy } = vi.hoisted(() => {
     vaccinations: makeTable(),
     temperatures: makeTable(),
     milestones: makeTable(),
+    transaction: vi.fn(async (mode: string, tables: any[], callback: Function) => {
+      return await callback()
+    }),
   }
   const downloadSpy = vi.fn()
   return { mockDb, downloadSpy }
@@ -118,7 +122,8 @@ describe('buildBabyCsvRows', () => {
     expect(rows).toHaveLength(1)
     const row = rows[0]
     expect(row).toHaveLength(10)
-    expect(row[0]).toBe('exportCsv.recordTypes.feeding')
+    // 数据行使用内部键值
+    expect(row[0]).toBe('feeding')
     expect(row[1]).toBe('2026-01-01')
     expect(row[2]).toBe('08:00')
     expect(row[6]).toBe('120 ml')
@@ -155,8 +160,10 @@ describe('exportBabyCsvs', () => {
     expect(type).toBe('text/csv;charset=utf-8')
     const text = await lastDownloadText()
     expect(text.startsWith('\ufeff')).toBe(true)
+    // 表头使用本地化键
     expect(text).toContain('exportCsv.recordType')
-    expect(text).toContain('exportCsv.recordTypes.feeding')
+    // 数据行使用内部键值
+    expect(text).toContain('feeding')
   })
 })
 
@@ -207,5 +214,66 @@ describe('exportAllBabiesCsv', () => {
     const text = await lastDownloadText()
     const lines = text.split('\r\n')
     expect(lines.length).toBe(1)
+  })
+})
+
+describe('parseCsv', () => {
+  it('解析简单 CSV', () => {
+    const rows = parseCsv('a,b,c\r\n1,2,3')
+    expect(rows).toEqual([['a', 'b', 'c'], ['1', '2', '3']])
+  })
+
+  it('处理 BOM', () => {
+    const rows = parseCsv('\ufeffa,b\r\n1,2')
+    expect(rows).toEqual([['a', 'b'], ['1', '2']])
+  })
+
+  it('处理引号转义', () => {
+    const rows = parseCsv('a,b\r\n"hello, world","a""b"')
+    expect(rows).toEqual([['a', 'b'], ['hello, world', 'a"b']])
+  })
+
+  it('处理字段内换行', () => {
+    const rows = parseCsv('a,b\r\n"line1\nline2",c')
+    expect(rows).toEqual([['a', 'b'], ['line1\nline2', 'c']])
+  })
+
+  it('处理 \\r\\n 和 \\n 混合', () => {
+    const rows = parseCsv('a,b\n1,2\r\n3,4')
+    expect(rows).toEqual([['a', 'b'], ['1', '2'], ['3', '4']])
+  })
+
+  it('跳过末尾空行', () => {
+    const rows = parseCsv('a,b\n1,2\n\n')
+    // 新行为：末尾空行被跳过，不产生额外空行
+    expect(rows).toEqual([['a', 'b'], ['1', '2']])
+  })
+})
+
+describe('importAllCsv', () => {
+  beforeEach(() => {
+    // 手动重置所需 mock，避免 clearAllMocks 影响 transaction 等共享 mock
+    vi.clearAllMocks()
+    // 为所有表配置空返回
+    const tables = ['babies', 'feedings', 'diapers', 'pumpings', 'sleeps', 'growths', 'solidFoods', 'medications', 'vaccinations', 'temperatures', 'milestones']
+    for (const t of tables) {
+      mockDb[t].where.mockReturnValue({ equals: () => ({ sortBy: async () => [] }) })
+      mockDb[t].clear.mockResolvedValue(undefined)
+      mockDb[t].bulkAdd.mockResolvedValue(undefined)
+    }
+    // babies 表额外需要 add 方法（用于导入时创建宝宝）
+    mockDb.babies.add = vi.fn().mockImplementation(async (b) => b.id || 1)
+    // transaction mock 会被 clearAllMocks 清除，需重新设置
+    mockDb.transaction = vi.fn(async (mode: string, tables: any[], callback: Function) => {
+      return await callback()
+    })
+    // downloadSpy 也需要重置
+    downloadSpy.mockClear()
+  })
+
+  it('仅表头无数据抛出错误', async () => {
+    const csv = 'exportCsv.recordType,exportCsv.date,exportCsv.time,exportCsv.endDate,exportCsv.endTime,exportCsv.item,exportCsv.value,exportCsv.duration,exportCsv.status,exportCsv.notes'
+    const file = new File([csv], 'empty.csv', { type: 'text/csv' })
+    await expect(importAllCsv(file)).rejects.toThrow('exportCsv.invalidFile')
   })
 })
