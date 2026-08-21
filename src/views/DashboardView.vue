@@ -120,6 +120,7 @@ onUnmounted(() => window.clearInterval(nowTimer))
 const hasBaby = computed(() => babyStore.babies.length > 0)
 
 const onboardingOpen = ref(false)
+const todayOverviewRef = ref<InstanceType<typeof TodayOverview> | null>(null)
 
 const { scheduleDelete } = useDeleteUndo()
 
@@ -336,7 +337,13 @@ const editPayload = computed(() => {
 
     <template v-else>
       <!-- 今日概览（提醒条 + 统计卡） -->
-      <TodayOverview :now="now" @add="openAdd('vaccination')" />
+      <div class="section-row">
+        <p class="section-title">{{ t('dashboard.todayOverview') }}</p>
+        <button class="btn btn-sm btn-outline" @click="todayOverviewRef?.generateSummary()">
+          <span>📋</span> {{ t('dashboard.summaryButton') }}
+        </button>
+      </div>
+      <TodayOverview ref="todayOverviewRef" :now="now" @add="openAdd('vaccination')" />
 
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>

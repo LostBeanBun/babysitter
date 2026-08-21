@@ -17,6 +17,61 @@ import { downloadBlob, formatDate, formatTime, parseDate } from '@/utils/format'
 
 const t = i18n.global.t
 
+/** 双语标签映射：内部键值 -> "English/中文" */
+const BILINGUAL_LABELS: Record<string, string> = {
+  // 记录类型
+  feeding: 'Feeding/喂养',
+  diaper: 'Diaper/纸尿裤',
+  pumping: 'Pumping/吸奶',
+  sleep: 'Sleep/睡眠',
+  growth: 'Growth record/成长记录',
+  solidFood: 'Solid food/辅食',
+  medication: 'Medication/用药',
+  vaccination: 'Vaccination/疫苗',
+  temperature: 'Temperature/体温',
+  milestone: 'Milestone/里程碑',
+  // 喂养类型
+  breast_left: 'Left breast/左侧亲喂',
+  breast_right: 'Right breast/右侧亲喂',
+  breast_both: 'Both breasts/双侧亲喂',
+  bottle_breastmilk: 'Bottle breastmilk/瓶喂母乳',
+  bottle_formula: 'Bottle formula/配方奶',
+  // 纸尿裤类型
+  wet: 'Wet/尿湿',
+  dirty: 'Dirty/便便',
+  both: 'Both/尿+便',
+  // 纸尿裤颜色
+  yellow: 'Yellow/黄色',
+  brown: 'Brown/褐色',
+  green: 'Green/绿色',
+  black: 'Black/黑色',
+  red: 'Red/红色',
+  other: 'Other/其他',
+  // 纸尿裤量
+  small: 'Small/少量',
+  medium: 'Medium/中等',
+  large: 'Large/大量',
+  // 吸奶侧
+  left: 'Left/左侧',
+  right: 'Right/右侧',
+  // 睡眠类型
+  nap: 'Nap/小睡',
+  night: 'Night sleep/夜间睡眠',
+  // 疫苗状态
+  planned: 'Planned/待接种',
+  done: 'Done/已接种',
+  // 体温方式
+  armpit: 'Armpit/腋下',
+  ear: 'Ear/耳温',
+  forehead: 'Forehead/额头',
+  rectal: 'Rectal/肛温',
+}
+
+/** 获取双语标签，未找到返回原键值 */
+function bl(key: string): string {
+  return BILINGUAL_LABELS[key] ?? key
+}
+
 /** CSV 转义：含逗号/引号/换行时包裹引号 */
 export function csvEscape(v: string | number | undefined | null): string {
   if (v === undefined || v === null) return ''
@@ -48,7 +103,7 @@ function csvHeader(withBaby: boolean): Row {
 
 /**
  * 生成单个宝宝的全部记录 CSV 数据行（不含表头）。
- * 使用内部键值，确保跨 locale 可导入。
+ * 使用双语标签，格式为 "English/中文"，确保跨 locale 可读。
  * babyName 提供时每行首列插入宝宝名（用于多宝宝合并导出）。
  */
 export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
@@ -60,12 +115,12 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
   for (const f of data.feedings) {
     rows.push([
       ...nameCol(),
-      'feeding',
+      bl('feeding'),
       formatDate(f.startTime),
       formatTime(f.startTime),
       '',
       '',
-      f.type, // 内部键值：breast_left / breast_right / breast_both / bottle_breastmilk / bottle_formula
+      bl(f.type),
       f.amount ? `${f.amount} ml` : '',
       f.duration ? Math.round(f.duration / 60000) : '',
       '',
@@ -77,13 +132,13 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
   for (const d of data.diapers) {
     rows.push([
       ...nameCol(),
-      'diaper',
+      bl('diaper'),
       formatDate(d.time),
       formatTime(d.time),
       '',
       '',
-      d.type, // 内部键值：wet / dirty / both
-      [d.color ? d.color : '', d.amount ? d.amount : ''].filter(Boolean).join(' · '),
+      bl(d.type),
+      [d.color ? bl(d.color) : '', d.amount ? bl(d.amount) : ''].filter(Boolean).join(' · '),
       '',
       '',
       d.notes ?? '',
@@ -94,12 +149,12 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
   for (const p of data.pumpings) {
     rows.push([
       ...nameCol(),
-      'pumping',
+      bl('pumping'),
       formatDate(p.startTime),
       formatTime(p.startTime),
       '',
       '',
-      p.side, // 内部键值：left / right / both
+      bl(p.side),
       p.amount ? `${p.amount} ml` : '',
       p.duration ? Math.round(p.duration / 60000) : '',
       '',
@@ -111,12 +166,12 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
   for (const s of data.sleeps) {
     rows.push([
       ...nameCol(),
-      'sleep',
+      bl('sleep'),
       formatDate(s.startTime),
       formatTime(s.startTime),
       formatDate(s.endTime),
       formatTime(s.endTime),
-      s.type, // 内部键值：nap / night
+      bl(s.type),
       '',
       Math.round((s.endTime - s.startTime) / 60000),
       '',
@@ -132,7 +187,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
     if (g.headCircumference != null) parts.push(`${g.headCircumference} cm`)
     rows.push([
       ...nameCol(),
-      'growth',
+      bl('growth'),
       formatDate(g.date),
       '',
       '',
@@ -149,7 +204,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
   for (const sf of data.solidFoods) {
     rows.push([
       ...nameCol(),
-      'solidFood',
+      bl('solidFood'),
       formatDate(sf.time),
       formatTime(sf.time),
       '',
@@ -166,7 +221,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
   for (const m of data.medications) {
     rows.push([
       ...nameCol(),
-      'medication',
+      bl('medication'),
       formatDate(m.time),
       formatTime(m.time),
       '',
@@ -183,7 +238,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
   for (const v of data.vaccinations) {
     rows.push([
       ...nameCol(),
-      'vaccination',
+      bl('vaccination'),
       formatDate(v.date),
       '',
       '',
@@ -191,7 +246,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
       v.name,
       v.dose ?? '',
       '',
-      v.status, // 内部键值：planned / done
+      bl(v.status),
       v.notes ?? '',
     ])
   }
@@ -200,12 +255,12 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
   for (const tmp of data.temperatures) {
     rows.push([
       ...nameCol(),
-      'temperature',
+      bl('temperature'),
       formatDate(tmp.time),
       formatTime(tmp.time),
       '',
       '',
-      tmp.method ?? '', // 内部键值：armpit / ear / forehead / rectal
+      tmp.method ? bl(tmp.method) : '',
       tmp.value != null && tmp.value !== 0 ? `${tmp.value} ℃` : '',
       '',
       '',
@@ -217,12 +272,12 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
   for (const ms of data.milestones) {
     rows.push([
       ...nameCol(),
-      'milestone',
+      bl('milestone'),
       formatDate(ms.time),
       formatTime(ms.time),
       '',
       '',
-      ms.type, // 内部键值：roll / sit / crawl / stand / walk / first_word / tooth / wave / other
+      bl(ms.type),
       '',
       '',
       '',
@@ -235,6 +290,9 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
 
 /** 读取单个宝宝的全部记录（按时间排序） */
 async function fetchBabyData(babyId: number): Promise<BabyCsvData> {
+  if (!Number.isFinite(babyId) || babyId <= 0) {
+    throw new Error('Invalid babyId for export')
+  }
   const [feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures, milestones] =
     await Promise.all([
       db.feedings.where('babyId').equals(babyId).sortBy('startTime'),
@@ -246,14 +304,18 @@ async function fetchBabyData(babyId: number): Promise<BabyCsvData> {
       db.medications.where('babyId').equals(babyId).sortBy('time'),
       db.vaccinations.where('babyId').equals(babyId).sortBy('date'),
       db.temperatures.where('babyId').equals(babyId).sortBy('time'),
-      db.milestones.where('babyId').equals(babyId).sortBy('time'),
+      // milestones 表在 v4 新增 babyId 索引，若数据库版本过旧可能抛错，做兼容处理
+      db.milestones.where('babyId').equals(babyId).sortBy('time').catch(() => []),
     ])
   return { feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures, milestones }
 }
 
 /** 导出单个宝宝 CSV（十类记录合并为单个文件，统一宽表结构） */
 export async function exportBabyCsvs(baby: Baby): Promise<void> {
-  const data = await fetchBabyData(baby.id!)
+  if (baby.id === undefined || baby.id === null || !Number.isFinite(baby.id) || baby.id <= 0) {
+    throw new Error('Invalid baby id for export')
+  }
+  const data = await fetchBabyData(baby.id)
   const rows: Row[] = [csvHeader(false), ...buildBabyCsvRows(data)]
   const stamp = formatDate(Date.now())
   downloadBlob(

@@ -122,8 +122,8 @@ describe('buildBabyCsvRows', () => {
     expect(rows).toHaveLength(1)
     const row = rows[0]
     expect(row).toHaveLength(10)
-    // 数据行使用内部键值
-    expect(row[0]).toBe('feeding')
+    // 数据行使用双语标签
+    expect(row[0]).toBe('Feeding/喂养')
     expect(row[1]).toBe('2026-01-01')
     expect(row[2]).toBe('08:00')
     expect(row[6]).toBe('120 ml')
@@ -162,8 +162,8 @@ describe('exportBabyCsvs', () => {
     expect(text.startsWith('\ufeff')).toBe(true)
     // 表头使用本地化键
     expect(text).toContain('exportCsv.recordType')
-    // 数据行使用内部键值
-    expect(text).toContain('feeding')
+    // 数据行使用双语标签
+    expect(text).toContain('Feeding/喂养')
   })
 })
 
