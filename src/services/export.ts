@@ -17,59 +17,110 @@ import { downloadBlob, formatDate, formatTime, parseDate } from '@/utils/format'
 
 const t = i18n.global.t
 
-/** 双语标签映射：内部键值 -> "English/中文" */
-const BILINGUAL_LABELS: Record<string, string> = {
+/** 按语言的标签映射：内部键值 -> 对应语言的显示文本 */
+const LABELS_ZH: Record<string, string> = {
   // 记录类型
-  feeding: 'Feeding/喂养',
-  diaper: 'Diaper/纸尿裤',
-  pumping: 'Pumping/吸奶',
-  sleep: 'Sleep/睡眠',
-  growth: 'Growth record/成长记录',
-  solidFood: 'Solid food/辅食',
-  medication: 'Medication/用药',
-  vaccination: 'Vaccination/疫苗',
-  temperature: 'Temperature/体温',
-  milestone: 'Milestone/里程碑',
+  feeding: '喂养',
+  diaper: '纸尿裤',
+  pumping: '吸奶',
+  sleep: '睡眠',
+  growth: '成长记录',
+  solidFood: '辅食',
+  medication: '用药',
+  vaccination: '疫苗',
+  temperature: '体温',
+  milestone: '里程碑',
   // 喂养类型
-  breast_left: 'Left breast/左侧亲喂',
-  breast_right: 'Right breast/右侧亲喂',
-  breast_both: 'Both breasts/双侧亲喂',
-  bottle_breastmilk: 'Bottle breastmilk/瓶喂母乳',
-  bottle_formula: 'Bottle formula/配方奶',
+  breast_left: '左侧亲喂',
+  breast_right: '右侧亲喂',
+  breast_both: '双侧亲喂',
+  bottle_breastmilk: '瓶喂母乳',
+  bottle_formula: '配方奶',
   // 纸尿裤类型
-  wet: 'Wet/尿湿',
-  dirty: 'Dirty/便便',
-  both: 'Both/尿+便',
+  wet: '尿湿',
+  dirty: '便便',
+  both: '尿+便',
   // 纸尿裤颜色
-  yellow: 'Yellow/黄色',
-  brown: 'Brown/褐色',
-  green: 'Green/绿色',
-  black: 'Black/黑色',
-  red: 'Red/红色',
-  other: 'Other/其他',
+  yellow: '黄色',
+  brown: '褐色',
+  green: '绿色',
+  black: '黑色',
+  red: '红色',
+  other: '其他',
   // 纸尿裤量
-  small: 'Small/少量',
-  medium: 'Medium/中等',
-  large: 'Large/大量',
+  small: '少量',
+  medium: '中等',
+  large: '大量',
   // 吸奶侧
-  left: 'Left/左侧',
-  right: 'Right/右侧',
+  left: '左侧',
+  right: '右侧',
   // 睡眠类型
-  nap: 'Nap/小睡',
-  night: 'Night sleep/夜间睡眠',
+  nap: '小睡',
+  night: '夜间睡眠',
   // 疫苗状态
-  planned: 'Planned/待接种',
-  done: 'Done/已接种',
+  planned: '待接种',
+  done: '已接种',
   // 体温方式
-  armpit: 'Armpit/腋下',
-  ear: 'Ear/耳温',
-  forehead: 'Forehead/额头',
-  rectal: 'Rectal/肛温',
+  armpit: '腋下',
+  ear: '耳温',
+  forehead: '额头',
+  rectal: '肛温',
 }
 
-/** 获取双语标签，未找到返回原键值 */
+const LABELS_EN: Record<string, string> = {
+  // 记录类型
+  feeding: 'Feeding',
+  diaper: 'Diaper',
+  pumping: 'Pumping',
+  sleep: 'Sleep',
+  growth: 'Growth record',
+  solidFood: 'Solid food',
+  medication: 'Medication',
+  vaccination: 'Vaccination',
+  temperature: 'Temperature',
+  milestone: 'Milestone',
+  // 喂养类型
+  breast_left: 'Left breast',
+  breast_right: 'Right breast',
+  breast_both: 'Both breasts',
+  bottle_breastmilk: 'Bottle breastmilk',
+  bottle_formula: 'Bottle formula',
+  // 纸尿裤类型
+  wet: 'Wet',
+  dirty: 'Dirty',
+  both: 'Both',
+  // 纸尿裤颜色
+  yellow: 'Yellow',
+  brown: 'Brown',
+  green: 'Green',
+  black: 'Black',
+  red: 'Red',
+  other: 'Other',
+  // 纸尿裤量
+  small: 'Small',
+  medium: 'Medium',
+  large: 'Large',
+  // 吸奶侧
+  left: 'Left',
+  right: 'Right',
+  // 睡眠类型
+  nap: 'Nap',
+  night: 'Night sleep',
+  // 疫苗状态
+  planned: 'Planned',
+  done: 'Done',
+  // 体温方式
+  armpit: 'Armpit',
+  ear: 'Ear',
+  forehead: 'Forehead',
+  rectal: 'Rectal',
+}
+
+/** 获取当前语言标签，未找到返回原键值 */
 function bl(key: string): string {
-  return BILINGUAL_LABELS[key] ?? key
+  const locale = i18n.global.locale.value
+  const map = locale === 'en-US' ? LABELS_EN : LABELS_ZH
+  return map[key] ?? key
 }
 
 /** CSV 转义：含逗号/引号/换行时包裹引号 */

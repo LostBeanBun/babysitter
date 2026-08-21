@@ -33,7 +33,7 @@ const { mockDb, downloadSpy } = vi.hoisted(() => {
 })
 
 vi.mock('@/db', () => ({ db: mockDb, DB_VERSION: 4 }))
-vi.mock('@/i18n', () => ({ default: { global: { t: (key: string) => key } } }))
+vi.mock('@/i18n', () => ({ default: { global: { t: (key: string) => key, locale: { value: 'zh-CN' } } } }))
 vi.mock('@/utils/format', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/utils/format')>()
   return { ...actual, downloadBlob: downloadSpy }
@@ -122,8 +122,8 @@ describe('buildBabyCsvRows', () => {
     expect(rows).toHaveLength(1)
     const row = rows[0]
     expect(row).toHaveLength(10)
-    // 数据行使用双语标签
-    expect(row[0]).toBe('Feeding/喂养')
+    // 数据行使用当前语言标签
+    expect(row[0]).toBe('喂养')
     expect(row[1]).toBe('2026-01-01')
     expect(row[2]).toBe('08:00')
     expect(row[6]).toBe('120 ml')
@@ -162,8 +162,8 @@ describe('exportBabyCsvs', () => {
     expect(text.startsWith('\ufeff')).toBe(true)
     // 表头使用本地化键
     expect(text).toContain('exportCsv.recordType')
-    // 数据行使用双语标签
-    expect(text).toContain('Feeding/喂养')
+    // 数据行使用当前语言标签
+    expect(text).toContain('喂养')
   })
 })
 
