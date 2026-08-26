@@ -164,6 +164,7 @@ function clearDateFilter() {
 /** 删除撤销：过滤待删除记录 */
 const { isPending, scheduleDelete } = useDeleteUndo()
 const activeTimer = useActiveTimer()
+const anyModalOpen = computed(() => modalState.value !== null || confirmDelete.value !== null)
 
 /** 悬浮球点击：重新打开对应计时表单 */
 function openTimerForm() {
@@ -525,7 +526,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
     </BaseModal>
 
     <!-- 悬浮计时球 -->
-    <FloatingTimer :active="activeTimer.isActive.value" @open="openTimerForm" />
+    <FloatingTimer :active="activeTimer.isActive.value && !anyModalOpen" @open="openTimerForm" />
   </div>
 </template>
 
