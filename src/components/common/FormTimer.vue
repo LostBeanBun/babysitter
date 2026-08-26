@@ -5,11 +5,14 @@
  * - 计时中：显示已计时长 + 停止按钮
  * - 编辑态（editing）：显示既有记录时长（recordedText）
  * - 已结束（finished）：显示区间回显（finishedText），可重新开始
+ *
+ * 当传入 kind 时，与全局 useActiveTimer 同步，支持悬浮球跨弹窗显示。
  */
-import { ref, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { formatDuration } from '@/utils/format'
+import { useActiveTimer, type TimerKind } from '@/composables/useActiveTimer'
 
-defineProps<{
+const props = defineProps<{
   editing?: boolean
   recordedText?: string
   finished?: boolean
@@ -17,6 +20,10 @@ defineProps<{
   startLabel: string
   stopLabel: string
   hint?: string
+  /** 传入时启用全局同步，支持悬浮球 */
+  kind?: TimerKind
+  /** 父组件传入的当前起始时间（ms 时间戳），用于同步修改起始时间 */
+  startTs?: number
 }>()
 
 const emit = defineEmits<{
@@ -24,30 +31,76 @@ const emit = defineEmits<{
   (e: 'stop', payload: { start: number; end: number }): void
 }>()
 
+const activeTimer = useActiveTimer()
+const useGlobal = () => props.kind != null
+
 const running = ref(false)
 const elapsedMs = ref(0)
-let timerId: number | undefined
-let startTs = 0
+let localTimerId: number | undefined
+let localStartTs = 0
+
+// —— 全局同步：挂载时若计时器已在运行，恢复状态 ——
+onMounted(() => {
+  if (useGlobal() && activeTimer.isActive.value && activeTimer.kind.value === props.kind) {
+    running.value = true
+    elapsedMs.value = activeTimer.elapsedMs.value
+  }
+})
+
+// —— 全局同步：外部 startTs 变化时重算 ——
+watch(
+  () => props.startTs,
+  (ts) => {
+    if (useGlobal() && running.value && ts && ts > 0) {
+      activeTimer.updateStartTime(ts)
+      elapsedMs.value = Date.now() - ts
+    }
+  },
+)
 
 function start() {
   running.value = true
-  startTs = Date.now()
   elapsedMs.value = 0
-  timerId = window.setInterval(() => {
-    elapsedMs.value = Date.now() - startTs
-  }, 1000)
+  if (useGlobal()) {
+    const now = Date.now()
+    localStartTs = now
+    activeTimer.start(props.kind!, now)
+  } else {
+    localStartTs = Date.now()
+    localTimerId = window.setInterval(() => {
+      elapsedMs.value = Date.now() - localStartTs
+    }, 1000)
+  }
   emit('start')
 }
 
 function stop() {
   running.value = false
-  if (timerId) clearInterval(timerId)
-  timerId = undefined
-  emit('stop', { start: startTs, end: Date.now() })
+  if (useGlobal()) {
+    const result = activeTimer.stop()
+    const end = result?.end ?? Date.now()
+    emit('stop', { start: localStartTs, end })
+  } else {
+    if (localTimerId) clearInterval(localTimerId)
+    localTimerId = undefined
+    emit('stop', { start: localStartTs, end: Date.now() })
+  }
+}
+
+// —— 全局同步：每秒从全局状态读取 elapsedMs ——
+let syncId: number | undefined
+if (useGlobal()) {
+  syncId = window.setInterval(() => {
+    if (running.value && useGlobal()) {
+      elapsedMs.value = activeTimer.elapsedMs.value
+    }
+  }, 1000)
 }
 
 onUnmounted(() => {
-  if (timerId) clearInterval(timerId)
+  if (localTimerId) clearInterval(localTimerId)
+  if (syncId) clearInterval(syncId)
+  // 全局计时器不在这里清除——悬浮球需要它继续运行
 })
 </script>
 

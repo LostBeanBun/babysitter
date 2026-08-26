@@ -116,6 +116,8 @@ async function submit() {
       :start-label="t('feed.startTimer')"
       :stop-label="t('feed.stopTimer')"
       :hint="t('feed.timerHint')"
+      kind="feeding"
+      :start-ts="fromDateTimeLocal(startTime)"
       @start="onTimerStart"
       @stop="onTimerStop"
     />

@@ -14,6 +14,7 @@ import { useMilestoneStore } from '@/stores/milestone'
 import PageHeader from '@/components/common/PageHeader.vue'
 import TimelineList, { type TimelineEntry } from '@/components/timeline/TimelineList.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import FloatingTimer from '@/components/common/FloatingTimer.vue'
 import FeedingForm from '@/components/forms/FeedingForm.vue'
 import DiaperForm from '@/components/forms/DiaperForm.vue'
 import PumpingForm from '@/components/forms/PumpingForm.vue'
@@ -26,6 +27,7 @@ import TemperatureForm from '@/components/forms/TemperatureForm.vue'
 import MilestoneForm from '@/components/forms/MilestoneForm.vue'
 import { formatTime, startOfDay } from '@/utils/format'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
+import { useActiveTimer } from '@/composables/useActiveTimer'
 import type {
   Feeding,
   DiaperChange,
@@ -161,6 +163,13 @@ function clearDateFilter() {
 
 /** 删除撤销：过滤待删除记录 */
 const { isPending, scheduleDelete } = useDeleteUndo()
+const activeTimer = useActiveTimer()
+
+/** 悬浮球点击：重新打开对应计时表单 */
+function openTimerForm() {
+  const kind = activeTimer.kind.value
+  if (kind) openAdd(kind)
+}
 
 function keep<T extends { id?: number }>(items: T[], kind: string): T[] {
   return items.filter((x) => !isPending({ kind, id: x.id! }))
@@ -248,6 +257,10 @@ const confirmDelete = ref<TimelineEntry | null>(null)
 
 function onEdit(entry: TimelineEntry) {
   modalState.value = { kind: entry.kind, editing: entry }
+}
+
+function openAdd(kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone') {
+  modalState.value = { kind }
 }
 
 function onDelete(entry: TimelineEntry) {
@@ -510,6 +523,9 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
         <button class="btn btn-danger-soft" @click="confirmDeleteAction">{{ t('log.confirmDelete') }}</button>
       </div>
     </BaseModal>
+
+    <!-- 悬浮计时球 -->
+    <FloatingTimer :active="activeTimer.isActive.value" @open="openTimerForm" />
   </div>
 </template>
 

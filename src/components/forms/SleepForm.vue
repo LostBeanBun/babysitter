@@ -90,6 +90,8 @@ async function submit() {
       :start-label="t('sleep.startTimer')"
       :stop-label="t('sleep.stopTimer')"
       :hint="t('sleep.timerHint')"
+      kind="sleep"
+      :start-ts="fromDateTimeLocal(startTime)"
       @start="onTimerStart"
       @stop="onTimerStop"
     />

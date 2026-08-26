@@ -100,6 +100,8 @@ async function submit() {
       :start-label="t('pump.startTimer')"
       :stop-label="t('pump.stopTimer')"
       :hint="t('pump.timerHint')"
+      kind="pumping"
+      :start-ts="fromDateTimeLocal(startTime)"
       @start="onTimerStart"
       @stop="onTimerStop"
     />
