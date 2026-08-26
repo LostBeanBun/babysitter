@@ -9,7 +9,7 @@
  * 当传入 kind 时，与全局 useActiveTimer 同步，支持悬浮球跨弹窗显示。
  */
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { formatDuration } from '@/utils/format'
+import { formatDurationHMS } from '@/utils/format'
 import { useActiveTimer, type TimerKind } from '@/composables/useActiveTimer'
 
 const props = defineProps<{
@@ -119,7 +119,7 @@ onUnmounted(() => {
       <div class="timer-done">{{ recordedText }}</div>
     </template>
     <template v-else-if="running">
-      <div class="timer-display">{{ formatDuration(elapsedMs) }}</div>
+      <div class="timer-display">{{ formatDurationHMS(elapsedMs) }}</div>
       <button type="button" class="btn btn-soft btn-lg" @click="stop">{{ stopLabel }}</button>
     </template>
     <template v-else-if="finished">
