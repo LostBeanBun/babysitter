@@ -27,7 +27,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'start'): void
+  (e: 'start', startTs: number): void
   (e: 'stop', payload: { start: number; end: number }): void
 }>()
 
@@ -38,6 +38,7 @@ const running = ref(false)
 const elapsedMs = ref(0)
 let localTimerId: number | undefined
 let localStartTs = 0
+let justStarted = false
 
 // —— 全局同步：挂载时若计时器已在运行，恢复状态 ——
 onMounted(() => {
@@ -48,10 +49,14 @@ onMounted(() => {
   }
 })
 
-// —— 全局同步：外部 startTs 变化时重算 ——
+// —— 全局同步：外部 startTs 变化时重算（仅用户手动编辑时间输入时触发，start 刚触发时跳过） ——
 watch(
   () => props.startTs,
   (ts) => {
+    if (justStarted) {
+      justStarted = false
+      return
+    }
     if (useGlobal() && running.value && ts && ts > 0) {
       localStartTs = ts
       activeTimer.updateStartTime(ts)
@@ -63,17 +68,19 @@ watch(
 function start() {
   running.value = true
   elapsedMs.value = 0
+  justStarted = true
   if (useGlobal()) {
     const now = Date.now()
     localStartTs = now
     activeTimer.start(props.kind!, now)
+    emit('start', now)
   } else {
     localStartTs = Date.now()
     localTimerId = window.setInterval(() => {
       elapsedMs.value = Date.now() - localStartTs
     }, 1000)
+    emit('start', localStartTs)
   }
-  emit('start')
 }
 
 function stop() {

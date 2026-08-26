@@ -35,9 +35,9 @@ const endTime = ref(props.editing?.endTime ? toDateTimeLocal(props.editing.endTi
 // 计时器回调：由 FormTimer 组件驱动
 const timerFinished = ref(false)
 
-function onTimerStart() {
+function onTimerStart(ts: number) {
   timerFinished.value = false
-  startTime.value = toDateTimeLocal(Date.now())
+  startTime.value = toDateTimeLocal(ts)
 }
 
 function onTimerStop({ start, end }: { start: number; end: number }) {
