@@ -31,7 +31,7 @@ const isBreast = computed(() => type.value.startsWith('breast'))
 const amount = ref<string>(props.editing?.amount != null ? String(props.editing.amount) : '')
 const notes = ref(props.editing?.notes ?? '')
 const startTime = ref(toDateTimeLocal(props.editing?.startTime ?? Date.now()))
-const endTime = ref(props.editing?.endTime ? toDateTimeLocal(props.editing.endTime) : '')
+const endTime = ref(props.editing?.endTime ? toDateTimeLocal(props.editing.endTime) : startTime.value)
 
 // 计时器回调：由 FormTimer 组件驱动
 const timerFinished = ref(false)
@@ -52,12 +52,16 @@ const editingRecordedText = computed(() =>
 )
 
 /** 计时结束后回显起止区间 */
-const finishedText = computed(() =>
-  t('feed.recordedRange', {
+const finishedText = computed(() => {
+  const start = fromDateTimeLocal(startTime.value)
+  const end = fromDateTimeLocal(endTime.value)
+  const dur = start && end && end > start ? formatDuration(end - start) : '—'
+  return t('feed.recordedRange', {
+    duration: dur,
     start: startTime.value.replace('T', ' '),
     end: endTime.value ? t('feed.endRange', { end: endTime.value.replace('T', ' ') }) : '',
-  }),
-)
+  })
+})
 
 async function submit() {
   const start = fromDateTimeLocal(startTime.value) ?? Date.now()
