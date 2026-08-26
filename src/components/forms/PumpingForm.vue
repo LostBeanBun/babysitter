@@ -33,11 +33,15 @@ const startTime = ref(toDateTimeLocal(props.editing?.startTime ?? Date.now()))
 const endTime = ref(props.editing?.endTime ? toDateTimeLocal(props.editing.endTime) : '')
 
 // 计时器回调：由 FormTimer 组件驱动
+const timerFinished = ref(false)
+
 function onTimerStart() {
+  timerFinished.value = false
   startTime.value = toDateTimeLocal(Date.now())
 }
 
 function onTimerStop({ start, end }: { start: number; end: number }) {
+  timerFinished.value = true
   startTime.value = toDateTimeLocal(start)
   endTime.value = toDateTimeLocal(end)
 }
@@ -45,6 +49,14 @@ function onTimerStop({ start, end }: { start: number; end: number }) {
 /** 编辑既有吸奶记录时回显时长 */
 const recordedText = computed(() =>
   t('pump.recordedDuration', { duration: props.editing?.duration ? formatDuration(props.editing.duration) : '—' }),
+)
+
+/** 计时结束后回显起止区间 */
+const finishedText = computed(() =>
+  t('pump.recordedRange', {
+    start: startTime.value.replace('T', ' '),
+    end: endTime.value ? t('pump.endRange', { end: endTime.value.replace('T', ' ') }) : '',
+  }),
 )
 
 async function submit() {
@@ -97,6 +109,8 @@ async function submit() {
     <FormTimer
       :editing="!!props.editing"
       :recorded-text="recordedText"
+      :finished="timerFinished"
+      :finished-text="finishedText"
       :start-label="t('pump.startTimer')"
       :stop-label="t('pump.stopTimer')"
       :hint="t('pump.timerHint')"

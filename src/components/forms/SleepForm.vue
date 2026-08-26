@@ -26,11 +26,15 @@ const endTime = ref(
 )
 
 // 计时器回调：由 FormTimer 组件驱动
+const timerFinished = ref(false)
+
 function onTimerStart() {
+  timerFinished.value = false
   startTime.value = toDateTimeLocal(Date.now())
 }
 
 function onTimerStop({ start, end }: { start: number; end: number }) {
+  timerFinished.value = true
   startTime.value = toDateTimeLocal(start)
   endTime.value = toDateTimeLocal(end)
 }
@@ -39,6 +43,14 @@ function onTimerStop({ start, end }: { start: number; end: number }) {
 const recordedText = computed(() =>
   t('sleep.recordedDuration', {
     duration: formatDuration((props.editing?.endTime ?? 0) - (props.editing?.startTime ?? 0)),
+  }),
+)
+
+/** 计时结束后回显起止区间 */
+const finishedText = computed(() =>
+  t('sleep.recordedRange', {
+    start: startTime.value.replace('T', ' '),
+    end: endTime.value ? t('sleep.endRange', { end: endTime.value.replace('T', ' ') }) : '',
   }),
 )
 
@@ -87,6 +99,8 @@ async function submit() {
     <FormTimer
       :editing="!!props.editing"
       :recorded-text="recordedText"
+      :finished="timerFinished"
+      :finished-text="finishedText"
       :start-label="t('sleep.startTimer')"
       :stop-label="t('sleep.stopTimer')"
       :hint="t('sleep.timerHint')"

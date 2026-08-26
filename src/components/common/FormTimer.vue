@@ -44,6 +44,7 @@ onMounted(() => {
   if (useGlobal() && activeTimer.isActive.value && activeTimer.kind.value === props.kind) {
     running.value = true
     elapsedMs.value = activeTimer.elapsedMs.value
+    localStartTs = activeTimer.startTime.value
   }
 })
 
@@ -52,6 +53,7 @@ watch(
   () => props.startTs,
   (ts) => {
     if (useGlobal() && running.value && ts && ts > 0) {
+      localStartTs = ts
       activeTimer.updateStartTime(ts)
       elapsedMs.value = Date.now() - ts
     }
