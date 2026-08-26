@@ -37,6 +37,7 @@ const endTime = ref(props.editing?.endTime ? toDateTimeLocal(props.editing.endTi
 const timerFinished = ref(false)
 
 function onTimerStart(ts: number) {
+  timerFinished.value = false
   startTime.value = toDateTimeLocal(ts)
 }
 
