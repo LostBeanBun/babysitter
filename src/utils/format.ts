@@ -28,8 +28,8 @@ export function startOfDay(ts: number): number {
 export function formatDuration(ms: number): string {
   const t = i18n.global.t
   if (!ms || ms < 0) return t('duration.zero')
-  const totalMin = Math.round(ms / 60000)
-  if (totalMin < 1) return `${Math.max(1, Math.round(ms / 1000))}${t('duration.second')}`
+  const totalMin = Math.floor(ms / 60000)
+  if (totalMin < 1) return `${Math.max(1, Math.floor(ms / 1000))}${t('duration.second')}`
   if (totalMin < 60) return `${totalMin}${t('duration.minute')}`
   const h = Math.floor(totalMin / 60)
   const m = totalMin % 60
