@@ -27,11 +27,13 @@ export const useSleepStore = defineStore('sleep', () => {
     if (babyId == null) throw new Error(t('errors.noBaby'))
     if (data.endTime <= data.startTime) throw new Error(t('errors.sleepOrder'))
     const now = Date.now()
+    const duration = data.endTime - data.startTime
     const id = await db.sleeps.add({
       babyId,
       type: data.type,
       startTime: data.startTime,
       endTime: data.endTime,
+      duration,
       notes: data.notes,
       createdAt: now,
       updatedAt: now,

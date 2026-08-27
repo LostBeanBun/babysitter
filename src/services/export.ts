@@ -224,7 +224,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
       formatTime(s.endTime),
       bl(s.type),
       '',
-      Math.round((s.endTime - s.startTime) / 60000),
+      s.duration ?? Math.round((s.endTime - s.startTime) / 60000),
       '',
       s.notes ?? '',
     ])

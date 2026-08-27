@@ -95,6 +95,8 @@ export interface Sleep {
   type: SleepType
   startTime: number
   endTime: number
+  /** 睡眠时长 ms */
+  duration?: number
   notes?: string
   createdAt: number
   updatedAt: number

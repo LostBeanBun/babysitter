@@ -3,7 +3,7 @@
  * 所有提醒默认关闭，由用户在设置页自行开启并配置参数。
  * 通知节流状态持久化在 localStorage，避免刷新页面后重复提醒。
  */
-import type { Baby, Feeding, Medication, Vaccination, DiaperChange } from '@/types'
+import type { Baby, Feeding, Medication, Vaccination, DiaperChange, Sleep } from '@/types'
 import { recommendedIntervalMs } from '@/utils/feedingGuide'
 import i18n from '@/i18n'
 
@@ -13,7 +13,7 @@ export type ReminderType = 'feed' | 'sleep' | 'medication' | 'vaccination' | 'di
 
 export interface ReminderConfig {
   feed: { enabled: boolean; intervalHours: number }
-  sleep: { enabled: boolean; time: string }
+  sleep: { enabled: boolean; time: string; intervalHours: number }
   medication: { enabled: boolean; intervalHours: number }
   vaccination: { enabled: boolean }
   diaper: { enabled: boolean; intervalHours: number }
@@ -21,7 +21,7 @@ export interface ReminderConfig {
 
 export const DEFAULT_REMINDERS: ReminderConfig = {
   feed: { enabled: false, intervalHours: 0 },
-  sleep: { enabled: false, time: '20:00' },
+  sleep: { enabled: false, time: '20:00', intervalHours: 0 },
   medication: { enabled: false, intervalHours: 8 },
   vaccination: { enabled: false },
   diaper: { enabled: false, intervalHours: 3 },
@@ -96,6 +96,7 @@ export interface ReminderContext {
   medications: Medication[]
   vaccinations: Vaccination[]
   diapers: DiaperChange[]
+  sleeps: Sleep[]
 }
 
 export interface ReminderHit {
@@ -131,19 +132,36 @@ export function checkReminders(ctx: ReminderContext): ReminderHit[] {
     }
   }
 
-  // 睡眠：到达设置的晚间就寝时间（1 小时窗口内，当天仅一次）
-  if (cfg.sleep.enabled && cfg.sleep.time) {
-    const [h, m] = cfg.sleep.time.split(':').map(Number)
-    const target = new Date(now)
-    target.setHours(h, m, 0, 0)
-    if (now >= target.getTime() && now - target.getTime() <= 3600_000 && lastNotified('sleep') < target.getTime()) {
-      markNotified('sleep', now)
-      hits.push({
-        type: 'sleep',
-        title: t('reminders.sleep.title'),
-        body: t('reminders.sleep.body', { time: cfg.sleep.time }),
-        tag: 'reminder-sleep',
-      })
+  // 睡眠：到达设置的晚间就寝时间（1 小时窗口内，当天仅一次）或距上次睡眠超过间隔
+  if (cfg.sleep.enabled) {
+    // 固定时间提醒
+    if (cfg.sleep.time) {
+      const [h, m] = cfg.sleep.time.split(':').map(Number)
+      const target = new Date(now)
+      target.setHours(h, m, 0, 0)
+      if (now >= target.getTime() && now - target.getTime() <= 3600_000 && lastNotified('sleep') < target.getTime()) {
+        markNotified('sleep', now)
+        hits.push({
+          type: 'sleep',
+          title: t('reminders.sleep.title'),
+          body: t('reminders.sleep.bodyTime', { time: cfg.sleep.time }),
+          tag: 'reminder-sleep',
+        })
+      }
+    }
+    // 间隔提醒（距上次睡眠超过设置间隔）
+    if (cfg.sleep.intervalHours > 0 && ctx.sleeps.length) {
+      const last = [...ctx.sleeps].sort((a, b) => b.startTime - a.startTime)[0]
+      const since = now - last.startTime
+      if (since > cfg.sleep.intervalHours * 3600_000 && now - lastNotified('sleep') > THROTTLE_MS) {
+        markNotified('sleep', now)
+        hits.push({
+          type: 'sleep',
+          title: t('reminders.sleep.title'),
+          body: t('reminders.sleep.body', { duration: formatMin(since) }),
+          tag: 'reminder-sleep',
+        })
+      }
     }
   }
 

@@ -112,7 +112,7 @@ function persistReminders() {
 }
 
 /** 间隔类提醒参数更新（组件统一回调，转 number 后写回配置） */
-function setIntervalReminder(type: 'feed' | 'medication' | 'diaper', v: number | string) {
+function setIntervalReminder(type: 'feed' | 'medication' | 'diaper' | 'sleep', v: number | string) {
   reminders.value[type].intervalHours = typeof v === 'number' ? v : Number(v)
 }
 
@@ -337,6 +337,18 @@ async function confirmClearAll() {
             :model-value="reminders.sleep.time"
             :placeholder="t('common.selectTime')"
             @update:model-value="setSleepTime"
+            @change="persistReminders"
+          />
+          <ReminderParam
+            v-if="r.type === 'sleep' && reminders.sleep.enabled"
+            mode="interval"
+            :label="t('reminders.intervalLabel')"
+            :model-value="reminders.sleep.intervalHours"
+            :min="0"
+            :step="1"
+            :placeholder="t('reminders.intervalPh', { n: '4' })"
+            :hint="t('reminders.sleep.hint')"
+            @update:model-value="(v) => setIntervalReminder('sleep', v)"
             @change="persistReminders"
           />
           <ReminderParam

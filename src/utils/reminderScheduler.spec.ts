@@ -18,6 +18,7 @@ function makeContext(partial: Partial<ReminderContext> = {}): ReminderContext {
     medications: [],
     vaccinations: [],
     diapers: [],
+    sleeps: [],
     ...partial,
   }
 }
@@ -106,14 +107,14 @@ describe('checkReminders - 喂奶', () => {
 
 describe('checkReminders - 睡眠', () => {
   it('就寝时间窗口内触发（1 小时）', () => {
-    saveReminders({ ...DEFAULT_REMINDERS, sleep: { enabled: true, time: '20:00' } })
+    saveReminders({ ...DEFAULT_REMINDERS, sleep: { enabled: true, time: '20:00', intervalHours: 0 } })
     const ctx = makeContext({ now: new Date(2026, 0, 1, 20, 30).getTime() })
     const hits = checkReminders(ctx)
     expect(hits.some((h) => h.type === 'sleep')).toBe(true)
   })
 
   it('窗口外不触发', () => {
-    saveReminders({ ...DEFAULT_REMINDERS, sleep: { enabled: true, time: '20:00' } })
+    saveReminders({ ...DEFAULT_REMINDERS, sleep: { enabled: true, time: '20:00', intervalHours: 0 } })
     const ctx = makeContext({ now: new Date(2026, 0, 1, 21, 30).getTime() })
     expect(checkReminders(ctx).length).toBe(0)
   })

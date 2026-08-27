@@ -9,6 +9,7 @@ import { useFeedingStore } from '@/stores/feeding'
 import { useMedicationStore } from '@/stores/medication'
 import { useVaccinationStore } from '@/stores/vaccination'
 import { useDiaperStore } from '@/stores/diaper'
+import { useSleepStore } from '@/stores/sleep'
 
 const CHECK_INTERVAL = 60_000
 
@@ -20,6 +21,7 @@ export function useReminderLoop() {
   const medicationStore = useMedicationStore()
   const vaccinationStore = useVaccinationStore()
   const diaperStore = useDiaperStore()
+  const sleepStore = useSleepStore()
 
   function sendNotifications() {
     if (!('Notification' in window) || Notification.permission !== 'granted') return
@@ -32,6 +34,7 @@ export function useReminderLoop() {
       medications: medicationStore.medications,
       vaccinations: vaccinationStore.vaccinations,
       diapers: diaperStore.diapers,
+      sleeps: sleepStore.sleeps,
     })
     hits.forEach((h) => {
       const notification = new Notification(h.title, { body: h.body, tag: h.tag })

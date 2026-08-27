@@ -3,20 +3,22 @@
  * 悬浮计时球：可自由拖拽，显示当前活跃计时器状态。
  * - 点击主体：emit('open') 由父组件重新打开对应表单
  * - 无关闭按钮：仅在用户保存/取消记录时消失
- * - 支持触摸拖拽水平+垂直移动
+ * - 支持触摸+鼠标拖拽水平+垂直移动
  * - 垂直范围限制在 header 与 tabbar 之间
  */
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useActiveTimer } from '@/composables/useActiveTimer'
 import { formatDuration } from '@/utils/format'
 
 defineProps<{ active: boolean }>()
 const emit = defineEmits<{ open: [] }>()
 
+const { t } = useI18n()
 const activeTimer = useActiveTimer()
 
 const ICON_MAP: Record<string, string> = { feeding: '🍼', sleep: '😴', pumping: '🎀' }
-const KIND_LABEL_MAP: Record<string, string> = { feeding: '喂养', sleep: '睡眠', pumping: '吸奶' }
+const KIND_LABEL_KEYS: Record<string, string> = { feeding: 'floatingTimer.kindFeeding', sleep: 'floatingTimer.kindSleep', pumping: 'floatingTimer.kindPumping' }
 
 const icon = ref('🍼')
 const label = ref('')
@@ -51,30 +53,30 @@ watch(
   (k) => {
     if (k) {
       icon.value = ICON_MAP[k] ?? '⏱️'
-      label.value = KIND_LABEL_MAP[k] ?? ''
+      label.value = t(KIND_LABEL_KEYS[k] ?? '')
     }
   },
   { immediate: true },
 )
 
-// —— 拖拽逻辑 ——
+// —— 拖拽逻辑（触摸+鼠标） ——
 let dragStartX = 0
 let dragStartY = 0
 let startDragX = 0
 let startDragY = 0
 let dragging = false
 
-function onTouchStart(e: TouchEvent) {
+function onStart(clientX: number, clientY: number) {
   dragging = false
-  dragStartX = e.touches[0].clientX
-  dragStartY = e.touches[0].clientY
+  dragStartX = clientX
+  dragStartY = clientY
   startDragX = posX.value
   startDragY = posY.value
 }
 
-function onTouchMove(e: TouchEvent) {
-  const dx = e.touches[0].clientX - dragStartX
-  const dy = e.touches[0].clientY - dragStartY
+function onMove(clientX: number, clientY: number) {
+  const dx = clientX - dragStartX
+  const dy = clientY - dragStartY
   if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragging = true
   if (dragging) {
     posX.value = startDragX + dx
@@ -83,10 +85,41 @@ function onTouchMove(e: TouchEvent) {
   }
 }
 
-function onTouchEnd() {
+function onEnd() {
   clampPos()
   localStorage.setItem(POS_KEY, JSON.stringify({ x: posX.value, y: posY.value }))
 }
+
+// 触摸事件
+function onTouchStart(e: TouchEvent) {
+  onStart(e.touches[0].clientX, e.touches[0].clientY)
+}
+function onTouchMove(e: TouchEvent) {
+  onMove(e.touches[0].clientX, e.touches[0].clientY)
+}
+function onTouchEnd() {
+  onEnd()
+}
+
+// 鼠标事件
+function onMouseDown(e: MouseEvent) {
+  onStart(e.clientX, e.clientY)
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
+}
+function onMouseMove(e: MouseEvent) {
+  onMove(e.clientX, e.clientY)
+}
+function onMouseUp() {
+  onEnd()
+  document.removeEventListener('mousemove', onMouseMove)
+  document.removeEventListener('mouseup', onMouseUp)
+}
+
+onUnmounted(() => {
+  document.removeEventListener('mousemove', onMouseMove)
+  document.removeEventListener('mouseup', onMouseUp)
+})
 
 function onOpen() {
   if (!dragging) emit('open')
@@ -102,6 +135,7 @@ function onOpen() {
       @touchstart.passive="onTouchStart"
       @touchmove.passive="onTouchMove"
       @touchend="onTouchEnd"
+      @mousedown="onMouseDown"
       @click="onOpen"
     >
       <span class="ft-icon">{{ icon }}</span>
