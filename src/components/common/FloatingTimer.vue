@@ -19,7 +19,11 @@ const KIND_LABEL_MAP: Record<string, string> = { feeding: '喂养', sleep: '睡�
 
 const icon = ref('🍼')
 const label = ref('')
-const posY = ref(Math.round(window.innerHeight * 0.4))
+
+// posY 持久化到 localStorage
+const POS_KEY = 'floating_timer_posY'
+const savedY = Number(localStorage.getItem(POS_KEY))
+const posY = ref(Number.isFinite(savedY) ? savedY : Math.round(window.innerHeight * 0.4))
 
 watch(
   () => activeTimer.kind.value,
@@ -53,7 +57,7 @@ function onTouchMove(e: TouchEvent) {
 }
 
 function onTouchEnd() {
-  // 保持当前位置
+  localStorage.setItem(POS_KEY, String(posY.value))
 }
 
 function onOpen() {

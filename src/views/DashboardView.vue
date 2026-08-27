@@ -14,7 +14,6 @@ import { useTemperatureStore } from '@/stores/temperature'
 import { useMilestoneStore } from '@/stores/milestone'
 import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import FloatingTimer from '@/components/common/FloatingTimer.vue'
 import OnboardingModal from '@/components/dashboard/OnboardingModal.vue'
 import TodayOverview from '@/components/dashboard/TodayOverview.vue'
 import FeedingForm from '@/components/forms/FeedingForm.vue'
@@ -125,15 +124,6 @@ const onboardingOpen = ref(false)
 
 const { scheduleDelete } = useDeleteUndo()
 const activeTimer = useActiveTimer()
-const anyModalOpen = computed(
-  () => modalState.value !== null || confirmDelete.value !== null || sleepFeedOpen.value || onboardingOpen.value,
-)
-
-/** 悬浮球点击：重新打开对应计时表单 */
-function openTimerForm() {
-  const kind = activeTimer.kind.value
-  if (kind) openAdd(kind)
-}
 
 // —— 奶睡一键（组合记录喂养 + 睡眠）——
 const sleepFeedOpen = ref(false)
@@ -562,8 +552,6 @@ const editPayload = computed(() => {
     <!-- 首次引导添加宝宝弹窗 -->
     <OnboardingModal :show="onboardingOpen" @close="onboardingOpen = false" />
 
-    <!-- 悬浮计时球 -->
-    <FloatingTimer :active="activeTimer.isActive.value && !anyModalOpen" @open="openTimerForm" />
   </div>
 </template>
 

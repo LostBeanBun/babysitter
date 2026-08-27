@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
@@ -14,7 +15,6 @@ import { useMilestoneStore } from '@/stores/milestone'
 import PageHeader from '@/components/common/PageHeader.vue'
 import TimelineList, { type TimelineEntry } from '@/components/timeline/TimelineList.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import FloatingTimer from '@/components/common/FloatingTimer.vue'
 import FeedingForm from '@/components/forms/FeedingForm.vue'
 import DiaperForm from '@/components/forms/DiaperForm.vue'
 import PumpingForm from '@/components/forms/PumpingForm.vue'
@@ -164,13 +164,17 @@ function clearDateFilter() {
 /** 删除撤销：过滤待删除记录 */
 const { isPending, scheduleDelete } = useDeleteUndo()
 const activeTimer = useActiveTimer()
-const anyModalOpen = computed(() => modalState.value !== null || confirmDelete.value !== null)
+const route = useRoute()
+const router = useRouter()
 
-/** 悬浮球点击：重新打开对应计时表单 */
-function openTimerForm() {
-  const kind = activeTimer.kind.value
-  if (kind) openAdd(kind)
-}
+// 悬浮球导航过来时自动打开对应计时表单
+onMounted(() => {
+  const timerKind = route.query.timer
+  if (timerKind && typeof timerKind === 'string') {
+    openAdd(timerKind as 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone')
+    router.replace({ path: '/log' }) // 清除 query 避免重复触发
+  }
+})
 
 function keep<T extends { id?: number }>(items: T[], kind: string): T[] {
   return items.filter((x) => !isPending({ kind, id: x.id! }))
@@ -526,8 +530,6 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
       </div>
     </BaseModal>
 
-    <!-- 悬浮计时球 -->
-    <FloatingTimer :active="activeTimer.isActive.value && !anyModalOpen" @open="openTimerForm" />
   </div>
 </template>
 
