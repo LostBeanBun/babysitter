@@ -160,6 +160,7 @@ async function saveSleepFeed() {
   }
   await feedingStore.add({ type: sfType.value, startTime: start, amount })
   await sleepStore.add({ type: sfSleepType.value, startTime: start, endTime: end, notes: sfNotes.value || undefined })
+  activeTimer.reset()
   sleepFeedOpen.value = false
   sfType.value = 'breast_both'
   sfAmount.value = ''
@@ -505,7 +506,7 @@ const editPayload = computed(() => {
     </template>
 
     <!-- 奶睡组合弹窗 -->
-    <BaseModal :show="sleepFeedOpen" :title="t('dashboard.sleepFeedTitle')" @close="sleepFeedOpen = false">
+    <BaseModal :show="sleepFeedOpen" :title="t('dashboard.sleepFeedTitle')" @close="activeTimer.reset(); sleepFeedOpen = false">
       <div class="form-field">
         <label class="form-label">{{ t('feed.typeLabel') }}</label>
         <select v-model="sfType" class="form-input">
@@ -544,7 +545,7 @@ const editPayload = computed(() => {
         <input v-model="sfNotes" type="text" :placeholder="t('dashboard.sleepFeedNotesPh')" class="form-input" />
       </div>
       <div class="form-actions">
-        <button class="btn btn-outline" @click="sleepFeedOpen = false">{{ t('common.cancel') }}</button>
+        <button class="btn btn-outline" @click="activeTimer.reset(); sleepFeedOpen = false">{{ t('common.cancel') }}</button>
         <button class="btn btn-primary" @click="saveSleepFeed">{{ t('dashboard.oneTapRecord') }}</button>
       </div>
     </BaseModal>
