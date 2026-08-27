@@ -3,8 +3,7 @@
  * 悬浮计时球：固定在屏幕右侧边缘，显示当前活跃计时器状态。
  * - 点击主体：emit('open') 由父组件重新打开对应表单
  * - 无关闭按钮：仅在用户保存/取消记录时消失
- * - 支持触摸拖拽，拖到屏幕左右边缘时收起（半隐藏圆球）
- * - 收起状态下仅露出半个图标，点击可展开
+ * - 支持触摸拖拽垂直移动
  */
 import { ref, watch } from 'vue'
 import { useActiveTimer } from '@/composables/useActiveTimer'
@@ -21,8 +20,6 @@ const KIND_LABEL_MAP: Record<string, string> = { feeding: '喂养', sleep: '睡�
 const icon = ref('🍼')
 const label = ref('')
 const posY = ref(Math.round(window.innerHeight * 0.4))
-const posX = ref(0) // 0 = 默认右侧（right: 12px），> 0 = 向左偏移
-const snapSide = ref<'none' | 'left' | 'right'>('none')
 
 watch(
   () => activeTimer.kind.value,
@@ -35,62 +32,32 @@ watch(
   { immediate: true },
 )
 
-// —— 拖拽 + 边缘收起逻辑 ——
-const EDGE_THRESHOLD = 40
-const BALL_SIZE = 56
-let dragStartX = 0
+// —— 拖拽逻辑 ——
 let dragStartY = 0
-let startDragX = 0
 let startDragY = 0
 let dragging = false
 
 function onTouchStart(e: TouchEvent) {
   dragging = false
-  dragStartX = e.touches[0].clientX
   dragStartY = e.touches[0].clientY
-  startDragX = posX.value
   startDragY = posY.value
 }
 
 function onTouchMove(e: TouchEvent) {
-  const dx = e.touches[0].clientX - dragStartX
   const dy = e.touches[0].clientY - dragStartY
-  if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragging = true
+  if (Math.abs(dy) > 5) dragging = true
   if (dragging) {
-    const maxLeft = window.innerWidth - BALL_SIZE - 12
-    posX.value = Math.min(Math.max(startDragX - dx, 0), maxLeft)
-    const half = BALL_SIZE / 2
+    const half = 28
     posY.value = Math.min(Math.max(startDragY + dy, half), window.innerHeight - half)
   }
 }
 
 function onTouchEnd() {
-  checkSnap()
-}
-
-function checkSnap() {
-  const nearLeft = posX.value >= window.innerWidth - BALL_SIZE - 12 - EDGE_THRESHOLD
-  const nearRight = posX.value <= EDGE_THRESHOLD
-  if (nearLeft) {
-    snapSide.value = 'left'
-    posX.value = window.innerWidth - BALL_SIZE / 2 - 12
-  } else if (nearRight) {
-    snapSide.value = 'right'
-    posX.value = 0
-  } else {
-    snapSide.value = 'none'
-  }
+  // 保持当前位置
 }
 
 function onOpen() {
-  if (dragging) return
-  if (snapSide.value !== 'none') {
-    const wasLeft = snapSide.value === 'left'
-    snapSide.value = 'none'
-    posX.value = wasLeft ? window.innerWidth - BALL_SIZE - 24 : 0
-  } else {
-    emit('open')
-  }
+  if (!dragging) emit('open')
 }
 </script>
 
@@ -99,15 +66,14 @@ function onOpen() {
     <div
       v-if="active"
       class="floating-timer"
-      :class="{ collapsed: snapSide !== 'none', 'snap-left': snapSide === 'left' }"
-      :style="{ top: posY + 'px', right: (12 - posX) + 'px' }"
+      :style="{ top: posY + 'px' }"
       @touchstart.passive="onTouchStart"
       @touchmove.passive="onTouchMove"
       @touchend="onTouchEnd"
       @click="onOpen"
     >
       <span class="ft-icon">{{ icon }}</span>
-      <div v-if="snapSide === 'none'" class="ft-body">
+      <div class="ft-body">
         <span class="ft-label">{{ label }}</span>
         <span class="ft-time">{{ formatDuration(activeTimer.elapsedMs.value) }}</span>
       </div>
@@ -119,6 +85,7 @@ function onOpen() {
 <style scoped>
 .floating-timer {
   position: fixed;
+  right: 12px;
   z-index: 9000;
   display: flex;
   align-items: center;
@@ -131,7 +98,6 @@ function onOpen() {
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  transition: right 0.25s ease, padding 0.2s ease, border-radius 0.2s ease, width 0.2s ease;
   touch-action: none;
 }
 
@@ -139,38 +105,10 @@ function onOpen() {
   transform: scale(0.96);
 }
 
-/* —— 收起状态：圆形半隐藏 —— */
-.floating-timer.collapsed {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border-radius: 50%;
-  overflow: hidden;
-  justify-content: center;
-  gap: 0;
-}
-
-.floating-timer.collapsed.snap-left {
-  /* 贴左时 translateX 让球体一半藏在屏幕外 */
-  transform: translateX(-50%);
-}
-
-.floating-timer.collapsed:active {
-  transform: scale(0.96);
-}
-
-.floating-timer.collapsed.snap-left:active {
-  transform: translateX(-50%) scale(0.96);
-}
-
 .ft-icon {
   font-size: 22px;
   flex-shrink: 0;
   line-height: 1;
-}
-
-.floating-timer.collapsed .ft-icon {
-  font-size: 20px;
 }
 
 .ft-body {
@@ -203,10 +141,6 @@ function onOpen() {
   opacity: 0;
   animation: pulse-ring 2s ease-out infinite;
   pointer-events: none;
-}
-
-.floating-timer.collapsed .ft-pulse {
-  border-radius: 50%;
 }
 
 @keyframes pulse-ring {
