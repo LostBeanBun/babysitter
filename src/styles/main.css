@@ -411,7 +411,7 @@ select.form-input:focus {
   background: var(--modal-mask);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
-  z-index: 100;
+  z-index: 200;
   display: flex;
   align-items: flex-end;
   justify-content: center;

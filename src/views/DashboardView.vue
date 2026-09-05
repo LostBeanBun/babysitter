@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, ref, onUnmounted } from 'vue'
+import { computed, ref, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
@@ -30,6 +30,7 @@ import { formatTime, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { FEED_TYPE_LABELS } from '@/constants'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import { useActiveTimer } from '@/composables/useActiveTimer'
+import { useSleepModal } from '@/composables/useSleepModal'
 import type {
   Feeding,
   DiaperChange,
@@ -124,6 +125,7 @@ const onboardingOpen = ref(false)
 
 const { scheduleDelete } = useDeleteUndo()
 const activeTimer = useActiveTimer()
+const { sleepModalOpen } = useSleepModal()
 
 // —— 奶睡一键（组合记录喂养 + 睡眠）——
 const sleepFeedOpen = ref(false)
@@ -208,6 +210,12 @@ const confirmDelete = ref<{
   timeLabel?: string
   raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature | Milestone
 } | null>(null)
+
+// 睡眠弹窗打开时隐藏悬浮球
+watch(
+  [modalState, sleepFeedOpen],
+  ([ms, sf]) => { sleepModalOpen.value = !!(sf || ms?.kind === 'sleep') },
+)
 
 function openAdd(
   kind:

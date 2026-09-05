@@ -9,6 +9,7 @@
 import { ref, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useActiveTimer } from '@/composables/useActiveTimer'
+import { useSleepModal } from '@/composables/useSleepModal'
 import { formatDuration } from '@/utils/format'
 
 defineProps<{ active: boolean }>()
@@ -16,6 +17,7 @@ const emit = defineEmits<{ open: [] }>()
 
 const { t } = useI18n()
 const activeTimer = useActiveTimer()
+const { sleepModalOpen } = useSleepModal()
 
 const ICON_MAP: Record<string, string> = { feeding: '🍼', sleep: '😴', pumping: '🎀' }
 const KIND_LABEL_KEYS: Record<string, string> = { feeding: 'floatingTimer.kindFeeding', sleep: 'floatingTimer.kindSleep', pumping: 'floatingTimer.kindPumping' }
@@ -129,7 +131,7 @@ function onOpen() {
 <template>
   <Transition name="float">
     <div
-      v-if="active"
+      v-if="active && !sleepModalOpen"
       class="floating-timer"
       :style="{ top: posY + 'px', left: posX + 'px' }"
       @touchstart.passive="onTouchStart"
@@ -151,7 +153,7 @@ function onOpen() {
 <style scoped>
 .floating-timer {
   position: fixed;
-  z-index: 9000;
+  z-index: 100;
   display: flex;
   align-items: center;
   gap: 8px;

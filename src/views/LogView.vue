@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useFeedingStore } from '@/stores/feeding'
@@ -28,6 +28,7 @@ import MilestoneForm from '@/components/forms/MilestoneForm.vue'
 import { formatTime, startOfDay } from '@/utils/format'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import { useActiveTimer } from '@/composables/useActiveTimer'
+import { useSleepModal } from '@/composables/useSleepModal'
 import type {
   Feeding,
   DiaperChange,
@@ -164,6 +165,7 @@ function clearDateFilter() {
 /** 删除撤销：过滤待删除记录 */
 const { isPending, scheduleDelete } = useDeleteUndo()
 const activeTimer = useActiveTimer()
+const { sleepModalOpen } = useSleepModal()
 const route = useRoute()
 const router = useRouter()
 
@@ -259,6 +261,9 @@ const modalState = ref<{
   editing?: TimelineEntry
 } | null>(null)
 const confirmDelete = ref<TimelineEntry | null>(null)
+
+// 睡眠弹窗打开时隐藏悬浮球
+watch(modalState, (ms) => { sleepModalOpen.value = ms?.kind === 'sleep' })
 
 function onEdit(entry: TimelineEntry) {
   modalState.value = { kind: entry.kind, editing: entry }
