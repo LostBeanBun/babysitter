@@ -258,7 +258,18 @@ async function removeEntry(e: {
 }
 
 function onSaved() {
-  activeTimer.reset()
+  const savedKind = modalState.value?.kind
+  if (savedKind && savedKind === activeTimer.kind.value) {
+    activeTimer.reset()
+  }
+  modalState.value = null
+}
+
+function onCancelled() {
+  const closedKind = modalState.value?.kind
+  if (closedKind && closedKind === activeTimer.kind.value) {
+    activeTimer.reset()
+  }
   modalState.value = null
 }
 
@@ -403,61 +414,61 @@ const editPayload = computed(() => {
           v-if="modalState?.kind === 'feeding'"
           :editing="modalState?.editing ? (editPayload as FeedingFormProps) : undefined"
           @saved="onSaved"
-          @cancelled="activeTimer.reset(); modalState = null"
+          @cancelled="onCancelled"
         />
         <DiaperForm
           v-else-if="modalState?.kind === 'diaper'"
           :editing="modalState?.editing ? (editPayload as DiaperFormProps) : undefined"
           @saved="onSaved"
-          @cancelled="activeTimer.reset(); modalState = null"
+          @cancelled="onCancelled"
         />
         <PumpingForm
           v-else-if="modalState?.kind === 'pumping'"
           :editing="modalState?.editing ? (editPayload as PumpingFormProps) : undefined"
           @saved="onSaved"
-          @cancelled="activeTimer.reset(); modalState = null"
+          @cancelled="onCancelled"
         />
         <SleepForm
           v-else-if="modalState?.kind === 'sleep'"
           :editing="modalState?.editing ? (editPayload as SleepFormProps) : undefined"
           @saved="onSaved"
-          @cancelled="activeTimer.reset(); modalState = null"
+          @cancelled="onCancelled"
         />
         <GrowthForm
           v-else-if="modalState?.kind === 'growth'"
           :editing="modalState?.editing ? (editPayload as GrowthFormProps) : undefined"
           @saved="onSaved"
-          @cancelled="activeTimer.reset(); modalState = null"
+          @cancelled="onCancelled"
         />
         <SolidFoodForm
           v-else-if="modalState?.kind === 'solidFood'"
           :editing="modalState?.editing ? (editPayload as SolidFoodFormProps) : undefined"
           @saved="onSaved"
-          @cancelled="activeTimer.reset(); modalState = null"
+          @cancelled="onCancelled"
         />
         <MedicationForm
           v-else-if="modalState?.kind === 'medication'"
           :editing="modalState?.editing ? (editPayload as MedicationFormProps) : undefined"
           @saved="onSaved"
-          @cancelled="activeTimer.reset(); modalState = null"
+          @cancelled="onCancelled"
         />
         <VaccinationForm
           v-else-if="modalState?.kind === 'vaccination'"
           :editing="modalState?.editing ? (editPayload as VaccinationFormProps) : undefined"
           @saved="onSaved"
-          @cancelled="activeTimer.reset(); modalState = null"
+          @cancelled="onCancelled"
         />
         <TemperatureForm
           v-else-if="modalState?.kind === 'temperature'"
           :editing="modalState?.editing ? (editPayload as TemperatureFormProps) : undefined"
           @saved="onSaved"
-          @cancelled="activeTimer.reset(); modalState = null"
+          @cancelled="onCancelled"
         />
         <MilestoneForm
           v-else-if="modalState?.kind === 'milestone'"
           :editing="modalState?.editing ? (editPayload as MilestoneFormProps) : undefined"
           @saved="onSaved"
-          @cancelled="activeTimer.reset(); modalState = null"
+          @cancelled="onCancelled"
         />
       </BaseModal>
 
