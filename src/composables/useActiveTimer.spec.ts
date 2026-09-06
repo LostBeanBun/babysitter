@@ -140,4 +140,30 @@ describe('useActiveTimer', () => {
     expect(timer.kind.value).toBeNull()
     expect(timer.running.value).toBe(false)
   })
+
+  it('start 可使用用户指定的起始时间（非Date.now）', () => {
+    const timer = useActiveTimer()
+    const oneHourAgo = Date.now() - 3600_000
+
+    // 模拟用户在表单中设置了开始时间为1小时前，然后点击开始
+    timer.start('feeding', oneHourAgo)
+
+    expect(timer.running.value).toBe(true)
+    expect(timer.startTime.value).toBe(oneHourAgo)
+    expect(timer.kind.value).toBe('feeding')
+    // elapsedMs 应该约等于1小时（≥3599000ms，考虑毫秒误差）
+    expect(timer.elapsedMs.value).toBeGreaterThanOrEqual(3599_000)
+  })
+
+  it('sleep使用用户指定的起始时间后stop返回正确start', () => {
+    const timer = useActiveTimer()
+    const twoHoursAgo = Date.now() - 7200_000
+
+    timer.start('sleep', twoHoursAgo)
+    const result = timer.stop()
+
+    expect(result).not.toBeNull()
+    expect(result!.start).toBe(twoHoursAgo)
+    expect(result!.end).toBeGreaterThanOrEqual(twoHoursAgo)
+  })
 })

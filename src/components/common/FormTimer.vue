@@ -69,13 +69,13 @@ function start() {
   running.value = true
   elapsedMs.value = 0
   justStarted = true
+  const ts = (props.startTs && props.startTs > 0) ? props.startTs : Date.now()
   if (useGlobal()) {
-    const now = Date.now()
-    localStartTs = now
-    activeTimer.start(props.kind!, now)
-    emit('start', now)
+    localStartTs = ts
+    activeTimer.start(props.kind!, ts)
+    emit('start', ts)
   } else {
-    localStartTs = Date.now()
+    localStartTs = ts
     localTimerId = window.setInterval(() => {
       elapsedMs.value = Date.now() - localStartTs
     }, 1000)
