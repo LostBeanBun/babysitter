@@ -16,7 +16,7 @@ export const useSleepStore = defineStore('sleep', () => {
     () => {
       const babyId = activeBabyId.value
       if (babyId == null) return Promise.resolve([] as Sleep[])
-      return db.sleeps.where('[babyId+startTime]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray()
+      return db.sleeps.where('[babyId+startTime]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray().then(a => a.filter(Boolean))
     },
     [] as Sleep[],
     [activeBabyId],

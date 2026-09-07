@@ -59,11 +59,14 @@ export default {
   feed: {
     typeLabel: 'Feeding type',
     types: {
-      breast_left: 'Left breast',
-      breast_right: 'Right breast',
-      breast_both: 'Both breasts',
+      breast: 'Breastfeed',
       bottle_breastmilk: 'Bottle breastmilk',
       bottle_formula: 'Bottle formula',
+    },
+    sides: {
+      left: 'Left',
+      right: 'Right',
+      both: 'Both',
     },
     startTimer: '▶ Start timer',
     stopTimer: '■ Stop timer',

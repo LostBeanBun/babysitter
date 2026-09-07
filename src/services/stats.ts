@@ -129,7 +129,7 @@ export function buildDailySeries(
     const d = dayMap.get(startOfDay(f.startTime))
     if (!d) continue
     d.feedCount++
-    if (f.type.startsWith('breast')) {
+    if (f.type === 'breast') {
       d.breastCount++
       // 亲喂量按估算：无奶量数据，仅计数
     } else {

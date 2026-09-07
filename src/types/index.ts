@@ -23,17 +23,20 @@ export interface Baby {
 
 /** 喂养类型 */
 export type FeedType =
-  | 'breast_left' // 左侧亲喂
-  | 'breast_right' // 右侧亲喂
-  | 'breast_both' // 双侧亲喂
+  | 'breast' // 亲喂
   | 'bottle_breastmilk' // 瓶喂母乳
   | 'bottle_formula' // 配方奶
+
+/** 亲喂侧边 */
+export type BreastSide = 'left' | 'right' | 'both'
 
 /** 喂养记录 */
 export interface Feeding {
   id?: number
   babyId: number
   type: FeedType
+  /** 亲喂侧边（仅 type=breast 时有值） */
+  side?: BreastSide
   /** 开始时间（毫秒时间戳） */
   startTime: number
   /** 结束时间（亲喂计时用） */

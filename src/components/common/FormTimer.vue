@@ -69,7 +69,7 @@ function start() {
   running.value = true
   elapsedMs.value = 0
   justStarted = true
-  const ts = (props.startTs && props.startTs > 0) ? props.startTs : Date.now()
+  const ts = Date.now()
   if (useGlobal()) {
     localStartTs = ts
     activeTimer.start(props.kind!, ts)

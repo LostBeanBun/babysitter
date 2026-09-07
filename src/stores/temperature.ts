@@ -16,7 +16,7 @@ export const useTemperatureStore = defineStore('temperature', () => {
     () => {
       const babyId = activeBabyId.value
       if (babyId == null) return Promise.resolve([] as Temperature[])
-      return db.temperatures.where('[babyId+time]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray()
+      return db.temperatures.where('[babyId+time]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray().then(a => a.filter(Boolean))
     },
     [] as Temperature[],
     [activeBabyId],

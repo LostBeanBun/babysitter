@@ -16,7 +16,7 @@ export const useMilestoneStore = defineStore('milestone', () => {
     () => {
       const babyId = activeBabyId.value
       if (babyId == null) return Promise.resolve([] as Milestone[])
-      return db.milestones.where('[babyId+time]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray()
+      return db.milestones.where('[babyId+time]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray().then(a => a.filter(Boolean))
     },
     [] as Milestone[],
     [activeBabyId],

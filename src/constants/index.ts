@@ -1,5 +1,6 @@
 import type {
   FeedType,
+  BreastSide,
   DiaperType,
   DiaperColor,
   DiaperAmount,
@@ -11,19 +12,27 @@ import type {
 
 /** 喂养类型标签（i18n key，配合 t() 使用） */
 export const FEED_TYPE_LABELS: Record<FeedType, string> = {
-  breast_left: 'feed.types.breast_left',
-  breast_right: 'feed.types.breast_right',
-  breast_both: 'feed.types.breast_both',
+  breast: 'feed.types.breast',
   bottle_breastmilk: 'feed.types.bottle_breastmilk',
   bottle_formula: 'feed.types.bottle_formula',
 }
 
 export const FEED_TYPE_LIST: { value: FeedType; label: string; icon: string; color: string }[] = [
-  { value: 'breast_left', label: 'feed.types.breast_left', icon: '🤱', color: '#F2A28C' },
-  { value: 'breast_right', label: 'feed.types.breast_right', icon: '🤱', color: '#F2A28C' },
-  { value: 'breast_both', label: 'feed.types.breast_both', icon: '🤱', color: '#E8906C' },
+  { value: 'breast', label: 'feed.types.breast', icon: '🤱', color: '#F2A28C' },
   { value: 'bottle_breastmilk', label: 'feed.types.bottle_breastmilk', icon: '🍼', color: '#8FB9D8' },
   { value: 'bottle_formula', label: 'feed.types.bottle_formula', icon: '🥛', color: '#C4A8E0' },
+]
+
+/** 亲喂侧边选项 */
+export const BREAST_SIDE_LABELS: Record<BreastSide, string> = {
+  left: 'feed.sides.left',
+  right: 'feed.sides.right',
+  both: 'feed.sides.both',
+}
+
+export const BREAST_SIDE_LIST: { value: BreastSide; label: string; icon: string }[] = [
+  { value: 'left', label: 'feed.sides.left', icon: '👈' },
+  { value: 'right', label: 'feed.sides.right', icon: '👉' },
 ]
 
 /** 纸尿裤类型 */

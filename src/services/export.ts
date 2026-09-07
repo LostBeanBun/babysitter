@@ -31,9 +31,7 @@ const LABELS_ZH: Record<string, string> = {
   temperature: '体温',
   milestone: '里程碑',
   // 喂养类型
-  breast_left: '左侧亲喂',
-  breast_right: '右侧亲喂',
-  breast_both: '双侧亲喂',
+  breast: '亲喂',
   bottle_breastmilk: '瓶喂母乳',
   bottle_formula: '配方奶',
   // 纸尿裤类型
@@ -80,9 +78,7 @@ const LABELS_EN: Record<string, string> = {
   temperature: 'Temperature',
   milestone: 'Milestone',
   // 喂养类型
-  breast_left: 'Left breast',
-  breast_right: 'Right breast',
-  breast_both: 'Both breasts',
+  breast: 'Breastfeed',
   bottle_breastmilk: 'Bottle breastmilk',
   bottle_formula: 'Bottle formula',
   // 纸尿裤类型
@@ -121,6 +117,16 @@ function bl(key: string): string {
   const locale = i18n.global.locale.value
   const map = locale === 'en-US' ? LABELS_EN : LABELS_ZH
   return map[key] ?? key
+}
+
+/** 亲喂侧边标签（避免与 diaper 的 both 键冲突） */
+const BREAST_SIDE_LABELS_MAP: Record<string, Record<string, string>> = {
+  'zh-CN': { left: '左侧', right: '右侧', both: '双侧' },
+  'en-US': { left: 'Left', right: 'Right', both: 'Both' },
+}
+function breastSideLabel(side: string): string {
+  const locale = i18n.global.locale.value
+  return BREAST_SIDE_LABELS_MAP[locale]?.[side] ?? side
 }
 
 /** CSV 转义：含逗号/引号/换行时包裹引号 */
@@ -164,6 +170,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
 
   // 喂养
   for (const f of data.feedings) {
+    const typeLabel = f.type === 'breast' && f.side ? bl(f.type) + '·' + breastSideLabel(f.side) : bl(f.type)
     rows.push([
       ...nameCol(),
       bl('feeding'),
@@ -171,7 +178,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
       formatTime(f.startTime),
       '',
       '',
-      bl(f.type),
+      typeLabel,
       f.amount ? `${f.amount} ml` : '',
       f.duration ? Math.round(f.duration / 60000) : '',
       '',
@@ -205,7 +212,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
       formatTime(p.startTime),
       '',
       '',
-      bl(p.side),
+      breastSideLabel(p.side),
       p.amount ? `${p.amount} ml` : '',
       p.duration ? Math.round(p.duration / 60000) : '',
       '',
@@ -529,11 +536,32 @@ function mapCsvRowToRecord(
 
   switch (kind) {
     case 'feeding': {
+      // 兼容新旧格式：item 可能是 "breast·left" 或旧的 "breast_left" 等
+      const OLD_TYPE_MAP: Record<string, { type: string; side?: string }> = {
+        breast_left: { type: 'breast', side: 'left' },
+        breast_right: { type: 'breast', side: 'right' },
+        breast_both: { type: 'breast', side: 'both' },
+      }
+      let feedType: string
+      let feedSide: string | undefined
+      if (item in OLD_TYPE_MAP) {
+        const mapped = OLD_TYPE_MAP[item]
+        feedType = mapped.type
+        feedSide = mapped.side
+      } else if (item.includes('·')) {
+        const [t, s] = item.split('·').map((p) => p.trim())
+        feedType = t || item
+        feedSide = s || undefined
+      } else {
+        feedType = item
+        feedSide = undefined
+      }
       return {
         kind,
         data: {
           ...base,
-          type: item, // 内部键值
+          type: feedType,
+          side: feedSide,
           startTime,
           endTime: endTime || undefined,
           duration: duration ? parseInt(duration) * 60000 : undefined,

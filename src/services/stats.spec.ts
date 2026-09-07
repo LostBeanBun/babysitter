@@ -68,7 +68,7 @@ describe('stats aggregation', () => {
       [
         feed({ type: 'bottle_formula', startTime: day0 + 1, amount: 120 }),
         feed({ type: 'bottle_breastmilk', startTime: day0 + 2, amount: 60 }),
-        feed({ type: 'breast_both', startTime: day1 + 1 }),
+        feed({ type: 'breast', side: 'both', startTime: day1 + 1 }),
       ],
       [],
       [],

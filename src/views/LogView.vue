@@ -41,6 +41,7 @@ import type {
   Temperature,
   Milestone,
   FeedType,
+  BreastSide,
   DiaperType,
   DiaperColor,
   DiaperAmount,
@@ -54,6 +55,7 @@ import type {
 type FeedingFormProps = {
   id: number
   type: FeedType
+  side?: BreastSide
   startTime: number
   endTime?: number
   duration?: number
@@ -322,6 +324,7 @@ const editPayload = computed(() => {
     return {
       id: e.id,
       type: f.type,
+      side: f.side,
       startTime: f.startTime,
       endTime: f.endTime,
       duration: f.duration,

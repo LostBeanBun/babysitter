@@ -16,7 +16,7 @@ export const useSolidFoodStore = defineStore('solidFood', () => {
     () => {
       const babyId = activeBabyId.value
       if (babyId == null) return Promise.resolve([] as SolidFood[])
-      return db.solidFoods.where('[babyId+time]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray()
+      return db.solidFoods.where('[babyId+time]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray().then(a => a.filter(Boolean))
     },
     [] as SolidFood[],
     [activeBabyId],

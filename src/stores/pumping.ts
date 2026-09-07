@@ -16,7 +16,7 @@ export const usePumpingStore = defineStore('pumping', () => {
     () => {
       const babyId = activeBabyId.value
       if (babyId == null) return Promise.resolve([] as Pumping[])
-      return db.pumpings.where('[babyId+startTime]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray()
+      return db.pumpings.where('[babyId+startTime]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray().then(a => a.filter(Boolean))
     },
     [] as Pumping[],
     [activeBabyId],

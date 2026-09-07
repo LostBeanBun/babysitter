@@ -93,19 +93,20 @@ const entries = computed<TimelineEntry[]>(() => {
   const list: TimelineEntry[] = []
 
   for (const f of props.feedings) {
-    const color = f.type.startsWith('breast') ? '#F2A28C' : f.type === 'bottle_formula' ? '#C4A8E0' : '#8FB9D8'
+    const color = f.type === 'breast' ? '#F2A28C' : f.type === 'bottle_formula' ? '#C4A8E0' : '#8FB9D8'
     const detailParts: string[] = []
     if (f.amount != null) detailParts.push(formatAmount(f.amount))
     if (f.duration) detailParts.push(formatDuration(f.duration))
     const detail = detailParts.length ? detailParts.join(' · ') : t('common.recorded')
+    const sideLabel = f.type === 'breast' && f.side ? ' (' + t('feed.sides.' + f.side) + ')' : ''
     list.push({
       id: f.id!,
       kind: 'feeding',
       time: f.startTime,
-      icon: f.type.startsWith('breast') ? '🤱' : '🍼',
+      icon: f.type === 'breast' ? '🤱' : '🍼',
       color,
       kindColor: KIND_COLORS.feeding,
-      title: t(FEED_TYPE_LABELS[f.type]),
+      title: t(FEED_TYPE_LABELS[f.type]) + sideLabel,
       detail,
       duration: f.duration,
       raw: f,

@@ -43,6 +43,7 @@ import type {
   Temperature,
   Milestone,
   FeedType,
+  BreastSide,
   DiaperType,
   DiaperColor,
   DiaperAmount,
@@ -57,6 +58,7 @@ import type {
 type FeedingFormProps = {
   id: number
   type: FeedType
+  side?: BreastSide
   startTime: number
   endTime?: number
   duration?: number
@@ -129,7 +131,7 @@ const { sleepModalOpen } = useSleepModal()
 
 // —— 奶睡一键（组合记录喂养 + 睡眠）——
 const sleepFeedOpen = ref(false)
-const sfType = ref<FeedType>('breast_both')
+const sfType = ref<FeedType>('breast')
 const sfAmount = ref('')
 const sfStart = ref(toDateTimeLocal(Date.now()))
 const sfSleepType = ref<SleepType>('nap')
@@ -160,11 +162,11 @@ async function saveSleepFeed() {
       return
     }
   }
-  await feedingStore.add({ type: sfType.value, startTime: start, amount })
+  await feedingStore.add({ type: sfType.value, side: sfType.value === 'breast' ? 'both' : undefined, startTime: start, amount })
   await sleepStore.add({ type: sfSleepType.value, startTime: start, endTime: end, notes: sfNotes.value || undefined })
   activeTimer.reset()
   sleepFeedOpen.value = false
-  sfType.value = 'breast_both'
+  sfType.value = 'breast'
   sfAmount.value = ''
   sfStart.value = toDateTimeLocal(Date.now())
   sfSleepType.value = 'nap'
@@ -290,6 +292,7 @@ const editPayload = computed(() => {
     return {
       id: e.id,
       type: f.type,
+      side: f.side,
       startTime: f.startTime,
       endTime: f.endTime,
       duration: f.duration,

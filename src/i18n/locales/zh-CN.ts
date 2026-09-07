@@ -59,11 +59,14 @@ export default {
   feed: {
     typeLabel: '喂养类型',
     types: {
-      breast_left: '左侧亲喂',
-      breast_right: '右侧亲喂',
-      breast_both: '双侧亲喂',
+      breast: '亲喂',
       bottle_breastmilk: '瓶喂母乳',
       bottle_formula: '配方奶',
+    },
+    sides: {
+      left: '左侧',
+      right: '右侧',
+      both: '双侧',
     },
     startTimer: '▶ 开始计时',
     stopTimer: '■ 结束计时',

@@ -3,7 +3,7 @@ import { db } from '@/db'
 import i18n from '@/i18n'
 import { useLiveQuery } from '@/composables/useLiveQuery'
 import { useBabyStore } from '@/stores/baby'
-import type { Feeding, FeedType } from '@/types'
+import type { Feeding, FeedType, BreastSide } from '@/types'
 
 const t = i18n.global.t
 
@@ -16,7 +16,7 @@ export const useFeedingStore = defineStore('feeding', () => {
     () => {
       const babyId = activeBabyId.value
       if (babyId == null) return Promise.resolve([] as Feeding[])
-      return db.feedings.where('[babyId+startTime]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray()
+      return db.feedings.where('[babyId+startTime]').between([babyId, 0], [babyId, Number.MAX_SAFE_INTEGER]).toArray().then(a => a.filter(Boolean))
     },
     [] as Feeding[],
     [activeBabyId],
@@ -25,6 +25,7 @@ export const useFeedingStore = defineStore('feeding', () => {
   /** 新增喂养记录 */
   async function add(data: {
     type: FeedType
+    side?: BreastSide
     startTime: number
     endTime?: number
     amount?: number
@@ -37,6 +38,7 @@ export const useFeedingStore = defineStore('feeding', () => {
     const id = await db.feedings.add({
       babyId,
       type: data.type,
+      side: data.side,
       startTime: data.startTime,
       endTime: data.endTime,
       duration,

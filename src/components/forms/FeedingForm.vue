@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { FeedType } from '@/types'
-import { FEED_TYPE_LIST } from '@/constants'
+import type { FeedType, BreastSide } from '@/types'
+import { FEED_TYPE_LIST, BREAST_SIDE_LIST } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/format'
 import { useFeedingStore } from '@/stores/feeding'
 import FormTimer from '@/components/common/FormTimer.vue'
@@ -15,6 +15,7 @@ const props = defineProps<{
   editing?: {
     id: number
     type: FeedType
+    side?: BreastSide
     startTime: number
     endTime?: number
     duration?: number
@@ -26,8 +27,9 @@ const emit = defineEmits<{ saved: []; cancelled: [] }>()
 
 const feedingStore = useFeedingStore()
 
-const type = ref<FeedType>(props.editing?.type ?? 'breast_both')
-const isBreast = computed(() => type.value.startsWith('breast'))
+const type = ref<FeedType>(props.editing?.type ?? 'breast')
+const side = ref<BreastSide>(props.editing?.side ?? 'left')
+const isBreast = computed(() => type.value === 'breast')
 const amount = ref<string>(props.editing?.amount != null ? String(props.editing.amount) : '')
 const notes = ref(props.editing?.notes ?? '')
 const startTime = ref(toDateTimeLocal(props.editing?.startTime ?? Date.now()))
@@ -71,6 +73,7 @@ async function submit() {
   if (props.editing) {
     await feedingStore.update(props.editing.id, {
       type: type.value,
+      side: isBreast.value ? side.value : undefined,
       startTime: start,
       endTime: end,
       duration: end && end > start ? end - start : undefined,
@@ -78,7 +81,7 @@ async function submit() {
       notes: notes.value || undefined,
     })
   } else if (isBreast.value) {
-    await feedingStore.add({ type: type.value, startTime: start, endTime: end, notes: notes.value || undefined })
+    await feedingStore.add({ type: type.value, side: side.value, startTime: start, endTime: end, notes: notes.value || undefined })
   } else {
     const amt = Number(amount.value)
     if (!amount.value || isNaN(amt) || amt <= 0) {
@@ -108,6 +111,21 @@ async function submit() {
       >
         <span class="type-icon">{{ opt.icon }}</span>
         <span class="type-label">{{ t(opt.label) }}</span>
+      </button>
+    </div>
+
+    <!-- 亲喂侧边选择 -->
+    <div v-if="isBreast" class="side-row">
+      <button
+        v-for="s in BREAST_SIDE_LIST"
+        :key="s.value"
+        type="button"
+        class="side-btn"
+        :class="{ selected: side === s.value }"
+        @click="side = s.value"
+      >
+        <span>{{ s.icon }}</span>
+        <span>{{ t(s.label) }}</span>
       </button>
     </div>
 
@@ -193,6 +211,39 @@ async function submit() {
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+.side-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.side-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.side-btn.selected {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(232, 144, 108, 0.08);
+}
+
+.side-btn:active {
+  transform: scale(0.97);
 }
 
 .time-row {
