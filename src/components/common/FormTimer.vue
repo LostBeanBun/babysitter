@@ -49,7 +49,7 @@ onMounted(() => {
   }
 })
 
-// —— 全局同步：外部 startTs 变化时重算（仅用户手动编辑时间输入时触发，start 刚触发时跳过） ——
+// —— 外部 startTs 变化时重算（仅用户手动编辑时间输入时触发，start 刚触发时跳过） ——
 watch(
   () => props.startTs,
   (ts) => {
@@ -57,11 +57,12 @@ watch(
       justStarted = false
       return
     }
-    if (useGlobal() && running.value && ts && ts > 0) {
-      localStartTs = ts
+    if (!running.value || !ts || ts <= 0) return
+    localStartTs = ts
+    if (useGlobal()) {
       activeTimer.updateStartTime(ts)
-      elapsedMs.value = Date.now() - ts
     }
+    elapsedMs.value = Date.now() - ts
   },
 )
 
