@@ -190,6 +190,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
         ]"
         icon="🥛"
         color="#C4A8E0"
+        highlight-first
       />
       <StatCard
         :label="t('dashboard.statSleep')"
@@ -200,6 +201,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
         ]"
         icon="😴"
         color="#8FAED8"
+        highlight-first
       />
       <StatCard
         :label="t('dashboard.statDiaper')"

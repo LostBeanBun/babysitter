@@ -6,6 +6,8 @@ defineProps<{
   color?: string
   /** 支持多行说明：传数组则每项一行 */
   sub?: string | Array<string | undefined>
+  /** 第一行 sub 用警示黄高亮 */
+  highlightFirst?: boolean
 }>()
 </script>
 
@@ -23,7 +25,7 @@ defineProps<{
       <p class="stat-label">{{ label }}</p>
       <template v-if="sub">
         <p v-if="Array.isArray(sub)" class="stat-sub">
-          <span v-for="(s, i) in sub" :key="i" v-show="s" class="stat-sub-line">{{ s }}</span>
+          <span v-for="(s, i) in sub" :key="i" v-show="s" class="stat-sub-line" :class="{ 'hl-warn': highlightFirst && i === 0 }">{{ s }}</span>
         </p>
         <p v-else class="stat-sub">{{ sub }}</p>
       </template>
@@ -97,6 +99,11 @@ defineProps<{
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.stat-sub-line.hl-warn {
+  color: var(--accent-yellow);
+  font-weight: 600;
 }
 
 @media (max-width: 400px) {
