@@ -423,7 +423,6 @@ const guide = computed(() => dailyGuide(activeBaby.value))
     font-size: 20px;
   }
 }
-</style>
 
 .feed-reminder-banner {
   display: flex;
@@ -459,7 +458,6 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   margin-top: 1px;
 }
 
-/* 提醒条右上角关闭按钮（喂奶/疫苗共用） */
 .banner-close {
   width: 22px;
   height: 22px;
@@ -487,7 +485,6 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   transform: scale(0.9);
 }
 
-/* 疫苗提醒条 */
 .vaccine-banner {
   display: flex;
   align-items: center;
@@ -541,9 +538,9 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 }
 
 @media (max-width: 520px) {
-  .stats-grid {
+  .overview-grid {
     grid-template-columns: 1fr;
-    gap: 6px;
+    gap: 8px;
   }
 }
 </style>
