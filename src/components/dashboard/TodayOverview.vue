@@ -108,7 +108,11 @@ const lastSleep = computed(() => {
   const sorted = [...sleepStore.sleeps].sort((a, b) => (b.endTime ?? b.startTime) - (a.endTime ?? a.startTime))
   return sorted[0]
 })
-const sinceMs = computed(() => (lastFeeding.value ? (props.now - lastFeeding.value.startTime) : null))
+const sinceMs = computed(() => {
+  if (!lastFeeding.value) return null
+  const end = lastFeeding.value.endTime ?? lastFeeding.value.startTime
+  return props.now - end
+})
 const sinceSleepMs = computed(() => {
   if (!lastSleep.value) return null
   const end = lastSleep.value.endTime ?? lastSleep.value.startTime
@@ -183,7 +187,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
         :label="t('dashboard.statMilk')"
         :value="formatAmount(totalMilk) || '0 ml'"
         :sub="[
-          feedCount > 0 ? `${t('feed.lastFeedingTime')} ${formatTime(lastFeeding!.startTime)}${sinceMs != null ? ' · ' + formatDuration(sinceMs) + t('common.ago') : ''}` : undefined,
+          feedCount > 0 ? `${t('feed.lastFeedingTime')} ${formatTime(lastFeeding!.endTime ?? lastFeeding!.startTime)}${sinceMs != null ? ' · ' + formatDuration(sinceMs) + t('common.ago') : ''}` : undefined,
           t('common.times', { n: feedCount }),
           t('dashboard.milkStock', { pumped: formatAmount(pumpTotal), stock: formatAmount(breastStock) }),
           guide ? t('dashboard.guideMilk', { value: guide.milk }) : undefined,
