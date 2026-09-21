@@ -102,8 +102,12 @@ defineProps<{
 }
 
 .stat-sub-line.hl-warn {
-  color: var(--accent-yellow);
+  color: var(--primary);
   font-weight: 600;
+  background: var(--primary-soft);
+  border-radius: 3px;
+  padding: 0 3px;
+  margin: 0 -3px;
 }
 
 @media (max-width: 400px) {
