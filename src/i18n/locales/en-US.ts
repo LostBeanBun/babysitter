@@ -83,7 +83,7 @@ export default {
     aboutHours: '~{h} h',
     reminderSub: 'Exceeds suggested interval ({label}), time to feed',
     sinceLast: '{duration} since last feeding',
-    lastFeedingTime: 'Last feeding',
+    lastFeedingTime: 'Last feeding end',
     lastSleepTime: 'Last wake',
   },
   diaper: {

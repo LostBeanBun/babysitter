@@ -83,7 +83,7 @@ export default {
     aboutHours: '约 {h} 小时',
     reminderSub: '已超过建议间隔（{label}），记得喂奶哦',
     sinceLast: '距上次喂养已 {duration}',
-    lastFeedingTime: '上次喂奶',
+    lastFeedingTime: '上次喂奶结束',
     lastSleepTime: '上次睡醒',
   },
   diaper: {
