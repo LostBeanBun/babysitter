@@ -183,30 +183,47 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 <!-- 统计卡 -->
       <p class="section-title">{{ t('dashboard.todayOverview') }}</p>
       <div class="stats-grid">
-      <StatCard
-        :label="t('dashboard.statMilk')"
-        :value="formatAmount(totalMilk) || '0 ml'"
-        :sub="[
-          feedCount > 0 ? `${t('feed.lastFeedingTime')} ${formatTime(lastFeeding!.endTime ?? lastFeeding!.startTime)}${sinceMs != null ? ' · ' + formatDuration(sinceMs) + t('common.ago') : ''}` : undefined,
-          t('common.times', { n: feedCount }),
-          t('dashboard.milkStock', { pumped: formatAmount(pumpTotal), stock: formatAmount(breastStock) }),
-          guide ? t('dashboard.guideMilk', { value: guide.milk }) : undefined,
-        ]"
-        icon="🥛"
-        color="#C4A8E0"
-        highlight-first
-      />
-      <StatCard
-        :label="t('dashboard.statSleep')"
-        :value="formatDuration(sleepTotal)"
-        :sub="[
-          lastSleep ? `${t('feed.lastSleepTime')} ${formatTime(lastSleep.endTime ?? lastSleep.startTime)}${sinceSleepMs != null && sinceSleepMs >= 0 ? ' · ' + formatDuration(sinceSleepMs) + t('common.ago') : ''}` : undefined,
-          guide ? t('dashboard.guideSleep', { value: guide.sleep }) : undefined,
-        ]"
-        icon="😴"
-        color="#8FAED8"
-        highlight-first
-      />
+      <!-- 奶量卡片 -->
+      <div class="detail-card">
+        <div class="dc-header">
+          <span class="dc-icon" style="background: #C4A8E033; color: #C4A8E0;">🥛</span>
+          <span class="dc-title">{{ t('dashboard.statMilk') }}</span>
+        </div>
+        <div class="dc-body">
+          <p class="dc-row">
+            <span class="dc-label">{{ t('dashboard.totalMilk') }}: {{ formatAmount(totalMilk) || '0 ml' }}</span>
+            <span class="dc-label">{{ t('dashboard.feedCount') }}: {{ feedCount }}{{ t('common.timesShort') }}</span>
+          </p>
+          <p v-if="lastFeeding" class="dc-row hl-warn">
+            <span class="dc-label">{{ t('dashboard.lastFeedingEnd') }}: {{ formatTime(lastFeeding.endTime ?? lastFeeding.startTime) }}<template v-if="sinceMs != null">, {{ formatDuration(sinceMs) }}{{ t('common.ago') }}</template></span>
+          </p>
+          <p v-if="guide" class="dc-row dc-guide">
+            <span class="dc-label">{{ t('dashboard.guideDaily') }}: {{ guide.milk }}</span>
+          </p>
+          <p class="dc-row">
+            <span class="dc-label">{{ t('dashboard.pumpCount') }}: {{ todayPumpings.length }}{{ t('common.timesShort') }}</span>
+            <span class="dc-label">{{ t('dashboard.breastStock') }}: {{ formatAmount(breastStock) }}</span>
+          </p>
+        </div>
+      </div>
+      <!-- 睡眠卡片 -->
+      <div class="detail-card">
+        <div class="dc-header">
+          <span class="dc-icon" style="background: #8FAED833; color: #8FAED8;">😴</span>
+          <span class="dc-title">{{ t('dashboard.statSleep') }}</span>
+        </div>
+        <div class="dc-body">
+          <p class="dc-row">
+            <span class="dc-label">{{ t('dashboard.totalSleep') }}: {{ formatDuration(sleepTotal) }}</span>
+          </p>
+          <p v-if="lastSleep" class="dc-row hl-warn">
+            <span class="dc-label">{{ t('dashboard.lastSleepEnd') }}: {{ formatTime(lastSleep.endTime ?? lastSleep.startTime) }}<template v-if="sinceSleepMs != null && sinceSleepMs >= 0">, {{ formatDuration(sinceSleepMs) }}{{ t('common.ago') }}</template></span>
+          </p>
+          <p v-if="guide" class="dc-row dc-guide">
+            <span class="dc-label">{{ t('dashboard.guideDaily') }}: {{ guide.sleep }}</span>
+          </p>
+        </div>
+      </div>
       <StatCard
         :label="t('dashboard.statDiaper')"
         :value="t('common.times', { n: todayDiapers.length })"
@@ -223,6 +240,73 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+}
+
+.detail-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+.dc-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 0;
+}
+
+.dc-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.dc-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dc-body {
+  padding: 6px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dc-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  line-height: 1.4;
+}
+
+.dc-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.dc-row.hl-warn .dc-label {
+  color: var(--primary);
+  font-weight: 600;
+  background: var(--primary-soft);
+  border-radius: 3px;
+  padding: 0 3px;
+  margin: 0 -3px;
+}
+
+.dc-guide .dc-label {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .feed-reminder-banner {
@@ -340,23 +424,10 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   margin-left: 3px;
 }
 
-/* 统一卡片高度：网格内不受全局 .card + .card 相邻外边距规则影响 */
-.stats-grid .stat-card {
-  margin: 0;
-  min-height: 72px;
-  padding: 10px;
-  gap: 8px;
-}
-
 @media (max-width: 520px) {
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 6px;
-  }
-
-  .stats-grid .stat-card {
-    min-height: 64px;
-    padding: 9px;
   }
 }
 </style>
