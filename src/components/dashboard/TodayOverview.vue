@@ -314,19 +314,19 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 .ov-card__head {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .ov-card__icon {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1;
 }
 
 .ov-card__label {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0.2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.1px;
 }
 
 /* 主数值：大号粗体，视觉焦点 */
@@ -364,6 +364,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   padding-top: 5px;
   border-top: 1px solid var(--border);
   margin-top: auto;
+  justify-content: flex-end;
 }
 
 /* ===== 数据行 ===== */
@@ -404,7 +405,11 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   border-radius: 4px;
 }
 
-/* 参考行：最弱视觉权重 */
+/* 参考行：最弱视觉权重，靠右 */
+.ov-dt--muted {
+  margin-left: auto;
+}
+
 .ov-dt--muted .ov-dt__label,
 .ov-dt--muted .ov-dt__value {
   color: var(--text-muted);
