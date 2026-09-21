@@ -181,67 +181,84 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 
 <!-- 统计卡 -->
       <p class="section-title">{{ t('dashboard.todayOverview') }}</p>
-      <div class="stats-grid">
+      <div class="overview-grid">
       <!-- 奶量卡片 -->
-      <div class="detail-card">
-        <div class="dc-header">
-          <span class="dc-icon" style="background: #C4A8E033; color: #C4A8E0;">🥛</span>
-          <span class="dc-title">{{ t('dashboard.statMilk') }}</span>
-        </div>
-        <p class="dc-primary" style="color: #C4A8E0;">{{ formatAmount(totalMilk) || '0 ml' }}</p>
-        <div class="dc-body">
-          <p class="dc-row">
-            <span class="dc-key">{{ t('dashboard.feedCount') }}</span>
-            <span class="dc-val">{{ feedCount }}{{ t('common.timesShort') }}</span>
-          </p>
-          <p v-if="lastFeeding" class="dc-row hl-warn">
-            <span class="dc-key">{{ t('dashboard.lastFeedingEnd') }}</span>
-            <span class="dc-val">{{ formatTime(lastFeeding.endTime ?? lastFeeding.startTime) }}<template v-if="sinceMs != null">, {{ formatDuration(sinceMs) }}{{ t('common.ago') }}</template></span>
-          </p>
-          <p v-if="guide" class="dc-row dc-guide">
-            <span class="dc-key">{{ t('dashboard.guideDaily') }}</span>
-            <span class="dc-val">{{ guide.milk }}</span>
-          </p>
-          <p class="dc-row">
-            <span class="dc-key">{{ t('dashboard.pumpCount') }}</span>
-            <span class="dc-val">{{ todayPumpings.length }}{{ t('common.timesShort') }}</span>
-          </p>
-          <p class="dc-row">
-            <span class="dc-key">{{ t('dashboard.breastStock') }}</span>
-            <span class="dc-val">{{ formatAmount(breastStock) }}</span>
-          </p>
+      <div class="ov-card ov-card--milk">
+        <div class="ov-card__accent"></div>
+        <div class="ov-card__content">
+          <div class="ov-card__head">
+            <span class="ov-card__icon">🥛</span>
+            <span class="ov-card__label">{{ t('dashboard.statMilk') }}</span>
+          </div>
+          <p class="ov-card__hero">{{ formatAmount(totalMilk) || '0 ml' }}</p>
+          <div class="ov-card__details">
+            <div class="ov-dt">
+              <span class="ov-dt__label">{{ t('dashboard.feedCount') }}</span>
+              <span class="ov-dt__value">{{ feedCount }}{{ t('common.timesShort') }}</span>
+            </div>
+            <div v-if="lastFeeding" class="ov-dt ov-dt--alert">
+              <span class="ov-dt__label">{{ t('dashboard.lastFeedingEnd') }}</span>
+              <span class="ov-dt__value">
+                {{ formatTime(lastFeeding.endTime ?? lastFeeding.startTime) }}
+                <template v-if="sinceMs != null">· {{ formatDuration(sinceMs) }}{{ t('common.ago') }}</template>
+              </span>
+            </div>
+            <div v-if="guide" class="ov-dt ov-dt--muted">
+              <span class="ov-dt__label">{{ t('dashboard.guideDaily') }}</span>
+              <span class="ov-dt__value">{{ guide.milk }}</span>
+            </div>
+          </div>
+          <div class="ov-card__footer">
+            <div class="ov-dt">
+              <span class="ov-dt__label">{{ t('dashboard.pumpCount') }}</span>
+              <span class="ov-dt__value">{{ todayPumpings.length }}{{ t('common.timesShort') }}</span>
+            </div>
+            <div class="ov-dt">
+              <span class="ov-dt__label">{{ t('dashboard.breastStock') }}</span>
+              <span class="ov-dt__value">{{ formatAmount(breastStock) }}</span>
+            </div>
+          </div>
         </div>
       </div>
       <!-- 睡眠卡片 -->
-      <div class="detail-card">
-        <div class="dc-header">
-          <span class="dc-icon" style="background: #8FAED833; color: #8FAED8;">😴</span>
-          <span class="dc-title">{{ t('dashboard.statSleep') }}</span>
-        </div>
-        <p class="dc-primary" style="color: #8FAED8;">{{ formatDuration(sleepTotal) }}</p>
-        <div class="dc-body">
-          <p v-if="lastSleep" class="dc-row hl-warn">
-            <span class="dc-key">{{ t('dashboard.lastSleepEnd') }}</span>
-            <span class="dc-val">{{ formatTime(lastSleep.endTime ?? lastSleep.startTime) }}<template v-if="sinceSleepMs != null && sinceSleepMs >= 0">, {{ formatDuration(sinceSleepMs) }}{{ t('common.ago') }}</template></span>
-          </p>
-          <p v-if="guide" class="dc-row dc-guide">
-            <span class="dc-key">{{ t('dashboard.guideDaily') }}</span>
-            <span class="dc-val">{{ guide.sleep }}</span>
-          </p>
+      <div class="ov-card ov-card--sleep">
+        <div class="ov-card__accent"></div>
+        <div class="ov-card__content">
+          <div class="ov-card__head">
+            <span class="ov-card__icon">😴</span>
+            <span class="ov-card__label">{{ t('dashboard.statSleep') }}</span>
+          </div>
+          <p class="ov-card__hero">{{ formatDuration(sleepTotal) }}</p>
+          <div class="ov-card__details">
+            <div v-if="lastSleep" class="ov-dt ov-dt--alert">
+              <span class="ov-dt__label">{{ t('dashboard.lastSleepEnd') }}</span>
+              <span class="ov-dt__value">
+                {{ formatTime(lastSleep.endTime ?? lastSleep.startTime) }}
+                <template v-if="sinceSleepMs != null && sinceSleepMs >= 0">· {{ formatDuration(sinceSleepMs) }}{{ t('common.ago') }}</template>
+              </span>
+            </div>
+            <div v-if="guide" class="ov-dt ov-dt--muted">
+              <span class="ov-dt__label">{{ t('dashboard.guideDaily') }}</span>
+              <span class="ov-dt__value">{{ guide.sleep }}</span>
+            </div>
+          </div>
         </div>
       </div>
       <!-- 尿布卡片 -->
-      <div class="detail-card">
-        <div class="dc-header">
-          <span class="dc-icon" style="background: #9A8FC833; color: #9A8FC8;">🧷</span>
-          <span class="dc-title">{{ t('dashboard.statDiaper') }}</span>
-        </div>
-        <p class="dc-primary" style="color: #9A8FC8;">{{ todayDiapers.length }}{{ t('common.timesShort') }}</p>
-        <div class="dc-body">
-          <p v-if="guide" class="dc-row dc-guide">
-            <span class="dc-key">{{ t('dashboard.guideDaily') }}</span>
-            <span class="dc-val">{{ guide.diaper }}</span>
-          </p>
+      <div class="ov-card ov-card--diaper">
+        <div class="ov-card__accent"></div>
+        <div class="ov-card__content">
+          <div class="ov-card__head">
+            <span class="ov-card__icon">🧷</span>
+            <span class="ov-card__label">{{ t('dashboard.statDiaper') }}</span>
+          </div>
+          <p class="ov-card__hero">{{ todayDiapers.length }}<span class="ov-card__unit">{{ t('common.timesShort') }}</span></p>
+          <div class="ov-card__details">
+            <div v-if="guide" class="ov-dt ov-dt--muted">
+              <span class="ov-dt__label">{{ t('dashboard.guideDaily') }}</span>
+              <span class="ov-dt__value">{{ guide.diaper }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -249,103 +266,164 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 </template>
 
 <style scoped>
-.stats-grid {
+/* ===== 概览网格 ===== */
+.overview-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 
-.detail-card {
+/* ===== 卡片基础 ===== */
+.ov-card {
   display: flex;
-  flex-direction: column;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
+  border-radius: 14px;
   background: var(--surface);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-xs);
   overflow: hidden;
-  padding: 8px 10px 9px;
+  transition: box-shadow 0.2s ease;
 }
 
-.dc-header {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 4px;
+@media (hover: hover) {
+  .ov-card:hover {
+    box-shadow: var(--shadow-sm);
+  }
 }
 
-.dc-icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
+/* 左侧彩色指示条 */
+.ov-card__accent {
+  width: 3px;
   flex-shrink: 0;
 }
 
-.dc-title {
+.ov-card--milk .ov-card__accent  { background: #C4A8E0; }
+.ov-card--sleep .ov-card__accent { background: #8FAED8; }
+.ov-card--diaper .ov-card__accent { background: #9A8FC8; }
+
+/* 内容区 */
+.ov-card__content {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 头部：图标 + 标签 */
+.ov-card__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ov-card__icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.ov-card__label {
   font-size: 11px;
   font-weight: 500;
   color: var(--text-muted);
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
-/* 主数值：最重要，最大字号 */
-.dc-primary {
-  font-size: 20px;
+/* 主数值：大号粗体，视觉焦点 */
+.ov-card__hero {
+  font-size: 22px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
-  margin-bottom: 4px;
+  color: var(--text);
 }
 
-.dc-body {
+.ov-card__unit {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+.ov-card--milk .ov-card__hero  { color: #9a76c9; }
+.ov-card--sleep .ov-card__hero { color: #6a96c7; }
+.ov-card--diaper .ov-card__hero { color: #8476b5; }
+
+/* 详情区 */
+.ov-card__details {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
-.dc-row {
+/* 底部分隔区（泵/库存等辅助数据） */
+.ov-card__footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 4px;
-  line-height: 1.45;
+  gap: 2px 12px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
 }
 
-/* 键名：次要信息，小号 */
-.dc-key {
+/* ===== 数据行 ===== */
+.ov-dt {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+.ov-dt__label {
   font-size: 11px;
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
-/* 键值：次要信息，与键名同级 */
-.dc-val {
+.ov-dt__value {
   font-size: 11px;
+  font-weight: 500;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* 高亮行：上次结束时间，警示色 */
-.dc-row.hl-warn .dc-key {
-  color: var(--primary);
+/* 高亮行：上次结束时间 */
+.ov-dt--alert .ov-dt__label {
+  color: var(--primary-dark);
   font-weight: 600;
 }
-.dc-row.hl-warn .dc-val {
+
+.ov-dt--alert .ov-dt__value {
   color: var(--primary);
   font-weight: 600;
   background: var(--primary-soft);
-  border-radius: 3px;
-  padding: 0 3px;
-  margin: 0 -3px;
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
-/* 参考行：辅助信息，最弱 */
-.dc-guide .dc-key,
-.dc-guide .dc-val {
+/* 参考行：最弱视觉权重 */
+.ov-dt--muted .ov-dt__label,
+.ov-dt--muted .ov-dt__value {
   color: var(--text-muted);
   font-style: italic;
+  font-weight: 400;
 }
+
+/* ===== 响应式 ===== */
+@media (max-width: 520px) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .ov-card__hero {
+    font-size: 20px;
+  }
+}
+</style>
 
 .feed-reminder-banner {
   display: flex;
