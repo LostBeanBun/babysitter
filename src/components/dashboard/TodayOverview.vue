@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import StatCard from '@/components/common/StatCard.vue'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
@@ -189,20 +188,27 @@ const guide = computed(() => dailyGuide(activeBaby.value))
           <span class="dc-icon" style="background: #C4A8E033; color: #C4A8E0;">🥛</span>
           <span class="dc-title">{{ t('dashboard.statMilk') }}</span>
         </div>
+        <p class="dc-primary" style="color: #C4A8E0;">{{ formatAmount(totalMilk) || '0 ml' }}</p>
         <div class="dc-body">
           <p class="dc-row">
-            <span class="dc-label">{{ t('dashboard.totalMilk') }}: {{ formatAmount(totalMilk) || '0 ml' }}</span>
-            <span class="dc-label">{{ t('dashboard.feedCount') }}: {{ feedCount }}{{ t('common.timesShort') }}</span>
+            <span class="dc-key">{{ t('dashboard.feedCount') }}</span>
+            <span class="dc-val">{{ feedCount }}{{ t('common.timesShort') }}</span>
           </p>
           <p v-if="lastFeeding" class="dc-row hl-warn">
-            <span class="dc-label">{{ t('dashboard.lastFeedingEnd') }}: {{ formatTime(lastFeeding.endTime ?? lastFeeding.startTime) }}<template v-if="sinceMs != null">, {{ formatDuration(sinceMs) }}{{ t('common.ago') }}</template></span>
+            <span class="dc-key">{{ t('dashboard.lastFeedingEnd') }}</span>
+            <span class="dc-val">{{ formatTime(lastFeeding.endTime ?? lastFeeding.startTime) }}<template v-if="sinceMs != null">, {{ formatDuration(sinceMs) }}{{ t('common.ago') }}</template></span>
           </p>
           <p v-if="guide" class="dc-row dc-guide">
-            <span class="dc-label">{{ t('dashboard.guideDaily') }}: {{ guide.milk }}</span>
+            <span class="dc-key">{{ t('dashboard.guideDaily') }}</span>
+            <span class="dc-val">{{ guide.milk }}</span>
           </p>
           <p class="dc-row">
-            <span class="dc-label">{{ t('dashboard.pumpCount') }}: {{ todayPumpings.length }}{{ t('common.timesShort') }}</span>
-            <span class="dc-label">{{ t('dashboard.breastStock') }}: {{ formatAmount(breastStock) }}</span>
+            <span class="dc-key">{{ t('dashboard.pumpCount') }}</span>
+            <span class="dc-val">{{ todayPumpings.length }}{{ t('common.timesShort') }}</span>
+          </p>
+          <p class="dc-row">
+            <span class="dc-key">{{ t('dashboard.breastStock') }}</span>
+            <span class="dc-val">{{ formatAmount(breastStock) }}</span>
           </p>
         </div>
       </div>
@@ -212,25 +218,32 @@ const guide = computed(() => dailyGuide(activeBaby.value))
           <span class="dc-icon" style="background: #8FAED833; color: #8FAED8;">😴</span>
           <span class="dc-title">{{ t('dashboard.statSleep') }}</span>
         </div>
+        <p class="dc-primary" style="color: #8FAED8;">{{ formatDuration(sleepTotal) }}</p>
         <div class="dc-body">
-          <p class="dc-row">
-            <span class="dc-label">{{ t('dashboard.totalSleep') }}: {{ formatDuration(sleepTotal) }}</span>
-          </p>
           <p v-if="lastSleep" class="dc-row hl-warn">
-            <span class="dc-label">{{ t('dashboard.lastSleepEnd') }}: {{ formatTime(lastSleep.endTime ?? lastSleep.startTime) }}<template v-if="sinceSleepMs != null && sinceSleepMs >= 0">, {{ formatDuration(sinceSleepMs) }}{{ t('common.ago') }}</template></span>
+            <span class="dc-key">{{ t('dashboard.lastSleepEnd') }}</span>
+            <span class="dc-val">{{ formatTime(lastSleep.endTime ?? lastSleep.startTime) }}<template v-if="sinceSleepMs != null && sinceSleepMs >= 0">, {{ formatDuration(sinceSleepMs) }}{{ t('common.ago') }}</template></span>
           </p>
           <p v-if="guide" class="dc-row dc-guide">
-            <span class="dc-label">{{ t('dashboard.guideDaily') }}: {{ guide.sleep }}</span>
+            <span class="dc-key">{{ t('dashboard.guideDaily') }}</span>
+            <span class="dc-val">{{ guide.sleep }}</span>
           </p>
         </div>
       </div>
-      <StatCard
-        :label="t('dashboard.statDiaper')"
-        :value="t('common.times', { n: todayDiapers.length })"
-        :sub="guide ? t('dashboard.guideDiaper', { value: guide.diaper }) : undefined"
-        icon="🧷"
-        color="#9A8FC8"
-      />
+      <!-- 尿布卡片 -->
+      <div class="detail-card">
+        <div class="dc-header">
+          <span class="dc-icon" style="background: #9A8FC833; color: #9A8FC8;">🧷</span>
+          <span class="dc-title">{{ t('dashboard.statDiaper') }}</span>
+        </div>
+        <p class="dc-primary" style="color: #9A8FC8;">{{ todayDiapers.length }}{{ t('common.timesShort') }}</p>
+        <div class="dc-body">
+          <p v-if="guide" class="dc-row dc-guide">
+            <span class="dc-key">{{ t('dashboard.guideDaily') }}</span>
+            <span class="dc-val">{{ guide.diaper }}</span>
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -250,52 +263,75 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   background: var(--surface);
   box-shadow: var(--shadow-xs);
   overflow: hidden;
+  padding: 8px 10px 9px;
 }
 
 .dc-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 10px 0;
+  gap: 5px;
+  margin-bottom: 4px;
 }
 
 .dc-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
 .dc-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
+/* 主数值：最重要，最大字号 */
+.dc-primary {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 4px;
 }
 
 .dc-body {
-  padding: 6px 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .dc-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 6px;
-  line-height: 1.4;
+  gap: 0 4px;
+  line-height: 1.45;
 }
 
-.dc-label {
+/* 键名：次要信息，小号 */
+.dc-key {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* 键值：次要信息，与键名同级 */
+.dc-val {
   font-size: 11px;
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
-.dc-row.hl-warn .dc-label {
+/* 高亮行：上次结束时间，警示色 */
+.dc-row.hl-warn .dc-key {
+  color: var(--primary);
+  font-weight: 600;
+}
+.dc-row.hl-warn .dc-val {
   color: var(--primary);
   font-weight: 600;
   background: var(--primary-soft);
@@ -304,7 +340,9 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   margin: 0 -3px;
 }
 
-.dc-guide .dc-label {
+/* 参考行：辅助信息，最弱 */
+.dc-guide .dc-key,
+.dc-guide .dc-val {
   color: var(--text-muted);
   font-style: italic;
 }
