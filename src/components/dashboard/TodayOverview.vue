@@ -192,9 +192,9 @@ const guide = computed(() => dailyGuide(activeBaby.value))
           </div>
           <p class="ov-card__hero">{{ formatAmount(totalMilk) || '0 ml' }}</p>
           <div class="ov-card__details">
-            <div class="ov-dt">
-              <span class="ov-dt__label">{{ t('dashboard.feedCount') }}</span>
-              <span class="ov-dt__value">{{ feedCount }}{{ t('common.timesShort') }}</span>
+            <div class="ov-dt ov-dt--spread">
+              <span class="ov-dt__label">{{ t('dashboard.feedCount') }} <span class="ov-dt__value">{{ feedCount }}{{ t('common.timesShort') }}</span></span>
+              <span v-if="guide" class="ov-dt__label ov-dt--muted">{{ t('dashboard.guideDaily') }} {{ guide.milk }}</span>
             </div>
             <div v-if="lastFeeding" class="ov-dt ov-dt--alert">
               <span class="ov-dt__label">{{ t('dashboard.lastFeedingEnd') }}</span>
@@ -203,19 +203,13 @@ const guide = computed(() => dailyGuide(activeBaby.value))
                 <template v-if="sinceMs != null">· {{ formatDuration(sinceMs) }}{{ t('common.ago') }}</template>
               </span>
             </div>
-            <div v-if="guide" class="ov-dt ov-dt--muted">
-              <span class="ov-dt__label">{{ t('dashboard.guideDaily') }}</span>
-              <span class="ov-dt__value">{{ guide.milk }}</span>
-            </div>
           </div>
           <div class="ov-card__footer">
             <div class="ov-dt">
-              <span class="ov-dt__label">{{ t('dashboard.pumpCount') }}</span>
-              <span class="ov-dt__value">{{ todayPumpings.length }}{{ t('common.timesShort') }}</span>
+              <span class="ov-dt__label">{{ t('dashboard.pumpCount') }} <span class="ov-dt__value">{{ todayPumpings.length }}{{ t('common.timesShort') }}</span></span>
             </div>
             <div class="ov-dt">
-              <span class="ov-dt__label">{{ t('dashboard.breastStock') }}</span>
-              <span class="ov-dt__value">{{ formatAmount(breastStock) }}</span>
+              <span class="ov-dt__label">{{ t('dashboard.breastStock') }} <span class="ov-dt__value">{{ formatAmount(breastStock) }}</span></span>
             </div>
           </div>
         </div>
@@ -237,9 +231,8 @@ const guide = computed(() => dailyGuide(activeBaby.value))
                 <template v-if="sinceSleepMs != null && sinceSleepMs >= 0">· {{ formatDuration(sinceSleepMs) }}{{ t('common.ago') }}</template>
               </span>
             </div>
-            <div v-if="guide" class="ov-dt ov-dt--muted">
-              <span class="ov-dt__label">{{ t('dashboard.guideDaily') }}</span>
-              <span class="ov-dt__value">{{ guide.sleep }}</span>
+            <div v-if="guide" class="ov-dt ov-dt--spread">
+              <span class="ov-dt__label ov-dt--muted">{{ t('dashboard.guideDaily') }} {{ guide.sleep }}</span>
             </div>
           </div>
         </div>
@@ -254,9 +247,8 @@ const guide = computed(() => dailyGuide(activeBaby.value))
           </div>
           <p class="ov-card__hero">{{ todayDiapers.length }}<span class="ov-card__unit">{{ t('common.timesShort') }}</span></p>
           <div class="ov-card__details">
-            <div v-if="guide" class="ov-dt ov-dt--muted">
-              <span class="ov-dt__label">{{ t('dashboard.guideDaily') }}</span>
-              <span class="ov-dt__value">{{ guide.diaper }}</span>
+            <div v-if="guide" class="ov-dt ov-dt--spread">
+              <span class="ov-dt__label ov-dt--muted">{{ t('dashboard.guideDaily') }} {{ guide.diaper }}</span>
             </div>
           </div>
         </div>
@@ -375,6 +367,11 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   line-height: 1.4;
 }
 
+/* 左右分散一行 */
+.ov-dt--spread {
+  justify-content: space-between;
+}
+
 .ov-dt__label {
   font-size: 11px;
   color: var(--text-muted);
@@ -386,9 +383,6 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   font-weight: 500;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* 高亮行：上次结束时间 */
@@ -405,14 +399,9 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   border-radius: 4px;
 }
 
-/* 参考行：最弱视觉权重，靠右 */
+/* 弱化文字 */
 .ov-dt--muted {
-  margin-left: auto;
-}
-
-.ov-dt--muted .ov-dt__label,
-.ov-dt--muted .ov-dt__value {
-  color: var(--text-muted);
+  color: var(--text-muted) !important;
   font-style: italic;
   font-weight: 400;
 }
