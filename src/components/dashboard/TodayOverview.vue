@@ -9,7 +9,7 @@ import { usePumpingStore } from '@/stores/pumping'
 import { useSleepStore } from '@/stores/sleep'
 import { useVaccinationStore } from '@/stores/vaccination'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
-import { startOfDay, formatDuration, formatAmount } from '@/utils/format'
+import { startOfDay, formatDuration, formatAmount, formatTime } from '@/utils/format'
 import { MS_PER_DAY } from '@/constants'
 import { recommendedIntervalMs, recommendedIntervalLabel } from '@/utils/feedingGuide'
 import { dailyGuide } from '@/utils/dailyGuides'
@@ -62,7 +62,7 @@ const todayPumpings = computed(() =>
 )
 const todaySleeps = computed(() =>
   keep(
-    sleepStore.sleeps.filter((s) => s.endTime >= todayStart.value && s.startTime <= todayEnd.value),
+    sleepStore.sleeps.filter((s) => (s.endTime ?? s.startTime) >= todayStart.value && s.startTime <= todayEnd.value),
     'sleep',
   ),
 )
@@ -93,7 +93,7 @@ const breastStock = computed(() => pumpTotal.value - bottleBreastmilkTotal.value
 const sleepTotal = computed(() =>
   todaySleeps.value.reduce((sum, s) => {
     const s0 = Math.max(s.startTime, todayStart.value)
-    const e0 = Math.min(s.endTime, todayEnd.value)
+    const e0 = Math.min(s.endTime ?? s.startTime, todayEnd.value)
     return sum + Math.max(0, e0 - s0)
   }, 0),
 )
@@ -104,7 +104,16 @@ const lastFeeding = computed(() => {
   const sorted = [...feedingStore.feedings].sort((a, b) => b.startTime - a.startTime)
   return sorted[0]
 })
+const lastSleep = computed(() => {
+  const sorted = [...sleepStore.sleeps].sort((a, b) => (b.endTime ?? b.startTime) - (a.endTime ?? a.startTime))
+  return sorted[0]
+})
 const sinceMs = computed(() => (lastFeeding.value ? (props.now - lastFeeding.value.startTime) : null))
+const sinceSleepMs = computed(() => {
+  if (!lastSleep.value) return null
+  const end = lastSleep.value.endTime ?? lastSleep.value.startTime
+  return props.now - end
+})
 const recommendedMs = computed(() => recommendedIntervalMs(activeBaby.value))
 const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommendedMs.value)
 /** 按月龄的每日参考数据（无出生日期时为 null） */
@@ -174,6 +183,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
         :label="t('dashboard.statMilk')"
         :value="formatAmount(totalMilk) || '0 ml'"
         :sub="[
+          feedCount > 0 ? `${t('feed.lastFeedingTime')} ${formatTime(lastFeeding!.startTime)}${sinceMs != null ? ' · ' + formatDuration(sinceMs) + t('common.ago') : ''}` : undefined,
           t('common.times', { n: feedCount }),
           t('dashboard.milkStock', { pumped: formatAmount(pumpTotal), stock: formatAmount(breastStock) }),
           guide ? t('dashboard.guideMilk', { value: guide.milk }) : undefined,
@@ -184,7 +194,10 @@ const guide = computed(() => dailyGuide(activeBaby.value))
       <StatCard
         :label="t('dashboard.statSleep')"
         :value="formatDuration(sleepTotal)"
-        :sub="guide ? t('dashboard.guideSleep', { value: guide.sleep }) : undefined"
+        :sub="[
+          lastSleep ? `${t('feed.lastSleepTime')} ${formatTime(lastSleep.endTime ?? lastSleep.startTime)}${sinceSleepMs != null && sinceSleepMs >= 0 ? ' · ' + formatDuration(sinceSleepMs) + t('common.ago') : ''}` : undefined,
+          guide ? t('dashboard.guideSleep', { value: guide.sleep }) : undefined,
+        ]"
         icon="😴"
         color="#8FAED8"
       />
@@ -329,7 +342,6 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   gap: 8px;
 }
 
-/* 小屏下统计卡单列展示 */
 @media (max-width: 520px) {
   .stats-grid {
     grid-template-columns: 1fr;

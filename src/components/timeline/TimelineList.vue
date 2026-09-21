@@ -99,6 +99,7 @@ const entries = computed<TimelineEntry[]>(() => {
     if (f.duration) detailParts.push(formatDuration(f.duration))
     const detail = detailParts.length ? detailParts.join(' · ') : t('common.recorded')
     const sideLabel = f.type === 'breast' && f.side ? ' (' + t('feed.sides.' + f.side) + ')' : ''
+    const feedTitle = FEED_TYPE_LABELS[f.type] ? t(FEED_TYPE_LABELS[f.type]) : f.type
     list.push({
       id: f.id!,
       kind: 'feeding',
@@ -106,7 +107,7 @@ const entries = computed<TimelineEntry[]>(() => {
       icon: f.type === 'breast' ? '🤱' : '🍼',
       color,
       kindColor: KIND_COLORS.feeding,
-      title: t(FEED_TYPE_LABELS[f.type]) + sideLabel,
+      title: feedTitle + sideLabel,
       detail,
       duration: f.duration,
       raw: f,
@@ -114,9 +115,9 @@ const entries = computed<TimelineEntry[]>(() => {
   }
 
   for (const d of props.diapers) {
-    const detailParts: string[] = [t(DIAPER_TYPE_LABELS[d.type])]
-    if (d.color) detailParts.push(t(DIAPER_COLOR_LABELS[d.color]))
-    if (d.amount) detailParts.push(t(DIAPER_AMOUNT_LABELS[d.amount]))
+    const detailParts: string[] = [DIAPER_TYPE_LABELS[d.type] ? t(DIAPER_TYPE_LABELS[d.type]) : d.type]
+    if (d.color) detailParts.push(DIAPER_COLOR_LABELS[d.color] ? t(DIAPER_COLOR_LABELS[d.color]) : d.color)
+    if (d.amount) detailParts.push(DIAPER_AMOUNT_LABELS[d.amount] ? t(DIAPER_AMOUNT_LABELS[d.amount]) : d.amount)
     list.push({
       id: d.id!,
       kind: 'diaper',
@@ -124,7 +125,7 @@ const entries = computed<TimelineEntry[]>(() => {
       icon: d.type === 'wet' ? '💧' : d.type === 'dirty' ? '💩' : '🧷',
       color: '#9A8FC8',
       kindColor: KIND_COLORS.diaper,
-      title: t(DIAPER_TYPE_LABELS[d.type]),
+      title: DIAPER_TYPE_LABELS[d.type] ? t(DIAPER_TYPE_LABELS[d.type]) : d.type,
       detail: detailParts.slice(1).join(' · ') || t('common.changed'),
       raw: d,
     })
@@ -134,6 +135,7 @@ const entries = computed<TimelineEntry[]>(() => {
     const detailParts: string[] = []
     if (p.amount != null) detailParts.push(`${formatAmount(p.amount)}`)
     if (p.duration) detailParts.push(formatDuration(p.duration))
+    const pumpSideLabel = PUMP_SIDE_LABELS[p.side] ? t(PUMP_SIDE_LABELS[p.side]) : p.side
     list.push({
       id: p.id!,
       kind: 'pumping',
@@ -141,7 +143,7 @@ const entries = computed<TimelineEntry[]>(() => {
       icon: '🎀',
       color: '#D8A8C8',
       kindColor: KIND_COLORS.pumping,
-      title: t('timeline.pumpTitle', { side: t(PUMP_SIDE_LABELS[p.side]) }),
+      title: t('timeline.pumpTitle', { side: pumpSideLabel }),
       detail: detailParts.join(' · ') || t('common.recorded'),
       duration: p.duration,
       raw: p,
@@ -149,7 +151,8 @@ const entries = computed<TimelineEntry[]>(() => {
   }
 
   for (const s of props.sleeps) {
-    const dur = s.endTime - s.startTime
+    const dur = (s.endTime ?? s.startTime) - s.startTime
+    const sleepTitle = SLEEP_TYPE_LABELS[s.type] ? t(SLEEP_TYPE_LABELS[s.type]) : s.type
     list.push({
       id: s.id!,
       kind: 'sleep',
@@ -157,8 +160,8 @@ const entries = computed<TimelineEntry[]>(() => {
       icon: s.type === 'night' ? '🌙' : '😴',
       color: '#8FAED8',
       kindColor: KIND_COLORS.sleep,
-      title: t(SLEEP_TYPE_LABELS[s.type]),
-      detail: `${formatTime(s.startTime)} - ${formatTime(s.endTime)}${dur > 0 ? ` · ${formatDuration(dur)}` : ''}`,
+      title: sleepTitle,
+      detail: `${formatTime(s.startTime)} - ${formatTime(s.endTime ?? s.startTime)}${dur > 0 ? ` · ${formatDuration(dur)}` : ''}`,
       duration: dur,
       raw: s,
     })
@@ -235,7 +238,7 @@ const entries = computed<TimelineEntry[]>(() => {
 
   for (const tmp of props.temperatures ?? []) {
     const detailParts: string[] = [t('timeline.temperatureValue', { value: tmp.value })]
-    if (tmp.method) detailParts.push(t(TEMP_METHOD_LABELS[tmp.method]))
+    if (tmp.method) detailParts.push(TEMP_METHOD_LABELS[tmp.method] ? t(TEMP_METHOD_LABELS[tmp.method]) : tmp.method)
     list.push({
       id: tmp.id!,
       kind: 'temperature',
@@ -251,6 +254,7 @@ const entries = computed<TimelineEntry[]>(() => {
 
   for (const ms of props.milestones ?? []) {
     const item = MILESTONE_TYPE_LIST.find((x) => x.value === ms.type)
+    const milestoneTitle = MILESTONE_TYPE_LABELS[ms.type] ? t(MILESTONE_TYPE_LABELS[ms.type]) : ms.type
     list.push({
       id: ms.id!,
       kind: 'milestone',
@@ -258,7 +262,7 @@ const entries = computed<TimelineEntry[]>(() => {
       icon: item?.icon ?? '🌟',
       color: item?.color ?? '#E8B86A',
       kindColor: KIND_COLORS.milestone,
-      title: t(MILESTONE_TYPE_LABELS[ms.type]),
+      title: milestoneTitle,
       detail: ms.notes?.trim() || t('common.recorded'),
       raw: ms,
     })

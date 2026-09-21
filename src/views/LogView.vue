@@ -1,7 +1,8 @@
 ﻿<script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { showToast } from '@/composables/useToast'
 import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
 import { usePumpingStore } from '@/stores/pumping'
@@ -27,7 +28,6 @@ import TemperatureForm from '@/components/forms/TemperatureForm.vue'
 import MilestoneForm from '@/components/forms/MilestoneForm.vue'
 import { formatTime, startOfDay } from '@/utils/format'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
-import { useActiveTimer } from '@/composables/useActiveTimer'
 import { useSleepModal } from '@/composables/useSleepModal'
 import type {
   Feeding,
@@ -166,19 +166,9 @@ function clearDateFilter() {
 
 /** 删除撤销：过滤待删除记录 */
 const { isPending, scheduleDelete } = useDeleteUndo()
-const activeTimer = useActiveTimer()
 const { sleepModalOpen } = useSleepModal()
 const route = useRoute()
 const router = useRouter()
-
-// 悬浮球导航过来时自动打开对应计时表单
-onMounted(() => {
-  const timerKind = route.query.timer
-  if (timerKind && typeof timerKind === 'string') {
-    openAdd(timerKind as 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone')
-    router.replace({ path: '/log' }) // 清除 query 避免重复触发
-  }
-})
 
 function keep<T extends { id?: number }>(items: T[], kind: string): T[] {
   return items.filter((x) => !isPending({ kind, id: x.id! }))
@@ -264,9 +254,6 @@ const modalState = ref<{
 } | null>(null)
 const confirmDelete = ref<TimelineEntry | null>(null)
 
-// 睡眠弹窗打开时隐藏悬浮球
-watch(modalState, (ms) => { sleepModalOpen.value = ms?.kind === 'sleep' })
-
 function onEdit(entry: TimelineEntry) {
   modalState.value = { kind: entry.kind, editing: entry }
 }
@@ -274,6 +261,20 @@ function onEdit(entry: TimelineEntry) {
 function openAdd(kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone') {
   modalState.value = { kind }
 }
+
+// 悬浮球导航过来时自动打开对应表单
+let lastTimerKind = ''
+watch(
+  () => route.query.timer,
+  (timerKind) => {
+    if (timerKind && typeof timerKind === 'string' && timerKind !== lastTimerKind) {
+      lastTimerKind = timerKind
+      openAdd(timerKind as Parameters<typeof openAdd>[0])
+      router.replace({ path: '/log' })
+    }
+  },
+  { immediate: true },
+)
 
 function onDelete(entry: TimelineEntry) {
   confirmDelete.value = entry
@@ -300,19 +301,20 @@ async function removeEntry(e: TimelineEntry) {
   else await milestoneStore.remove(e.id)
 }
 
-function onSaved() {
-  const savedKind = modalState.value?.kind
-  if (savedKind && savedKind === activeTimer.kind.value) {
-    activeTimer.reset()
-  }
+// 表单弹窗打开时隐藏悬浮球
+watch(modalState, (ms) => { sleepModalOpen.value = ms !== null })
+
+function onStartRecord() {
   modalState.value = null
+  showToast(t('common.recordStarted'))
+}
+
+function onSaved() {
+  modalState.value = null
+  showToast(t('common.recordSaved'))
 }
 
 function onCancelled() {
-  const closedKind = modalState.value?.kind
-  if (closedKind && closedKind === activeTimer.kind.value) {
-    activeTimer.reset()
-  }
   modalState.value = null
 }
 
@@ -474,6 +476,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
       <FeedingForm
         v-if="modalState?.kind === 'feeding'"
         :editing="modalState?.editing ? (editPayload as FeedingFormProps) : undefined"
+        @start-record="onStartRecord"
         @saved="onSaved"
           @cancelled="onCancelled"
       />
@@ -486,12 +489,14 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
       <PumpingForm
         v-else-if="modalState?.kind === 'pumping'"
         :editing="modalState?.editing ? (editPayload as PumpingFormProps) : undefined"
+        @start-record="onStartRecord"
         @saved="onSaved"
           @cancelled="onCancelled"
       />
       <SleepForm
         v-else-if="modalState?.kind === 'sleep'"
         :editing="modalState?.editing ? (editPayload as SleepFormProps) : undefined"
+        @start-record="onStartRecord"
         @saved="onSaved"
           @cancelled="onCancelled"
       />

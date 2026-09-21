@@ -120,7 +120,7 @@ export function buildDailySeries(
   for (const s of sleeps) {
     const d = dayMap.get(startOfDay(s.startTime))
     if (!d) continue
-    d.sleepMs += Math.max(0, s.endTime - s.startTime)
+    d.sleepMs += Math.max(0, (s.endTime ?? s.startTime) - s.startTime)
     if (s.type === 'nap') d.napCount++
     else d.nightCount++
   }

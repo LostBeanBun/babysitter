@@ -1,123 +1,98 @@
 /**
- * 全局计时器状态（单例）：跨弹窗/页面共享当前活跃计时器。
- * - start(kind) 开始计时
- * - stop() 停止并返回 { start, end }
- * - updateStartTime(ts) 修改起始时间（自动重算已用时）
- * - reset() 清除计时器状态
- * - 持久化到 localStorage，刷新页面后自动恢复
+ * 全局记录状态（数组模式）：支持多个未完成记录同时存在。
+ * - start(kind, recordId, ts) 开始记录，返回唯一 id
+ * - reset(id?) 按 id 清除，不传则清除全部
+ * - records 活跃记录列表（最多 MAX_RECORDS 条）
+ * - 持久化到 localStorage，刷新页面后悬浮球自动恢复
  */
 import { ref, computed } from 'vue'
 
 export type TimerKind = 'feeding' | 'sleep' | 'pumping'
 
-const STORAGE_KEY = 'active_timer'
-
-interface StoredTimer {
+export interface ActiveRecord {
+  id: string
   kind: TimerKind
+  recordId: number
   startTime: number
 }
 
-// —— 模块级单例状态 ——
-const kind = ref<TimerKind | null>(null)
-const startTime = ref(0)
-const running = ref(false)
-const elapsedMs = ref(0)
-let timerId: number | undefined
+const STORAGE_KEY = 'active_records'
+const MAX_RECORDS = 3
 
-function tick() {
-  if (running.value && startTime.value > 0) {
-    elapsedMs.value = Date.now() - startTime.value
-  }
-}
+let nextId = 1
+
+// —— 模块级单例状态 ——
+const records = ref<ActiveRecord[]>([])
 
 function save() {
-  if (running.value && kind.value && startTime.value > 0) {
-    const data: StoredTimer = { kind: kind.value, startTime: startTime.value }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  } else {
-    localStorage.removeItem(STORAGE_KEY)
-  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records.value))
 }
 
-function restore(): boolean {
+function restore() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return false
-    const data: StoredTimer = JSON.parse(raw)
-    if (data.kind && data.startTime > 0) {
-      kind.value = data.kind
-      startTime.value = data.startTime
-      running.value = true
-      elapsedMs.value = Date.now() - data.startTime
-      if (timerId) clearInterval(timerId)
-      timerId = window.setInterval(tick, 1000)
-      tick()
-      return true
+    if (!raw) return
+    const arr: ActiveRecord[] = JSON.parse(raw)
+    if (Array.isArray(arr)) {
+      records.value = arr.filter((r) => r.kind && r.recordId != null && r.startTime > 0)
+      // 恢复 nextId
+      for (const r of records.value) {
+        const num = Number(r.id)
+        if (!isNaN(num) && num >= nextId) nextId = num + 1
+      }
     }
   } catch {
     // corrupted data, ignore
   }
-  return false
 }
 
-// 页面加载时自动恢复
-const restored = restore()
+restore()
 
 export function useActiveTimer() {
-  function start(k: TimerKind, ts: number = Date.now()) {
-    kind.value = k
-    startTime.value = ts
-    running.value = true
-    elapsedMs.value = 0
-    if (timerId) clearInterval(timerId)
-    timerId = window.setInterval(tick, 1000)
-    tick()
+  /** 是否已存在同类记录 */
+  function hasKind(k: TimerKind): boolean {
+    return records.value.some((r) => r.kind === k)
+  }
+
+  /** 开始记录，返回唯一 id；若已达上限或同类已存在则返回 null */
+  function start(k: TimerKind, recordId: number, ts: number = Date.now()): string | null {
+    if (records.value.length >= MAX_RECORDS) return null
+    if (hasKind(k)) return null
+    const id = String(nextId++)
+    records.value.push({ id, kind: k, recordId, startTime: ts })
+    save()
+    return id
+  }
+
+  /** 按 id 清除记录；不传 id 则清除全部 */
+  function reset(id?: string) {
+    if (id) {
+      records.value = records.value.filter((r) => r.id !== id)
+    } else {
+      records.value = []
+    }
     save()
   }
 
-  function stop(): { start: number; end: number } | null {
-    if (!running.value) return null
-    const end = Date.now()
-    const s = startTime.value
-    running.value = false
-    if (timerId) clearInterval(timerId)
-    timerId = undefined
-    elapsedMs.value = end - s
-    save()
-    return { start: s, end }
+  /** 按 id 查找记录 */
+  function getById(id: string): ActiveRecord | undefined {
+    return records.value.find((r) => r.id === id)
   }
 
-  function updateStartTime(ts: number) {
-    if (!running.value) return
-    startTime.value = ts
-    tick()
-    save()
+  /** 按 kind 查找记录 */
+  function getByKind(k: TimerKind): ActiveRecord | undefined {
+    return records.value.find((r) => r.kind === k)
   }
 
-  function reset() {
-    running.value = false
-    kind.value = null
-    startTime.value = 0
-    elapsedMs.value = 0
-    if (timerId) clearInterval(timerId)
-    timerId = undefined
-    save()
-  }
-
-  const isActive = computed(() => running.value && kind.value !== null)
+  const isActive = computed(() => records.value.length > 0)
 
   return {
-    kind,
-    startTime,
-    running,
-    elapsedMs,
+    records,
     isActive,
+    hasKind,
     start,
-    stop,
-    updateStartTime,
     reset,
+    getById,
+    getByKind,
   }
 }
-
-// 导出恢复状态供 App.vue 判断
-export { restored }

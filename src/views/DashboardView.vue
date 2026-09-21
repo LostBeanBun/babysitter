@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, ref, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { showToast } from '@/composables/useToast'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
@@ -213,12 +214,6 @@ const confirmDelete = ref<{
   raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature | Milestone
 } | null>(null)
 
-// 睡眠弹窗打开时隐藏悬浮球
-watch(
-  [modalState, sleepFeedOpen],
-  ([ms, sf]) => { sleepModalOpen.value = !!(sf || ms?.kind === 'sleep') },
-)
-
 function openAdd(
   kind:
     | 'feeding'
@@ -267,19 +262,22 @@ async function removeEntry(e: {
   else await milestoneStore.remove(e.id)
 }
 
-function onSaved() {
-  const savedKind = modalState.value?.kind
-  if (savedKind && savedKind === activeTimer.kind.value) {
-    activeTimer.reset()
-  }
+// 表单弹窗打开时隐藏悬浮球
+watch(modalState, (ms) => { sleepModalOpen.value = ms !== null })
+
+/** 开始记录：保存开始时间，关闭弹窗，悬浮球出现 */
+function onStartRecord() {
   modalState.value = null
+  showToast(t('common.recordStarted'))
+}
+
+/** 结束记录 / 编辑保存：关闭弹窗 */
+function onSaved() {
+  modalState.value = null
+  showToast(t('common.recordSaved'))
 }
 
 function onCancelled() {
-  const closedKind = modalState.value?.kind
-  if (closedKind && closedKind === activeTimer.kind.value) {
-    activeTimer.reset()
-  }
   modalState.value = null
 }
 
@@ -424,6 +422,7 @@ const editPayload = computed(() => {
         <FeedingForm
           v-if="modalState?.kind === 'feeding'"
           :editing="modalState?.editing ? (editPayload as FeedingFormProps) : undefined"
+          @start-record="onStartRecord"
           @saved="onSaved"
           @cancelled="onCancelled"
         />
@@ -436,12 +435,14 @@ const editPayload = computed(() => {
         <PumpingForm
           v-else-if="modalState?.kind === 'pumping'"
           :editing="modalState?.editing ? (editPayload as PumpingFormProps) : undefined"
+          @start-record="onStartRecord"
           @saved="onSaved"
           @cancelled="onCancelled"
         />
         <SleepForm
           v-else-if="modalState?.kind === 'sleep'"
           :editing="modalState?.editing ? (editPayload as SleepFormProps) : undefined"
+          @start-record="onStartRecord"
           @saved="onSaved"
           @cancelled="onCancelled"
         />

@@ -1,157 +1,209 @@
 <script setup lang="ts">
 /**
- * 悬浮计时球：可自由拖拽，显示当前活跃计时器状态。
- * - 点击主体：emit('open') 由父组件重新打开对应表单
- * - 无关闭按钮：仅在用户保存/取消记录时消失
- * - 支持触摸+鼠标拖拽水平+垂直移动
- * - 垂直范围限制在 header 与 tabbar 之间
+ * 悬浮记录球（多球模式）：每个活跃记录显示一个独立球。
+ * - 点击：emit('open', timerId) 打开对应表单
+ * - 纵向堆叠，独立拖拽
+ * - 最多显示 3 个球
  */
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useActiveTimer } from '@/composables/useActiveTimer'
 import { useSleepModal } from '@/composables/useSleepModal'
-import { formatDuration } from '@/utils/format'
+import { formatTime } from '@/utils/format'
 
 defineProps<{ active: boolean }>()
-const emit = defineEmits<{ open: [] }>()
+const emit = defineEmits<{ open: [timerId: string] }>()
 
 const { t } = useI18n()
 const activeTimer = useActiveTimer()
 const { sleepModalOpen } = useSleepModal()
 
-const ICON_MAP: Record<string, string> = { feeding: '🍼', sleep: '😴', pumping: '🎀' }
-const KIND_LABEL_KEYS: Record<string, string> = { feeding: 'floatingTimer.kindFeeding', sleep: 'floatingTimer.kindSleep', pumping: 'floatingTimer.kindPumping' }
+const CONFIG: Record<string, { icon: string; labelKey: string; color: string; bg: string }> = {
+  feeding: { icon: '🍼', labelKey: 'floatingTimer.kindFeeding', color: '#e8906c', bg: 'rgba(232, 144, 108, 0.12)' },
+  sleep:   { icon: '😴', labelKey: 'floatingTimer.kindSleep',   color: '#7c6de8', bg: 'rgba(124, 109, 232, 0.12)' },
+  pumping: { icon: '🎀', labelKey: 'floatingTimer.kindPumping', color: '#e86c9f', bg: 'rgba(232, 108, 159, 0.12)' },
+}
 
-const icon = ref('🍼')
-const label = ref('')
-
-// 位置持久化到 localStorage
-const POS_KEY = 'floating_timer_pos'
-const savedPos = (() => {
-  try {
-    const raw = localStorage.getItem(POS_KEY)
-    return raw ? JSON.parse(raw) as { x: number; y: number } : null
-  } catch {
-    return null
-  }
-})()
-
-// 安全区域边界：header ~60px，tabbar ~70px
+const POS_KEY = 'floating_balls_pos'
 const HEADER_BOTTOM = 70
 const TABBAR_TOP_MARGIN = 80
-const BALL_W = 130 // 近似宽度
+const BALL_GAP = 8
 
-const posX = ref(savedPos?.x ?? window.innerWidth - BALL_W - 12)
-const posY = ref(savedPos?.y ?? Math.round(window.innerHeight * 0.4))
-
-function clampPos() {
-  const maxY = window.innerHeight - TABBAR_TOP_MARGIN
-  posY.value = Math.min(Math.max(posY.value, HEADER_BOTTOM), maxY)
-  posX.value = Math.min(Math.max(posX.value, 12), window.innerWidth - BALL_W - 12)
+function getBallWidth(): number {
+  return window.innerWidth <= 375 ? 105 : 130
 }
 
-watch(
-  () => activeTimer.kind.value,
-  (k) => {
-    if (k) {
-      icon.value = ICON_MAP[k] ?? '⏱️'
-      label.value = t(KIND_LABEL_KEYS[k] ?? '')
-    }
-  },
-  { immediate: true },
-)
-
-// —— 拖拽逻辑（触摸+鼠标） ——
-let dragStartX = 0
-let dragStartY = 0
-let startDragX = 0
-let startDragY = 0
-let dragging = false
-
-function onStart(clientX: number, clientY: number) {
-  dragging = false
-  dragStartX = clientX
-  dragStartY = clientY
-  startDragX = posX.value
-  startDragY = posY.value
-}
-
-function onMove(clientX: number, clientY: number) {
-  const dx = clientX - dragStartX
-  const dy = clientY - dragStartY
-  if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragging = true
-  if (dragging) {
-    posX.value = startDragX + dx
-    posY.value = startDragY + dy
-    clampPos()
+function loadPositions(): Record<string, { x: number; y: number }> {
+  try {
+    const raw = localStorage.getItem(POS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
   }
 }
 
-function onEnd() {
-  clampPos()
-  localStorage.setItem(POS_KEY, JSON.stringify({ x: posX.value, y: posY.value }))
+function savePositions(map: Record<string, { x: number; y: number }>) {
+  localStorage.setItem(POS_KEY, JSON.stringify(map))
 }
 
-// 触摸事件
-function onTouchStart(e: TouchEvent) {
-  onStart(e.touches[0].clientX, e.touches[0].clientY)
+// —— 每个球的拖拽状态 ——
+interface BallState {
+  posX: number
+  posY: number
+  dragStartX: number
+  dragStartY: number
+  startDragX: number
+  startDragY: number
+  moved: boolean
 }
-function onTouchMove(e: TouchEvent) {
-  onMove(e.touches[0].clientX, e.touches[0].clientY)
+
+const ballStates = ref<Map<string, BallState>>(new Map())
+const draggingId = ref<string | null>(null)
+
+function getBallState(id: string): BallState {
+  if (!ballStates.value.has(id)) {
+    const saved = loadPositions()[id]
+    const bw = getBallWidth()
+    const idx = activeTimer.records.value.findIndex((r) => r.id === id)
+    ballStates.value.set(id, {
+      posX: saved?.x ?? window.innerWidth - bw - 12,
+      posY: saved?.y ?? HEADER_BOTTOM + idx * (56 + BALL_GAP),
+      dragStartX: 0,
+      dragStartY: 0,
+      startDragX: 0,
+      startDragY: 0,
+      moved: false,
+    })
+  }
+  return ballStates.value.get(id)!
 }
-function onTouchEnd() {
-  onEnd()
+
+function clampPos(s: BallState) {
+  const maxY = window.innerHeight - TABBAR_TOP_MARGIN
+  const bw = getBallWidth()
+  s.posY = Math.min(Math.max(s.posY, HEADER_BOTTOM), maxY)
+  s.posX = Math.min(Math.max(s.posX, 12), window.innerWidth - bw - 12)
+}
+
+function saveBallPos(id: string, s: BallState) {
+  clampPos(s)
+  const map = loadPositions()
+  map[id] = { x: s.posX, y: s.posY }
+  savePositions(map)
+}
+
+// 清理不存在的 ball state
+watch(
+  () => activeTimer.records.value.length,
+  () => {
+    const ids = new Set(activeTimer.records.value.map((r) => r.id))
+    for (const key of ballStates.value.keys()) {
+      if (!ids.has(key)) ballStates.value.delete(key)
+    }
+  },
+)
+
+onMounted(() => {
+  for (const r of activeTimer.records.value) {
+    const s = getBallState(r.id)
+    clampPos(s)
+  }
+})
+
+// —— 统一拖拽逻辑 ——
+function dragStart(id: string, clientX: number, clientY: number) {
+  draggingId.value = id
+  const s = getBallState(id)
+  s.moved = false
+  s.dragStartX = clientX
+  s.dragStartY = clientY
+  s.startDragX = s.posX
+  s.startDragY = s.posY
+}
+
+function dragMove(clientX: number, clientY: number) {
+  const id = draggingId.value
+  if (!id) return
+  const s = getBallState(id)
+  const dx = clientX - s.dragStartX
+  const dy = clientY - s.dragStartY
+  if (Math.abs(dx) > 5 || Math.abs(dy) > 5) s.moved = true
+  if (s.moved) {
+    s.posX = s.startDragX + dx
+    s.posY = s.startDragY + dy
+    clampPos(s)
+  }
+}
+
+function dragEnd() {
+  const id = draggingId.value
+  if (id) {
+    saveBallPos(id, getBallState(id))
+    draggingId.value = null
+  }
 }
 
 // 鼠标事件
-function onMouseDown(e: MouseEvent) {
-  onStart(e.clientX, e.clientY)
+function onMouseDown(id: string, e: MouseEvent) {
+  dragStart(id, e.clientX, e.clientY)
   document.addEventListener('mousemove', onMouseMove)
   document.addEventListener('mouseup', onMouseUp)
 }
-function onMouseMove(e: MouseEvent) {
-  onMove(e.clientX, e.clientY)
-}
+function onMouseMove(e: MouseEvent) { dragMove(e.clientX, e.clientY) }
 function onMouseUp() {
-  onEnd()
+  dragEnd()
   document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onMouseUp)
 }
+
+// 触摸事件
+function onTouchStart(id: string, e: TouchEvent) {
+  dragStart(id, e.touches[0].clientX, e.touches[0].clientY)
+}
+function onTouchMove(e: TouchEvent) { dragMove(e.touches[0].clientX, e.touches[0].clientY) }
+function onTouchEnd() { dragEnd() }
 
 onUnmounted(() => {
   document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onMouseUp)
 })
 
-function onOpen() {
-  if (!dragging) emit('open')
+function onOpen(id: string) {
+  if (!getBallState(id).moved) emit('open', id)
 }
 </script>
 
 <template>
-  <Transition name="float">
-    <div
-      v-if="active && !sleepModalOpen"
-      class="floating-timer"
-      :style="{ top: posY + 'px', left: posX + 'px' }"
-      @touchstart.passive="onTouchStart"
-      @touchmove.passive="onTouchMove"
-      @touchend="onTouchEnd"
-      @mousedown="onMouseDown"
-      @click="onOpen"
-    >
-      <span class="ft-icon">{{ icon }}</span>
-      <div class="ft-body">
-        <span class="ft-label">{{ label }}</span>
-        <span class="ft-time">{{ formatDuration(activeTimer.elapsedMs.value) }}</span>
+  <template v-for="rec in activeTimer.records.value" :key="rec.id">
+    <Transition name="float">
+      <div
+        v-if="active && !sleepModalOpen"
+        class="floating-ball"
+        :style="{
+          top: getBallState(rec.id).posY + 'px',
+          left: getBallState(rec.id).posX + 'px',
+          '--ball-color': CONFIG[rec.kind]?.color ?? '#e8906c',
+          '--ball-bg': CONFIG[rec.kind]?.bg ?? 'rgba(232,144,108,0.12)',
+        }"
+        @touchstart.passive="onTouchStart(rec.id, $event)"
+        @touchmove.passive="onTouchMove"
+        @touchend="onTouchEnd"
+        @mousedown="onMouseDown(rec.id, $event)"
+        @click="onOpen(rec.id)"
+      >
+        <span class="fb-icon">{{ CONFIG[rec.kind]?.icon ?? '⏱️' }}</span>
+        <div class="fb-body">
+          <span class="fb-label">{{ CONFIG[rec.kind] ? t(CONFIG[rec.kind].labelKey) : rec.kind }}</span>
+          <span class="fb-time">{{ formatTime(rec.startTime) }}</span>
+        </div>
+        <div class="fb-pulse" />
       </div>
-      <div class="ft-pulse" />
-    </div>
-  </Transition>
+    </Transition>
+  </template>
 </template>
 
 <style scoped>
-.floating-timer {
+.floating-ball {
   position: fixed;
   z-index: 100;
   display: flex;
@@ -160,80 +212,69 @@ function onOpen() {
   padding: 8px 12px;
   border-radius: 28px;
   background: var(--surface);
-  border: 1.5px solid var(--primary);
-  box-shadow: var(--shadow-md), 0 0 12px rgba(232, 144, 108, 0.25);
+  border: 1.5px solid var(--ball-color);
+  box-shadow: var(--shadow-md), 0 0 12px var(--ball-bg);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
 }
 
-.floating-timer:active {
+.floating-ball:active {
   transform: scale(0.96);
 }
 
-.ft-icon {
+.fb-icon {
   font-size: 22px;
   flex-shrink: 0;
   line-height: 1;
 }
 
-.ft-body {
+.fb-body {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.ft-label {
+.fb-label {
   font-size: 10px;
   font-weight: 600;
   color: var(--text-muted);
   line-height: 1;
 }
 
-.ft-time {
+.fb-time {
   font-size: 16px;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--ball-color);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
-/* 脉冲动画 */
-.ft-pulse {
+.fb-pulse {
   position: absolute;
   inset: -3px;
   border-radius: 31px;
-  border: 2px solid var(--primary);
+  border: 2px solid var(--ball-color);
   opacity: 0;
   animation: pulse-ring 2s ease-out infinite;
   pointer-events: none;
 }
 
 @keyframes pulse-ring {
-  0% {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.15);
-  }
+  0% { opacity: 0.5; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.15); }
 }
 
-/* 进出动画 */
-.float-enter-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-.float-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.float-enter-from {
-  opacity: 0;
-  transform: scale(0.8);
-}
-.float-leave-to {
-  opacity: 0;
-  transform: scale(0.8);
+.float-enter-active { transition: opacity 0.25s ease, transform 0.25s ease; }
+.float-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.float-enter-from { opacity: 0; transform: scale(0.8); }
+.float-leave-to { opacity: 0; transform: scale(0.8); }
+
+@media (max-width: 375px) {
+  .floating-ball { padding: 6px 10px; gap: 6px; }
+  .fb-icon { font-size: 18px; }
+  .fb-time { font-size: 14px; }
+  .fb-label { font-size: 9px; }
 }
 </style>

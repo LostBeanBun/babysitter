@@ -1,169 +1,93 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useActiveTimer, type TimerKind } from '@/composables/useActiveTimer'
+import { useActiveTimer } from '@/composables/useActiveTimer'
 
 describe('useActiveTimer', () => {
   beforeEach(() => {
     useActiveTimer().reset()
   })
 
-  it('start 启动计时器', () => {
+  it('start 返回唯一 id', () => {
     const timer = useActiveTimer()
-    timer.start('sleep', 1000)
-    expect(timer.running.value).toBe(true)
-    expect(timer.kind.value).toBe('sleep')
-    expect(timer.startTime.value).toBe(1000)
-    expect(timer.isActive.value).toBe(true)
+    const id1 = timer.start('sleep', 1, 1000)
+    const id2 = timer.start('feeding', 2, 2000)
+    expect(id1).toBeTruthy()
+    expect(id2).toBeTruthy()
+    expect(id1).not.toBe(id2)
+    expect(timer.records.value).toHaveLength(2)
   })
 
-  it('stop 停止计时器并返回起止时间', () => {
+  it('同类记录不能重复添加', () => {
     const timer = useActiveTimer()
-    timer.start('sleep', 1000)
-    const result = timer.stop()
-    expect(result).toEqual({ start: 1000, end: result!.end })
-    expect(timer.running.value).toBe(false)
-    expect(timer.isActive.value).toBe(false)
+    timer.start('sleep', 1, 1000)
+    const id2 = timer.start('sleep', 2, 2000)
+    expect(id2).toBeNull()
+    expect(timer.records.value).toHaveLength(1)
   })
 
-  it('reset 清除计时器状态', () => {
+  it('最多 3 条记录', () => {
     const timer = useActiveTimer()
-    timer.start('sleep', 1000)
+    timer.start('feeding', 1, 1000)
+    timer.start('sleep', 2, 2000)
+    timer.start('pumping', 3, 3000)
+    const id4 = timer.start('feeding', 4, 4000)
+    expect(id4).toBeNull()
+    expect(timer.records.value).toHaveLength(3)
+  })
+
+  it('reset(id) 按 id 清除', () => {
+    const timer = useActiveTimer()
+    const id1 = timer.start('sleep', 1, 1000)
+    timer.start('feeding', 2, 2000)
+    expect(id1).toBeTruthy()
+    timer.reset(id1!)
+    expect(timer.records.value).toHaveLength(1)
+    expect(timer.records.value[0].kind).toBe('feeding')
+  })
+
+  it('reset() 清除全部', () => {
+    const timer = useActiveTimer()
+    timer.start('sleep', 1, 1000)
+    timer.start('feeding', 2, 2000)
     timer.reset()
-    expect(timer.running.value).toBe(false)
-    expect(timer.kind.value).toBeNull()
-    expect(timer.startTime.value).toBe(0)
+    expect(timer.records.value).toHaveLength(0)
     expect(timer.isActive.value).toBe(false)
   })
 
-  it('updateStartTime 修改起始时间', () => {
+  it('getById 查找记录', () => {
     const timer = useActiveTimer()
-    timer.start('sleep', 1000)
-    timer.updateStartTime(2000)
-    expect(timer.startTime.value).toBe(2000)
+    const id = timer.start('sleep', 42, 1000)
+    expect(id).toBeTruthy()
+    const entry = timer.getById(id!)
+    expect(entry).toBeDefined()
+    expect(entry!.kind).toBe('sleep')
+    expect(entry!.recordId).toBe(42)
   })
 
-  it('BUG复现: sleep计时时保存feeding记录不应重置timer', () => {
+  it('getByKind 查找记录', () => {
     const timer = useActiveTimer()
+    timer.start('sleep', 1, 1000)
+    timer.start('feeding', 2, 2000)
+    const entry = timer.getByKind('feeding')
+    expect(entry).toBeDefined()
+    expect(entry!.recordId).toBe(2)
+  })
 
-    // 模拟用户启动sleep计时
-    timer.start('sleep', Date.now() - 60_000)
-    expect(timer.kind.value).toBe('sleep')
-    expect(timer.running.value).toBe(true)
+  it('hasKind 判断同类是否已存在', () => {
+    const timer = useActiveTimer()
+    expect(timer.hasKind('sleep')).toBe(false)
+    timer.start('sleep', 1, 1000)
+    expect(timer.hasKind('sleep')).toBe(true)
+    expect(timer.hasKind('feeding')).toBe(false)
+  })
 
-    // 模拟 onSaved() 被调用（当前bug: 无论什么kind都reset）
-    // 问题根源: onSaved() 不检查保存的kind是否匹配timer的kind
-    const savedKind: TimerKind = 'feeding' // 保存的是feeding记录
-    const timerKind = timer.kind.value
+  it('无记录时 isActive 为 false', () => {
+    const timer = useActiveTimer()
+    expect(timer.isActive.value).toBe(false)
+  })
 
-    // 当前有bug的行为: unconditionally reset
-    // if (true) timer.reset()
-
-    // 正确的行为: 只有当savedKind匹配timerKind时才reset
-    if (savedKind === timerKind) {
-      timer.reset()
-    }
-
-    // 验证: sleep计时器应该仍然在运行
-    expect(timer.kind.value).toBe('sleep')
-    expect(timer.running.value).toBe(true)
+  it('有记录时 isActive 为 true', () => {
+    const timer = useActiveTimer()
+    timer.start('sleep', 1, 1000)
     expect(timer.isActive.value).toBe(true)
-  })
-
-  it('sleep计时时保存sleep记录应重置timer', () => {
-    const timer = useActiveTimer()
-
-    // 模拟用户启动sleep计时
-    timer.start('sleep', Date.now() - 60_000)
-    expect(timer.kind.value).toBe('sleep')
-
-    // 模拟保存sleep记录
-    const savedKind: TimerKind = 'sleep'
-    const timerKind = timer.kind.value
-    if (savedKind === timerKind) {
-      timer.reset()
-    }
-
-    // 验证: timer应该被重置
-    expect(timer.kind.value).toBeNull()
-    expect(timer.running.value).toBe(false)
-  })
-
-  it('feeding计时时保存sleep记录不应重置timer', () => {
-    const timer = useActiveTimer()
-
-    // 模拟用户启动feeding计时
-    timer.start('feeding', Date.now() - 60_000)
-    expect(timer.kind.value).toBe('feeding')
-
-    // 模拟保存sleep记录
-    const savedKind: TimerKind = 'sleep'
-    const timerKind = timer.kind.value
-    if (savedKind === timerKind) {
-      timer.reset()
-    }
-
-    // 验证: feeding计时器应该仍然在运行
-    expect(timer.kind.value).toBe('feeding')
-    expect(timer.running.value).toBe(true)
-  })
-
-  it('feeding计时时保存feeding记录应重置timer', () => {
-    const timer = useActiveTimer()
-
-    // 模拟用户启动feeding计时
-    timer.start('feeding', Date.now() - 60_000)
-    expect(timer.kind.value).toBe('feeding')
-
-    // 模拟保存feeding记录
-    const savedKind: TimerKind = 'feeding'
-    const timerKind = timer.kind.value
-    if (savedKind === timerKind) {
-      timer.reset()
-    }
-
-    // 验证: timer应该被重置
-    expect(timer.kind.value).toBeNull()
-    expect(timer.running.value).toBe(false)
-  })
-
-  it('无计时时保存任何记录不应报错', () => {
-    const timer = useActiveTimer()
-    expect(timer.kind.value).toBeNull()
-
-    // 模拟保存记录
-    const savedKind: TimerKind = 'feeding'
-    const timerKind = timer.kind.value
-    if (savedKind === timerKind) {
-      timer.reset()
-    }
-
-    // 验证: 状态不变
-    expect(timer.kind.value).toBeNull()
-    expect(timer.running.value).toBe(false)
-  })
-
-  it('start 可使用用户指定的起始时间（非Date.now）', () => {
-    const timer = useActiveTimer()
-    const oneHourAgo = Date.now() - 3600_000
-
-    // 模拟用户在表单中设置了开始时间为1小时前，然后点击开始
-    timer.start('feeding', oneHourAgo)
-
-    expect(timer.running.value).toBe(true)
-    expect(timer.startTime.value).toBe(oneHourAgo)
-    expect(timer.kind.value).toBe('feeding')
-    // elapsedMs 应该约等于1小时（≥3599000ms，考虑毫秒误差）
-    expect(timer.elapsedMs.value).toBeGreaterThanOrEqual(3599_000)
-  })
-
-  it('sleep使用用户指定的起始时间后stop返回正确start', () => {
-    const timer = useActiveTimer()
-    const twoHoursAgo = Date.now() - 7200_000
-
-    timer.start('sleep', twoHoursAgo)
-    const result = timer.stop()
-
-    expect(result).not.toBeNull()
-    expect(result!.start).toBe(twoHoursAgo)
-    expect(result!.end).toBeGreaterThanOrEqual(twoHoursAgo)
   })
 })

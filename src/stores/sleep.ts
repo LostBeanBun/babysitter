@@ -22,12 +22,12 @@ export const useSleepStore = defineStore('sleep', () => {
     [activeBabyId],
   )
 
-  async function add(data: { type: SleepType; startTime: number; endTime: number; notes?: string }): Promise<number> {
+  async function add(data: { type: SleepType; startTime: number; endTime?: number; notes?: string }): Promise<number> {
     const babyId = activeBabyId.value
     if (babyId == null) throw new Error(t('errors.noBaby'))
-    if (data.endTime <= data.startTime) throw new Error(t('errors.sleepOrder'))
+    if (data.endTime && data.endTime <= data.startTime) throw new Error(t('errors.sleepOrder'))
     const now = Date.now()
-    const duration = data.endTime - data.startTime
+    const duration = data.endTime && data.endTime > data.startTime ? data.endTime - data.startTime : undefined
     const id = await db.sleeps.add({
       babyId,
       type: data.type,

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 /**
- * 表单操作按钮公共组件：统一「取消 / 保存（或保存修改）」按钮。
+ * 表单操作按钮公共组件：统一「取消 / 保存」按钮。
  */
 import { useI18n } from 'vue-i18n'
 
-defineProps<{ editing?: boolean }>()
+const props = defineProps<{
+  editing?: boolean
+  submitLabel?: string
+}>()
 defineEmits<{ cancelled: []; save: [] }>()
 
 const { t } = useI18n()
@@ -14,7 +17,7 @@ const { t } = useI18n()
   <div class="form-actions">
     <button type="button" class="btn btn-outline" @click="$emit('cancelled')">{{ t('common.cancel') }}</button>
     <button type="button" class="btn btn-primary" @click="$emit('save')">
-      {{ editing ? t('common.saveEdit') : t('common.save') }}
+      {{ submitLabel ?? (editing ? t('common.saveEdit') : t('common.save')) }}
     </button>
   </div>
 </template>

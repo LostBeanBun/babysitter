@@ -36,16 +36,6 @@ export function formatDuration(ms: number): string {
   return m === 0 ? `${h}${t('duration.hour')}` : `${h}${t('duration.hour')}${m}${t('duration.minShort')}`
 }
 
-/** 格式化时长为 HH:MM:SS（精确到秒，用于弹窗内计时器显示） */
-export function formatDurationHMS(ms: number): string {
-  if (!ms || ms < 0) return '00:00:00'
-  const totalSec = Math.floor(ms / 1000)
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  return `${pad2(h)}:${pad2(m)}:${pad2(s)}`
-}
-
 /** 格式化奶量为 "120 ml" */
 export function formatAmount(ml?: number): string {
   if (ml === undefined || ml === null) return ''

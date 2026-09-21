@@ -1,11 +1,12 @@
 ﻿<script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { PumpSide } from '@/types'
 import { PUMP_SIDE_LIST } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/format'
 import { usePumpingStore } from '@/stores/pumping'
-import FormTimer from '@/components/common/FormTimer.vue'
+import { useActiveTimer } from '@/composables/useActiveTimer'
+import { showToast } from '@/composables/useToast'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 
@@ -22,74 +23,93 @@ const props = defineProps<{
     notes?: string
   }
 }>()
-const emit = defineEmits<{ saved: []; cancelled: [] }>()
+const emit = defineEmits<{ saved: []; cancelled: []; startRecord: [] }>()
 
 const pumpingStore = usePumpingStore()
+const activeTimer = useActiveTimer()
 
 const side = ref<PumpSide>(props.editing?.side ?? 'both')
 const amount = ref<string>(props.editing?.amount != null ? String(props.editing.amount) : '')
 const notes = ref(props.editing?.notes ?? '')
 const startTime = ref(toDateTimeLocal(props.editing?.startTime ?? Date.now()))
-const endTime = ref(props.editing?.endTime ? toDateTimeLocal(props.editing.endTime) : startTime.value)
+const endTime = ref(props.editing?.endTime ? toDateTimeLocal(props.editing.endTime) : '')
 
-// 计时器回调：由 FormTimer 组件驱动
-const timerFinished = ref(false)
+const activeEntry = computed(() => activeTimer.getByKind('pumping'))
+const isRecording = computed(() => !!activeEntry.value)
+const isEditing = computed(() => !!props.editing && !isRecording.value)
 
-function onTimerStart(ts: number) {
-  timerFinished.value = false
-  startTime.value = toDateTimeLocal(ts)
-}
-
-function onTimerStop({ start, end }: { start: number; end: number }) {
-  timerFinished.value = true
-  startTime.value = toDateTimeLocal(start)
-  endTime.value = toDateTimeLocal(end)
-}
-
-/** 编辑既有吸奶记录时回显时长 */
-const recordedText = computed(() =>
-  t('pump.recordedDuration', { duration: props.editing?.duration ? formatDuration(props.editing.duration) : '—' }),
-)
-
-/** 计时结束后回显起止区间 */
-const finishedText = computed(() => {
+const durationText = computed(() => {
   const start = fromDateTimeLocal(startTime.value)
-  const end = fromDateTimeLocal(endTime.value)
-  const dur = start && end && end > start ? formatDuration(end - start) : '—'
-  return t('pump.recordedRange', {
-    duration: dur,
-    start: startTime.value.replace('T', ' '),
-    end: endTime.value ? t('pump.endRange', { end: endTime.value.replace('T', ' ') }) : '',
-  })
+  const end = endTime.value ? fromDateTimeLocal(endTime.value) : undefined
+  if (start && end && end > start) return formatDuration(end - start)
+  return null
+})
+
+const submitLabel = computed(() => {
+  if (isEditing.value) return t('common.saveEdit')
+  if (isRecording.value) return t('pump.endRecord')
+  return t('pump.startRecord')
+})
+
+onMounted(() => {
+  if (activeEntry.value) {
+    const record = pumpingStore.pumpings.find((p) => p.id === activeEntry.value!.recordId)
+    if (record) {
+      side.value = record.side
+      amount.value = record.amount != null ? String(record.amount) : ''
+      notes.value = record.notes ?? ''
+      startTime.value = toDateTimeLocal(record.startTime)
+      endTime.value = ''
+    }
+  }
 })
 
 async function submit() {
-  const start = fromDateTimeLocal(startTime.value) ?? Date.now()
-  const end = endTime.value ? fromDateTimeLocal(endTime.value) : undefined
-  const amt = amount.value ? Number(amount.value) : undefined
-  if (amount.value && (isNaN(amt as number) || (amt as number) <= 0)) {
-    alert(t('pump.invalidAmount'))
-    return
-  }
-  if (props.editing) {
-    await pumpingStore.update(props.editing.id, {
+  try {
+    const start = fromDateTimeLocal(startTime.value) ?? Date.now()
+    const end = endTime.value ? fromDateTimeLocal(endTime.value) : undefined
+    const amt = amount.value ? Number(amount.value) : undefined
+    if (amount.value && (isNaN(amt as number) || (amt as number) <= 0)) {
+      alert(t('pump.invalidAmount'))
+      return
+    }
+
+    if (isRecording.value && activeEntry.value) {
+      const endTs = end ?? Date.now()
+      await pumpingStore.update(activeEntry.value.recordId, {
+        endTime: endTs,
+        duration: endTs > start ? endTs - start : undefined,
+        amount: amt,
+      })
+      activeTimer.reset(activeEntry.value.id)
+      emit('saved')
+      return
+    }
+
+    if (isEditing.value && props.editing) {
+      await pumpingStore.update(props.editing.id, {
+        side: side.value,
+        startTime: start,
+        endTime: end,
+        duration: end && end > start ? end - start : undefined,
+        amount: amt,
+        notes: notes.value || undefined,
+      })
+      emit('saved')
+      return
+    }
+
+    const id = await pumpingStore.add({
       side: side.value,
       startTime: start,
-      endTime: end,
-      duration: end && end > start ? end - start : undefined,
       amount: amt,
       notes: notes.value || undefined,
     })
-  } else {
-    await pumpingStore.add({
-      side: side.value,
-      startTime: start,
-      endTime: end,
-      amount: amt,
-      notes: notes.value || undefined,
-    })
+    activeTimer.start('pumping', id, start)
+    emit('startRecord')
+  } catch {
+    showToast(t('errors.generic'))
   }
-  emit('saved')
 }
 </script>
 
@@ -110,20 +130,6 @@ async function submit() {
       </button>
     </div>
 
-    <FormTimer
-      :editing="!!props.editing"
-      :recorded-text="recordedText"
-      :finished="timerFinished"
-      :finished-text="finishedText"
-      :start-label="t('pump.startTimer')"
-      :stop-label="t('pump.stopTimer')"
-      :hint="t('pump.timerHint')"
-      kind="pumping"
-      :start-ts="fromDateTimeLocal(startTime)"
-      @start="onTimerStart"
-      @stop="onTimerStop"
-    />
-
     <div class="form-field">
       <label class="form-label">{{ t('pump.amountLabel') }}</label>
       <input
@@ -140,7 +146,13 @@ async function submit() {
     <div class="time-row">
       <div class="form-field">
         <label class="form-label">{{ t('pump.startLabel') }}</label>
-        <input v-model="startTime" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
+        <input
+          v-model="startTime"
+          type="datetime-local"
+          :placeholder="t('common.selectDateTime')"
+          class="form-input"
+          :disabled="isRecording"
+        />
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('pump.endLabel') }}</label>
@@ -148,9 +160,16 @@ async function submit() {
       </div>
     </div>
 
+    <p v-if="durationText" class="duration-hint">{{ durationText }}</p>
+
     <FormNotes v-model="notes" :label="t('pump.notesLabel')" :placeholder="t('common.optional')" />
 
-    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
+    <FormActions
+      :editing="isEditing"
+      :submit-label="submitLabel"
+      @cancelled="emit('cancelled')"
+      @save="submit"
+    />
   </div>
 </template>
 
@@ -180,9 +199,7 @@ async function submit() {
   color: var(--primary-dark);
 }
 
-.type-icon {
-  font-size: 20px;
-}
+.type-icon { font-size: 20px; }
 
 .type-label {
   font-size: 12px;
@@ -190,17 +207,27 @@ async function submit() {
   color: var(--text-secondary);
 }
 
+.duration-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
 .time-row {
   display: grid;
-  /* 窄屏（手机）自动单列，宽屏两列，避免 datetime-local 挤压重叠 */
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
 }
 
-/* 手机下强制单列：真机日期控件固有宽度大，并排必然溢出 */
 @media (max-width: 480px) {
-  .time-row {
-    grid-template-columns: 1fr;
-  }
+  .time-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 375px) {
+  .type-grid { gap: 8px; }
+  .type-btn { padding: 10px 4px; }
+  .type-icon { font-size: 18px; }
+  .type-label { font-size: 11px; }
 }
 </style>
