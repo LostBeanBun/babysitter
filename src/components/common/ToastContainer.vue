@@ -37,7 +37,7 @@ function handleAction(id: number, onAction?: () => void) {
 <style scoped>
 .toast-container {
   position: fixed;
-  bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 14px);
+  bottom: calc(var(--tabbar-height) + var(--tabbar-float-gap) + var(--safe-bottom) + 16px);
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 32px);
@@ -93,11 +93,12 @@ function handleAction(id: number, onAction?: () => void) {
 .toast-close {
   flex-shrink: 0;
   min-height: 0;
-  width: 24px;
-  height: 24px;
+  width: 44px;
+  height: 44px;
+  margin: -10px -8px -10px 0;
   border-radius: 50%;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;

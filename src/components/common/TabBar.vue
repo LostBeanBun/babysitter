@@ -13,66 +13,121 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
 </script>
 
 <template>
-  <nav v-if="showTabbar" class="tabbar">
-    <RouterLink v-for="tab in APP_TABS" :key="tab.name" :to="tab.path" class="tabbar-item"
-      :class="{ active: route.name === tab.name }">
-      <div class="tabbar-pill">
-        <svg viewBox="0 0 24 24" fill="currentColor" class="tabbar-icon" aria-hidden="true">
-          <path :d="tab.icon" />
-        </svg>
-      </div>
-      <span class="tabbar-label">{{ t(tab.label) }}</span>
-    </RouterLink>
+  <nav v-if="showTabbar" class="tabbar" :aria-label="t('nav.dashboard')">
+    <div class="tabbar-glass">
+      <span class="tabbar-shine" aria-hidden="true" />
+      <RouterLink
+        v-for="tab in APP_TABS"
+        :key="tab.name"
+        :to="tab.path"
+        class="tabbar-item"
+        :class="{ active: route.name === tab.name }"
+        :aria-current="route.name === tab.name ? 'page' : undefined"
+      >
+        <span class="tabbar-pill">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="tabbar-icon" aria-hidden="true">
+            <path :d="tab.icon" />
+          </svg>
+        </span>
+        <span class="tabbar-label">{{ t(tab.label) }}</span>
+      </RouterLink>
+    </div>
   </nav>
 </template>
 
 <style scoped>
+/* App Store / iOS Liquid Glass — 悬浮胶囊底栏 */
 .tabbar {
   position: fixed;
-  bottom: 0;
+  bottom: calc(var(--safe-bottom) + var(--tabbar-float-gap, 14px));
   left: 50%;
   transform: translateX(-50%);
-  width: 100%;
-  max-width: 640px;
-  height: calc(var(--tabbar-height) + var(--safe-bottom));
-  padding-bottom: var(--safe-bottom);
-  background: var(--surface-translucent);
+  width: calc(100% - 24px);
+  max-width: 420px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.tabbar-glass {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  height: var(--tabbar-height);
+  padding: 5px;
+  border-radius: calc(var(--tabbar-height) / 2);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
-  border-top: 1px solid var(--glass-border);
-  box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.04), inset 0 1px 0 var(--glass-shine);
-  display: flex;
-  z-index: 50;
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 var(--glass-shine),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+:global([data-theme='dark']) .tabbar-glass {
+  background: rgba(44, 40, 36, 0.72);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 var(--glass-shine),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* 顶部高光线（液态玻璃） */
+.tabbar-shine {
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-shine), transparent);
+  pointer-events: none;
 }
 
 .tabbar-item {
   flex: 1;
+  min-width: 0;
+  min-height: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 2px;
+  padding: 4px 2px;
+  border-radius: 999px;
   color: var(--text-muted);
   text-decoration: none;
-  margin: 6px 6px;
-  transition: color 0.2s ease;
-  min-height: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color 0.25s var(--ease-out),
+    background 0.35s var(--spring),
+    transform 0.35s var(--spring);
 }
 
 .tabbar-pill {
-  width: 48px;
-  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 28px;
   border-radius: 999px;
   transition:
-    background 0.3s var(--ease-out),
-    transform 0.3s var(--spring);
+    background 0.35s var(--spring),
+    transform 0.35s var(--spring),
+    box-shadow 0.3s var(--ease-out);
+}
+
+.tabbar-item:active {
+  transform: scale(var(--tap-scale));
 }
 
 .tabbar-item:active .tabbar-pill {
-  transform: scale(0.92);
+  transform: scale(var(--tap-scale));
 }
 
 .tabbar-item.active {
@@ -81,27 +136,42 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
 
 .tabbar-item.active .tabbar-pill {
   background: var(--primary-soft);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+:global([data-theme='dark']) .tabbar-item.active .tabbar-pill {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .tabbar-icon {
-  width: 22px;
-  height: 22px;
-  transition: transform 0.3s var(--spring);
+  width: 23px;
+  height: 23px;
+  transition: transform 0.35s var(--spring);
 }
 
 .tabbar-item.active .tabbar-icon {
-  transform: scale(1.08);
+  transform: scale(1.06);
 }
 
 .tabbar-label {
-  font-size: 10.5px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: font-weight 0.2s ease;
+}
+
+.tabbar-item.active .tabbar-label {
   font-weight: 600;
-  letter-spacing: -0.01em;
 }
 
 @media (min-width: 700px) {
   .tabbar {
-    max-width: 1200px;
+    max-width: 480px;
   }
 }
 </style>

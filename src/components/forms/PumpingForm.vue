@@ -186,6 +186,7 @@ async function submit() {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  min-height: 44px;
   padding: 12px 6px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);

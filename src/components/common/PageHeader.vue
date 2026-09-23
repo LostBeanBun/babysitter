@@ -106,7 +106,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .header-title {
-  font-size: 19px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--text);
   overflow: hidden;
@@ -124,7 +124,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   align-items: center;
   justify-content: center;
   font-size: 17px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: linear-gradient(135deg, var(--primary-soft), var(--surface-2));
   border: 1px solid var(--glass-border);
   backdrop-filter: var(--glass-blur-light);
@@ -132,7 +132,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .header-sub {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-top: 1px;
 }
@@ -150,10 +150,11 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .lang-toggle {
-  width: 38px;
-  height: 38px;
+  position: relative;
+  width: 44px;
+  height: 44px;
   min-height: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -167,7 +168,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   transition:
     color 0.2s ease,
     background 0.2s ease,
-    transform 0.3s var(--spring),
+    transform 0.35s var(--spring),
     border-color 0.2s ease;
 }
 
@@ -177,7 +178,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .lang-toggle:active {
-  transform: scale(0.9);
+  transform: scale(var(--tap-scale));
 }
 
 .lang-badge {
@@ -199,7 +200,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
   border: 1px solid var(--glass-border);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg), var(--shadow-glass);
   z-index: 50;
   animation: lang-pop 0.2s var(--spring);
@@ -210,9 +211,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-height: 44px;
   padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-base);
   color: var(--text);
   text-align: left;
 }
@@ -243,10 +245,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .theme-toggle {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   min-height: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -259,7 +261,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   transition:
     color 0.2s ease,
     background 0.2s ease,
-    transform 0.3s var(--spring),
+    transform 0.35s var(--spring),
     border-color 0.2s ease;
 }
 
@@ -269,7 +271,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .theme-toggle:active {
-  transform: scale(0.9);
+  transform: scale(var(--tap-scale));
 }
 
 @media (min-width: 700px) {

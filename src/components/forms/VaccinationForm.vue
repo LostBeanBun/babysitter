@@ -193,7 +193,7 @@ async function submit() {
 .plan-btn {
   flex-shrink: 0;
   white-space: nowrap;
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .plan-tip {
@@ -240,7 +240,7 @@ async function submit() {
   align-items: flex-start;
   gap: 2px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   border: 1px solid var(--glass-border);
   background: var(--surface-2);
   text-align: left;
@@ -290,6 +290,7 @@ async function submit() {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  min-height: 44px;
   padding: 12px 6px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);

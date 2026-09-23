@@ -59,33 +59,34 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .modal-title {
-  font-size: 18px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.02em;
 }
 
 .modal-close {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
+  min-height: 0;
   border-radius: 50%;
-  background: var(--surface-2);
-  backdrop-filter: var(--glass-blur-light);
-  -webkit-backdrop-filter: var(--glass-blur-light);
-  color: var(--text-secondary);
-  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  font-size: 15px;
   border: 1px solid var(--glass-border);
   transition:
     background 0.2s ease,
     color 0.2s ease,
-    transform 0.3s var(--spring);
+    transform 0.35s var(--spring);
 }
 
 .modal-close:active {
   background: var(--surface-3);
-  transform: scale(0.88);
+  transform: scale(var(--tap-scale));
 }
 </style>

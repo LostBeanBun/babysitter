@@ -575,14 +575,14 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 .filter-select {
   flex: 1;
   min-width: 0;
-  border-radius: 12px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow-xs);
 }
 
 .date-toggle {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   min-height: 0;
   border-radius: var(--radius);
   flex-shrink: 0;
@@ -647,7 +647,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 .date-input {
   flex: 1;
   min-width: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-xs);
   font-size: 13px;
   padding: 8px 10px;
@@ -660,16 +660,21 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 }
 
 .date-clear {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   min-height: 0;
   border-radius: 50%;
   flex-shrink: 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+}
+
+.date-clear:active {
+  transform: scale(var(--tap-scale));
   background: var(--surface-2);
 }
 
@@ -715,7 +720,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 .confirm-record-icon {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;

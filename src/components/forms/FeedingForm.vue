@@ -207,6 +207,7 @@ async function submit() {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  min-height: 44px;
   padding: 12px 6px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
@@ -243,6 +244,7 @@ async function submit() {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  min-height: 44px;
   padding: 10px 8px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);

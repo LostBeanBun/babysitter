@@ -510,7 +510,7 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 .range-select {
   flex: 1;
   min-width: 0;
-  border-radius: 12px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow-xs);
 }
 
@@ -539,7 +539,7 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 .overview-tab {
   flex: 1;
   min-width: 0; /* 允许收缩，避免长文本（如英文 tab）撑破容器 */
-  min-height: 0; /* 覆盖全局 button min-height:44px */
+  min-height: 44px;
   padding: 9px 12px;
   border-radius: 999px;
   font-size: 13px;

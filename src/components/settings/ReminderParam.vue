@@ -62,9 +62,9 @@ function onInput(e: Event) {
 
 .form-input.reminder-param-input {
   width: 88px;
-  min-height: 34px;
+  min-height: 44px;
   padding: 4px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
 }
 
 .reminder-param-hint {

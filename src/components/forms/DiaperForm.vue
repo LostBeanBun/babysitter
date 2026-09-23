@@ -119,6 +119,7 @@ async function submit() {
 }
 
 .type-btn {
+  min-height: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;

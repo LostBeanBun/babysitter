@@ -101,7 +101,7 @@ async function submit() {
 }
 
 .milestone-type {
-  min-height: 0;
+  min-height: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -143,7 +143,7 @@ async function submit() {
 }
 
 .guide-toggle {
-  min-height: 0;
+  min-height: 44px;
   width: 100%;
   display: flex;
   align-items: center;

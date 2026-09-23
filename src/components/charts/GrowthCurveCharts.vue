@@ -376,9 +376,9 @@ const hcSubtitle = computed(() => growthSubtitle('hc', hcPoints.value))
 <style scoped>
 .growth-info-btn {
   flex-shrink: 0;
-  min-height: 0; /* 覆盖全局 button min-height:44px，保持正圆 */
-  width: 22px;
-  height: 22px;
+  min-height: 0;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1px solid var(--glass-border);
   background: var(--surface-2);

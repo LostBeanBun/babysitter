@@ -404,8 +404,8 @@ const groupedEntries = computed(() => {
 }
 
 .tl-icon {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius);
   display: flex;
   align-items: center;
@@ -457,8 +457,9 @@ const groupedEntries = computed(() => {
 }
 
 .tl-delete {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  min-height: 0;
   border-radius: 50%;
   display: flex;
   align-items: center;

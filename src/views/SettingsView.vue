@@ -554,8 +554,8 @@ async function confirmClearAll() {
   }
 
   .baby-avatar {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     font-size: 16px;
   }
 
@@ -571,8 +571,8 @@ async function confirmClearAll() {
 }
 
 .baby-avatar {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -610,8 +610,9 @@ async function confirmClearAll() {
 }
 
 .icon-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  min-height: 0;
   border-radius: var(--radius);
   border: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.65);
@@ -849,7 +850,7 @@ async function confirmClearAll() {
 }
 
 .avatar-option {
-  min-height: 40px;
+  min-height: 44px;
   padding: 4px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);

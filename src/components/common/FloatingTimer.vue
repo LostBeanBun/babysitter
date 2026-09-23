@@ -26,7 +26,7 @@ const CONFIG: Record<string, { icon: string; labelKey: string; color: string; bg
 
 const POS_KEY = 'floating_balls_pos'
 const HEADER_BOTTOM = 70
-const TABBAR_TOP_MARGIN = 80
+const TABBAR_TOP_MARGIN = 96
 const BALL_GAP = 8
 
 function getBallWidth(): number {
@@ -210,7 +210,7 @@ function onOpen(id: string) {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-radius: 28px;
+  border-radius: var(--radius-xl);
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -261,7 +261,7 @@ function onOpen(id: string) {
 .fb-pulse {
   position: absolute;
   inset: -3px;
-  border-radius: 31px;
+  border-radius: calc(var(--radius-xl) + 3px);
   border: 2px solid var(--ball-color);
   opacity: 0;
   animation: pulse-ring 2s ease-out infinite;

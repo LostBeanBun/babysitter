@@ -481,14 +481,15 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 }
 
 .banner-close {
-  width: 22px;
-  height: 22px;
+  width: 44px;
+  height: 44px;
   min-height: 0;
   margin-left: auto;
+  margin-right: -10px;
   flex-shrink: 0;
   border-radius: 50%;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;

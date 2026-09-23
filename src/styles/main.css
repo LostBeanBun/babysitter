@@ -41,33 +41,45 @@
 
   --select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2357534e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 
-  --radius-sm: 12px;
-  --radius: 16px;
-  --radius-lg: 22px;
-  --radius-xl: 28px;
-
   /* 液态玻璃阴影 — 柔和、带色温 */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.06), 0 16px 64px rgba(0, 0, 0, 0.08);
   --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
 
-  --tabbar-height: 64px;
-  --header-height: 56px;
+  --tabbar-height: 58px;
+  --tabbar-float-gap: 14px;
+  --header-height: 52px;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 
-  --fs-xs: 11px;
-  --fs-sm: 12px;
-  --fs-base: 14px;
-  --fs-md: 15px;
-  --fs-lg: 17px;
-  --fs-xl: 20px;
-  --fs-2xl: 24px;
+  /* Apple HIG 字号阶梯（SF Pro 近似） */
+  --fs-xs: 11px; /* Caption 2 */
+  --fs-sm: 12px; /* Caption 1 */
+  --fs-base: 15px; /* Subhead / Footnote+ */
+  --fs-md: 17px; /* Headline / Body */
+  --fs-lg: 20px; /* Title 3 */
+  --fs-xl: 22px; /* Title 2 */
+  --fs-2xl: 28px; /* Title 1 */
+  --fs-3xl: 34px; /* Large Title */
+
+  /* Apple HIG 圆角（连续圆角近似） */
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* 交互反馈 */
+  --tap-scale: 0.96;
+  --focus-ring: 0 0 0 3.5px var(--primary-soft);
 
   /* 液态玻璃动效曲线 */
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -130,6 +142,7 @@
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4), 0 16px 64px rgba(0, 0, 0, 0.45);
   --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
 
   color-scheme: dark;
 }
@@ -239,12 +252,12 @@ textarea {
   pointer-events: none;
 }
 
-/* 通用容器 */
+/* 通用容器 — 底部预留悬浮胶囊栏 */
 .page {
   min-height: 100vh;
   min-height: 100dvh;
-  padding: calc(var(--header-height) + var(--safe-top) + 10px) 14px
-    calc(var(--tabbar-height) + var(--safe-bottom) + 20px);
+  padding: calc(var(--header-height) + var(--safe-top) + 12px) 16px
+    calc(var(--tabbar-height) + var(--tabbar-float-gap) + var(--safe-bottom) + 24px);
   max-width: 640px;
   margin: 0 auto;
 }
@@ -296,40 +309,43 @@ textarea {
   }
 }
 
-/* 区块标题 */
+/* 区块标题 — HIG Headline */
 .section-title {
   font-size: var(--fs-md);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-secondary);
-  margin: 16px 4px 8px;
+  margin: 18px 4px 8px;
   display: flex;
   align-items: center;
   gap: 6px;
   letter-spacing: -0.01em;
 }
 
-/* 按钮 */
+/* 按钮 — 44pt 最小触控区 / 系统圆角 */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  min-height: 44px;
   padding: 10px 16px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   font-weight: 600;
   font-size: var(--fs-base);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   transition:
-    transform 0.3s var(--spring),
-    opacity 0.15s ease,
-    background 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
+    transform 0.35s var(--spring),
+    opacity 0.2s var(--ease-out),
+    background 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 .btn:active {
-  transform: scale(0.96);
+  transform: scale(var(--tap-scale));
 }
 
 .btn:disabled {
@@ -377,14 +393,15 @@ textarea {
 }
 
 .btn-lg {
+  min-height: 50px;
   padding: 13px 22px;
   font-size: 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-md);
 }
 
-/* 表单 */
+/* 表单 — HIG 44pt 输入高度 */
 .form-field {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   min-width: 0;
   width: 100%;
 }
@@ -392,9 +409,10 @@ textarea {
 .form-label {
   display: block;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: 6px;
+  letter-spacing: -0.01em;
 }
 
 .form-input,
@@ -446,7 +464,7 @@ input[type='time']::-webkit-date-and-time-value {
 :focus-visible {
   outline: 2.5px solid var(--primary);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
 }
 
 .form-input::placeholder,
@@ -515,6 +533,7 @@ select.form-input:focus {
     0 -8px 40px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
   animation: glassSlideUp 0.4s var(--spring);
+  position: relative;
 }
 
 .modal-panel::before {

@@ -67,7 +67,7 @@ defineProps<{
 .stat-icon {
   width: 36px;
   height: 36px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;

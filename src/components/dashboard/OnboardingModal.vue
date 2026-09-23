@@ -105,7 +105,7 @@ async function onOnboarded() {
 }
 
 .avatar-option {
-  min-height: 40px;
+  min-height: 44px;
   padding: 4px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);

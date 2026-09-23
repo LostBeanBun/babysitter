@@ -809,7 +809,7 @@ const editPayload = computed(() => {
 .confirm-record-icon {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
