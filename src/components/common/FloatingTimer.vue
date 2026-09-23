@@ -211,17 +211,24 @@ function onOpen(id: string) {
   gap: 8px;
   padding: 8px 12px;
   border-radius: 28px;
-  background: var(--surface);
-  border: 1.5px solid var(--ball-color);
-  box-shadow: var(--shadow-md), 0 0 12px var(--ball-bg);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass), 0 0 16px var(--ball-bg);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
+  transition: transform 0.3s var(--spring), box-shadow 0.3s var(--ease-out);
+}
+
+:global([data-theme='dark']) .floating-ball {
+  background: rgba(30, 30, 34, 0.72);
 }
 
 .floating-ball:active {
-  transform: scale(0.96);
+  transform: scale(0.94);
 }
 
 .fb-icon {
@@ -266,10 +273,10 @@ function onOpen(id: string) {
   100% { opacity: 0; transform: scale(1.15); }
 }
 
-.float-enter-active { transition: opacity 0.25s ease, transform 0.25s ease; }
-.float-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
-.float-enter-from { opacity: 0; transform: scale(0.8); }
-.float-leave-to { opacity: 0; transform: scale(0.8); }
+.float-enter-active { transition: opacity 0.35s var(--spring), transform 0.35s var(--spring); }
+.float-leave-active { transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out); }
+.float-enter-from { opacity: 0; transform: scale(0.7); }
+.float-leave-to { opacity: 0; transform: scale(0.7); }
 
 @media (max-width: 375px) {
   .floating-ball { padding: 6px 10px; gap: 6px; }

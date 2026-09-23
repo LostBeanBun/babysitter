@@ -584,20 +584,22 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   width: 40px;
   height: 40px;
   min-height: 0;
-  border-radius: 12px;
+  border-radius: var(--radius);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
   background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-xs);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass);
   transition:
-    color 0.15s ease,
-    background 0.15s ease,
-    transform 0.12s ease,
-    border-color 0.15s ease;
+    color 0.25s var(--ease-out),
+    background 0.25s var(--ease-out),
+    transform 0.3s var(--spring),
+    border-color 0.25s var(--ease-out);
 }
 
 .date-toggle:hover {
@@ -702,8 +704,11 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: var(--surface-2);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
   margin-bottom: 18px;
 }
 

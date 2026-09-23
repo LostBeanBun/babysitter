@@ -533,16 +533,18 @@ async function confirmClearAll() {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 16px;
-  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
   background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   cursor: pointer;
-  box-shadow: var(--shadow-xs);
-  transition: all 0.15s ease;
+  box-shadow: var(--shadow-glass);
+  transition: all 0.3s var(--spring);
 }
 
 .baby-item:active {
-  transform: scale(0.99);
+  transform: scale(0.985);
 }
 
 @media (max-width: 400px) {
@@ -565,7 +567,7 @@ async function confirmClearAll() {
 .baby-item.active {
   border-color: var(--primary);
   background: var(--primary-soft);
-  box-shadow: 0 0 0 3px rgba(238, 122, 85, 0.12);
+  box-shadow: var(--shadow-glass), 0 0 0 3px rgba(238, 122, 85, 0.12);
 }
 
 .baby-avatar {
@@ -610,21 +612,26 @@ async function confirmClearAll() {
 .icon-btn {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  border: none;
-  background: var(--surface-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
   font-size: 17px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
-    background 0.12s ease,
-    transform 0.12s ease;
+    background 0.25s var(--ease-out),
+    transform 0.3s var(--spring);
+}
+
+:global([data-theme='dark']) .icon-btn {
+  background: rgba(58, 58, 62, 0.7);
 }
 
 .icon-btn:active {
-  background: var(--surface-3);
   transform: scale(0.92);
 }
 
@@ -684,7 +691,10 @@ async function confirmClearAll() {
   margin-top: 8px;
   padding: 8px 10px;
   background: var(--surface-2);
-  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
 }
 
 .switch {
@@ -695,7 +705,7 @@ async function confirmClearAll() {
   border-radius: 999px;
   border: none;
   background: var(--border);
-  transition: background 0.2s ease;
+  transition: background 0.3s var(--ease-out);
   flex-shrink: 0;
   cursor: pointer;
   padding: 0;
@@ -713,7 +723,7 @@ async function confirmClearAll() {
   height: 22px;
   border-radius: 50%;
   background: #fff;
-  transition: transform 0.2s ease;
+  transition: transform 0.35s var(--spring);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
@@ -732,10 +742,16 @@ async function confirmClearAll() {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  border: 1px solid var(--glass-border);
   padding: 4px 11px;
   border-radius: 999px;
+}
+
+:global([data-theme='dark']) .data-counts span {
+  background: rgba(44, 44, 48, 0.55);
 }
 
 .btn-block {
@@ -789,9 +805,11 @@ async function confirmClearAll() {
 .gender-option {
   min-height: 44px;
   padding: 6px 8px;
-  border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: var(--surface-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
   font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -799,7 +817,11 @@ async function confirmClearAll() {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.12s ease;
+  transition: all 0.3s var(--spring);
+}
+
+:global([data-theme='dark']) .gender-option {
+  background: rgba(58, 58, 62, 0.7);
 }
 
 .gender-option.selected {
@@ -829,14 +851,20 @@ async function confirmClearAll() {
 .avatar-option {
   min-height: 40px;
   padding: 4px;
-  border-radius: 10px;
-  border: 1.5px solid var(--border);
-  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
   font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.12s ease;
+  transition: all 0.3s var(--spring);
+}
+
+:global([data-theme='dark']) .avatar-option {
+  background: rgba(58, 58, 62, 0.7);
 }
 
 .avatar-option.selected {

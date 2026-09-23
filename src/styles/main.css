@@ -1,63 +1,66 @@
 :root {
-  /* ===== 温馨暖色主题（参考 Material Design 3 + Apple Health 暖色系） ===== */
-  --bg: #faf5f0;
-  --bg-soft: #f3ece4;
-  --surface: #ffffff;
-  --surface-2: #f7f0e9;
-  --surface-3: #efe6dc;
-  --border: #ece0d5;
-  --border-strong: #e0d1c3;
-  --text: #3d3028;
-  --text-secondary: #857468;
-  --text-muted: #b3a298;
+  /* ===== iOS Liquid Glass 液态玻璃主题 ===== */
+  --bg: #f2f0ed;
+  --bg-soft: #e8e5e1;
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-2: rgba(255, 255, 255, 0.55);
+  --surface-3: rgba(255, 255, 255, 0.4);
+  --border: rgba(255, 255, 255, 0.5);
+  --border-strong: rgba(255, 255, 255, 0.7);
+  --text: #1c1917;
+  --text-secondary: #57534e;
+  --text-muted: #a8a29e;
 
-  --primary: #ee7a55;
-  --primary-gradient: linear-gradient(135deg, #f8a188 0%, #ee7a55 100%);
-  --primary-soft: #fdf1ec;
-  --primary-dark: #d95f3a;
-  --accent-green: #7fbf9a;
-  --accent-green-soft: #ecf6f0;
-  --accent-blue: #82aede;
-  --accent-blue-soft: #edf3fa;
-  --accent-yellow: #e2b457;
-  --accent-yellow-soft: #faf3e3;
-  --accent-purple: #ad92cf;
-  --accent-purple-soft: #f3eef8;
-  --accent-pink: #d895b8;
-  --accent-pink-soft: #faf0f5;
+  --primary: #ff6b35;
+  --primary-gradient: linear-gradient(135deg, #ff8f6b 0%, #ff6b35 50%, #f4511e 100%);
+  --primary-soft: rgba(255, 107, 53, 0.12);
+  --primary-dark: #e55a28;
+  --accent-green: #34c759;
+  --accent-green-soft: rgba(52, 199, 89, 0.12);
+  --accent-blue: #007aff;
+  --accent-blue-soft: rgba(0, 122, 255, 0.1);
+  --accent-yellow: #ff9500;
+  --accent-yellow-soft: rgba(255, 149, 0, 0.12);
+  --accent-purple: #af52de;
+  --accent-purple-soft: rgba(175, 82, 222, 0.1);
+  --accent-pink: #ff2d55;
+  --accent-pink-soft: rgba(255, 45, 85, 0.1);
 
-  --danger: #d95f4e;
-  --danger-soft: #fbeae6;
+  --danger: #ff3b30;
+  --danger-soft: rgba(255, 59, 48, 0.1);
 
-  /* 半透明背景（页头 / 底部导航毛玻璃） */
-  --header-bg: rgba(250, 245, 240, 0.85);
-  --surface-translucent: rgba(255, 255, 255, 0.88);
-  --modal-mask: rgba(45, 34, 27, 0.45);
+  /* 液态玻璃半透明层 */
+  --header-bg: rgba(242, 240, 237, 0.72);
+  --surface-translucent: rgba(255, 255, 255, 0.65);
+  --modal-mask: rgba(0, 0, 0, 0.25);
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-shine: rgba(255, 255, 255, 0.6);
+  --glass-blur: blur(40px) saturate(180%);
+  --glass-blur-heavy: blur(60px) saturate(200%);
+  --glass-blur-light: blur(20px) saturate(150%);
 
-  /* 下拉选择箭头（跟随主题的 SVG data URI） */
-  --select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23857468' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  --select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2357534e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 
-  --radius-sm: 10px;
+  --radius-sm: 12px;
   --radius: 16px;
   --radius-lg: 22px;
   --radius-xl: 28px;
 
-  /* 层级阴影（elevation） */
-  --shadow-xs: 0 1px 2px rgba(61, 48, 41, 0.05);
-  --shadow-sm: 0 1px 2px rgba(61, 48, 41, 0.04), 0 2px 8px rgba(61, 48, 41, 0.06);
-  --shadow-md: 0 2px 8px rgba(61, 48, 41, 0.06), 0 8px 24px rgba(61, 48, 41, 0.08);
-  --shadow-lg: 0 8px 24px rgba(61, 48, 41, 0.1), 0 16px 48px rgba(61, 48, 41, 0.12);
+  /* 液态玻璃阴影 — 柔和、带色温 */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.06), 0 16px 64px rgba(0, 0, 0, 0.08);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 
-  --tabbar-height: 62px;
+  --tabbar-height: 64px;
   --header-height: 56px;
 
-  /* iOS 安全区 */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 
-  /* 字阶 */
   --fs-xs: 11px;
   --fs-sm: 12px;
   --fs-base: 14px;
@@ -66,66 +69,69 @@
   --fs-xl: 20px;
   --fs-2xl: 24px;
 
+  /* 液态玻璃动效曲线 */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
   font-family:
-    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 16px;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
-  /* 防止 iOS 横竖屏切换时字体自动缩放 */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
-/* ===== 暗色主题（data-theme="dark"） ===== */
+/* ===== 暗色主题 ===== */
 [data-theme='dark'] {
-  --bg: #17130f;
-  --bg-soft: #201a15;
-  --surface: #241d18;
-  --surface-2: #2d251f;
-  --surface-3: #372d25;
-  --border: #3a2f27;
-  --border-strong: #4a3d32;
-  --text: #f2e9e1;
-  --text-secondary: #b8a89b;
-  --text-muted: #857568;
+  --bg: #0f0e0c;
+  --bg-soft: #1a1816;
+  --surface: rgba(44, 40, 36, 0.72);
+  --surface-2: rgba(50, 46, 42, 0.6);
+  --surface-3: rgba(56, 52, 48, 0.5);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text: #f5f0eb;
+  --text-secondary: #b0a89f;
+  --text-muted: #6b6360;
 
-  --primary: #f08b68;
-  --primary-gradient: linear-gradient(135deg, #f5a384 0%, #f08b68 100%);
-  --primary-soft: #3a261d;
-  --primary-dark: #ffa584;
-  --accent-green: #8fc9a6;
-  --accent-green-soft: #20302a;
-  --accent-blue: #96b8e6;
-  --accent-blue-soft: #1f2b3a;
-  --accent-yellow: #e8c47c;
-  --accent-yellow-soft: #332a19;
-  --accent-purple: #bfa6de;
-  --accent-purple-soft: #2c2436;
-  --accent-pink: #e0a9c6;
-  --accent-pink-soft: #372432;
+  --primary: #ff7a45;
+  --primary-gradient: linear-gradient(135deg, #ff9a6b 0%, #ff7a45 50%, #f4633a 100%);
+  --primary-soft: rgba(255, 122, 69, 0.18);
+  --primary-dark: #ff9a6b;
+  --accent-green: #30d158;
+  --accent-green-soft: rgba(48, 209, 88, 0.15);
+  --accent-blue: #0a84ff;
+  --accent-blue-soft: rgba(10, 132, 255, 0.15);
+  --accent-yellow: #ff9f0a;
+  --accent-yellow-soft: rgba(255, 159, 10, 0.15);
+  --accent-purple: #bf5af2;
+  --accent-purple-soft: rgba(191, 90, 242, 0.15);
+  --accent-pink: #ff375f;
+  --accent-pink-soft: rgba(255, 55, 95, 0.15);
 
-  --danger: #e0775f;
-  --danger-soft: #3a241e;
+  --danger: #ff453a;
+  --danger-soft: rgba(255, 69, 58, 0.15);
 
-  --header-bg: rgba(23, 19, 15, 0.82);
-  --surface-translucent: rgba(36, 29, 24, 0.86);
-  --modal-mask: rgba(0, 0, 0, 0.6);
+  --header-bg: rgba(15, 14, 12, 0.72);
+  --surface-translucent: rgba(44, 40, 36, 0.65);
+  --modal-mask: rgba(0, 0, 0, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shine: rgba(255, 255, 255, 0.05);
 
-  --select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b8a89b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  --select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b0a89f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45), 0 16px 48px rgba(0, 0, 0, 0.5);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4), 0 16px 64px rgba(0, 0, 0, 0.45);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 
   color-scheme: dark;
-}
-
-/* 暗色下 body 使用纯净背景：移除亮色主题的暖色渐变光晕，避免出现脏色发光块 */
-[data-theme='dark'] body {
-  background: var(--bg);
 }
 
 * {
@@ -143,14 +149,24 @@ body,
 
 body {
   background:
-    radial-gradient(1100px 480px at 85% -8%, rgba(238, 122, 85, 0.07), transparent 62%),
-    radial-gradient(900px 420px at -10% 0%, rgba(130, 174, 222, 0.05), transparent 55%),
+    radial-gradient(1200px 500px at 85% -10%, rgba(255, 107, 53, 0.07), transparent 60%),
+    radial-gradient(900px 450px at -10% 0%, rgba(10, 132, 255, 0.05), transparent 55%),
+    radial-gradient(800px 400px at 50% 110%, rgba(175, 82, 222, 0.04), transparent 50%),
     var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   overflow-x: hidden;
   overscroll-behavior-y: none;
   -webkit-touch-callout: none;
-  transition: background-color 0.25s ease;
+  transition: background-color 0.3s ease;
+}
+
+[data-theme='dark'] body {
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(255, 122, 69, 0.05), transparent 60%),
+    radial-gradient(900px 450px at -10% 0%, rgba(10, 132, 255, 0.04), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
 }
 
 button {
@@ -160,12 +176,10 @@ button {
   background: none;
   cursor: pointer;
   color: inherit;
-  /* 确保触摸目标不小于 44px（移动端） */
   min-height: 44px;
   touch-action: manipulation;
 }
 
-/* 图标类小按钮允许更紧凑，但仍保证可点区域 */
 button.icon-btn,
 button.modal-close,
 button.tl-delete {
@@ -176,8 +190,53 @@ input,
 select,
 textarea {
   font-family: inherit;
-  font-size: 16px; /* 防 iOS 聚焦时自动放大 */
+  font-size: 16px;
   color: inherit;
+}
+
+/* ===== 液态玻璃工具类 ===== */
+.glass {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-heavy {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-subtle {
+  background: var(--surface-2);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  border: 1px solid var(--glass-border);
+}
+
+/* 液态玻璃卡片 — 全局通用 */
+.glass-card {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-shine), transparent);
+  pointer-events: none;
 }
 
 /* 通用容器 */
@@ -190,7 +249,6 @@ textarea {
   margin: 0 auto;
 }
 
-/* PC/平板：内容容器加宽并居中（保持整体居中布局） */
 @media (min-width: 700px) {
   .page {
     max-width: 1200px;
@@ -200,16 +258,31 @@ textarea {
   }
 }
 
-/* 卡片：无边框 + 柔和分层阴影（Material 风格） */
+/* 卡片 — 液态玻璃 */
 .card {
   background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border);
+  box-shadow: var(--shadow-glass);
   padding: 14px;
+  position: relative;
+  overflow: hidden;
   transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
+    box-shadow 0.3s var(--ease-out),
+    transform 0.3s var(--ease-out);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 10%, var(--glass-shine) 50%, transparent 90%);
+  pointer-events: none;
 }
 
 .card + .card {
@@ -218,7 +291,8 @@ textarea {
 
 @media (hover: hover) {
   .card:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-md), var(--shadow-glass);
+    transform: translateY(-1px);
   }
 }
 
@@ -231,7 +305,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 6px;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
 }
 
 /* 按钮 */
@@ -245,17 +319,17 @@ textarea {
   font-weight: 600;
   font-size: var(--fs-base);
   transition:
-    transform 0.12s ease,
-    opacity 0.12s ease,
-    background 0.15s ease,
-    box-shadow 0.15s ease,
-    border-color 0.15s ease;
+    transform 0.3s var(--spring),
+    opacity 0.15s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 .btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .btn:disabled {
@@ -266,15 +340,14 @@ textarea {
 .btn-primary {
   background: var(--primary-gradient);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(238, 122, 85, 0.3);
+  box-shadow:
+    0 4px 16px rgba(255, 107, 53, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .btn-primary:active {
-  box-shadow: 0 2px 6px rgba(238, 122, 85, 0.3);
-}
-
-[data-theme='dark'] .btn-primary {
-  box-shadow: 0 4px 14px rgba(240, 139, 104, 0.24);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  transform: scale(0.96);
 }
 
 .btn-soft {
@@ -284,7 +357,9 @@ textarea {
 
 .btn-outline {
   background: var(--surface);
-  border: 1.5px solid var(--border-strong);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  border: 1.5px solid var(--glass-border);
   color: var(--text-secondary);
 }
 
@@ -302,7 +377,7 @@ textarea {
 }
 
 .btn-lg {
-  padding: 12px 20px;
+  padding: 13px 22px;
   font-size: 16px;
   border-radius: 16px;
 }
@@ -310,7 +385,7 @@ textarea {
 /* 表单 */
 .form-field {
   margin-bottom: 12px;
-  min-width: 0; /* 允许收缩，防止 flex/grid 场景下被内容固有宽度撑破 */
+  min-width: 0;
   width: 100%;
 }
 
@@ -325,22 +400,23 @@ textarea {
 .form-input,
 .form-textarea {
   width: 100%;
-  min-width: 0; /* 允许收缩，防止原生日期控件等固有宽度撑破容器 */
+  min-width: 0;
   max-width: 100%;
-  min-height: 44px; /* 统一输入高度，保证触摸目标与各类输入框视觉一致 */
+  min-height: 44px;
   padding: 9px 12px;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--surface-2);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
   outline: none;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
+    border-color 0.25s var(--ease-out),
+    box-shadow 0.3s var(--spring),
+    background 0.25s var(--ease-out);
   box-sizing: border-box;
 }
 
-/* 原生日期/时间控件：限制宽度避免溢出（Android/iOS 渲染差异） */
 input[type='date'],
 input[type='datetime-local'],
 input[type='time'] {
@@ -348,10 +424,8 @@ input[type='time'] {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  /* iOS Safari：日期控件固有宽度优先于 width:100%，移除原生外观使其像普通输入框一样随容器自适应 */
   -webkit-appearance: none;
   appearance: none;
-  /* 移除原生外观后，空值（无「年/月/日」占位段）时行高塌陷会变矮，固定最小高度与其他输入框等高 */
   min-height: 44px;
 }
 
@@ -366,9 +440,9 @@ input[type='time']::-webkit-date-and-time-value {
 .form-textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3.5px var(--primary-soft);
+  background: var(--surface);
 }
 
-/* 键盘导航可见焦点环（鼠标点击不显示，仅 Tab/键盘操作时高亮） */
 :focus-visible {
   outline: 2.5px solid var(--primary);
   outline-offset: 2px;
@@ -381,7 +455,6 @@ input[type='time']::-webkit-date-and-time-value {
   opacity: 0.75;
 }
 
-/* 下拉选择：隐藏原生外观，统一自定义箭头，与整体风格一致 */
 select.form-input {
   appearance: none;
   -webkit-appearance: none;
@@ -404,13 +477,13 @@ select.form-input:focus {
   min-height: 56px;
 }
 
-/* 弹窗遮罩：毛玻璃背景 */
+/* 弹窗遮罩 — 液态玻璃模糊 */
 .modal-mask {
   position: fixed;
   inset: 0;
   background: var(--modal-mask);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
   z-index: 200;
   display: flex;
   align-items: flex-end;
@@ -425,20 +498,25 @@ select.form-input:focus {
 
 .modal-panel {
   background: var(--surface);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: 1px solid var(--glass-border);
+  border-bottom: none;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   width: 100%;
-  min-width: 0; /* flex 子项允许收缩，小屏不被内容固有宽度撑出屏幕 */
+  min-width: 0;
   max-width: 640px;
   max-height: 88vh;
   max-height: 88dvh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 20px 18px calc(20px + var(--safe-bottom));
-  box-shadow: var(--shadow-lg);
-  animation: slideUp 0.24s cubic-bezier(0.32, 0.72, 0.24, 1);
+  box-shadow:
+    0 -8px 40px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  animation: glassSlideUp 0.4s var(--spring);
 }
 
-/* 底部弹窗顶部拖拽把手 */
 .modal-panel::before {
   content: '';
   position: absolute;
@@ -451,24 +529,25 @@ select.form-input:focus {
   background: var(--border-strong);
 }
 
+@keyframes glassSlideUp {
+  from {
+    transform: translateY(40px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
 @media (min-width: 640px) {
   .modal-panel {
     border-radius: var(--radius-xl);
+    border-bottom: 1px solid var(--glass-border);
   }
 
   .modal-panel::before {
     display: none;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(28px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
   }
 }
 
@@ -494,7 +573,6 @@ select.form-input:focus {
   }
 }
 
-/* ===== 超窄屏（≤ 340px） ===== */
 @media (max-width: 340px) {
   :root {
     --tabbar-height: 56px;
@@ -505,7 +583,7 @@ select.form-input:focus {
 /* 动画 */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.18s ease;
+  transition: opacity 0.2s ease;
 }
 
 .fade-enter-from,
@@ -513,14 +591,24 @@ select.form-input:focus {
   opacity: 0;
 }
 
-/* 滚动条美化 */
+/* 弹性缩放动画 */
+@keyframes springIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.spring-in {
+  animation: springIn 0.4s var(--spring);
+}
+
+/* 滚动条 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
+  background: rgba(128, 128, 128, 0.25);
   border-radius: 3px;
 }
 

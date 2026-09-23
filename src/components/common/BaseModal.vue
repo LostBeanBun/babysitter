@@ -20,7 +20,6 @@ watch(
   (v) => {
     if (v) {
       document.addEventListener('keydown', onKeydown)
-      // 弹窗打开后将焦点移入面板，键盘用户可直接操作（Tab/Escape）
       requestAnimationFrame(() => panelRef.value?.focus())
     } else {
       document.removeEventListener('keydown', onKeydown)
@@ -35,14 +34,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   <Teleport to="body">
     <Transition name="fade">
       <div v-if="show" class="modal-mask" @click.self="emit('close')">
-        <div
-          ref="panelRef"
-          class="modal-panel"
-          role="dialog"
-          aria-modal="true"
-          :aria-label="title"
-          tabindex="-1"
-        >
+        <div ref="panelRef" class="modal-panel" role="dialog" aria-modal="true" :aria-label="title" tabindex="-1">
           <div v-if="title" class="modal-header">
             <h3 class="modal-title">{{ title }}</h3>
             <button class="modal-close" :aria-label="t('common.close')" @click="emit('close')">✕</button>
@@ -56,7 +48,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 <style scoped>
 .modal-panel:focus-visible {
-  outline: none; /* 面板本身作为焦点容器，不显示外环（内部元素有可见焦点环） */
+  outline: none;
 }
 
 .modal-header {
@@ -70,7 +62,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   font-size: 18px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.02em;
 }
 
 .modal-close {
@@ -78,19 +70,22 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   height: 34px;
   border-radius: 50%;
   background: var(--surface-2);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
   color: var(--text-secondary);
   font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--glass-border);
   transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    transform 0.12s ease;
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.3s var(--spring);
 }
 
 .modal-close:active {
   background: var(--surface-3);
-  transform: scale(0.9);
+  transform: scale(0.88);
 }
 </style>

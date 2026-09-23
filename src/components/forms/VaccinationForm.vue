@@ -213,12 +213,12 @@ async function submit() {
 .plan-tab {
   padding: 9px 6px;
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--glass-border);
   background: var(--surface);
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  transition: all 0.12s ease;
+  transition: all 0.3s var(--spring);
 }
 
 .plan-tab.active {
@@ -241,10 +241,10 @@ async function submit() {
   gap: 2px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--glass-border);
   background: var(--surface-2);
   text-align: left;
-  transition: all 0.12s ease;
+  transition: all 0.3s var(--spring);
 }
 
 .plan-item:not(.disabled):active {
@@ -292,9 +292,9 @@ async function submit() {
   gap: 4px;
   padding: 12px 6px;
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--glass-border);
   background: var(--surface);
-  transition: all 0.12s ease;
+  transition: all 0.3s var(--spring);
 }
 
 .status-btn.selected {

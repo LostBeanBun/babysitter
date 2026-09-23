@@ -695,13 +695,13 @@ const editPayload = computed(() => {
   gap: 5px;
   min-width: 0; /* 允许 grid track 收缩，避免长标签撑破容器 */
   padding: 10px 6px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   border: 1px solid transparent;
   background: transparent;
   transition:
-    transform 0.12s ease,
-    background 0.15s ease,
-    border-color 0.15s ease;
+    transform 0.3s var(--spring),
+    background 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out);
 }
 
 .quick-btn:active {
@@ -712,15 +712,15 @@ const editPayload = computed(() => {
 .quick-icon {
   width: 42px;
   height: 42px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 21px;
   flex-shrink: 0;
   line-height: 1;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.03), var(--shadow-xs);
-  transition: transform 0.15s ease;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4), var(--shadow-glass);
+  transition: transform 0.3s var(--spring);
 }
 
 .quick-btn:active .quick-icon {
@@ -798,8 +798,11 @@ const editPayload = computed(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: var(--surface-2);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
   margin-bottom: 18px;
 }
 

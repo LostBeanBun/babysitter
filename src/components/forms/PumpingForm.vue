@@ -188,9 +188,9 @@ async function submit() {
   gap: 4px;
   padding: 12px 6px;
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--glass-border);
   background: var(--surface);
-  transition: all 0.12s ease;
+  transition: all 0.3s var(--spring);
 }
 
 .type-btn.selected {

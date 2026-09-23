@@ -4,20 +4,14 @@ defineProps<{
   value: string
   icon?: string
   color?: string
-  /** 支持多行说明：传数组则每项一行 */
   sub?: string | Array<string | undefined>
-  /** 第一行 sub 用警示黄高亮 */
   highlightFirst?: boolean
 }>()
 </script>
 
 <template>
-  <div class="stat-card card">
-    <div
-      v-if="icon"
-      class="stat-icon"
-      :style="{ background: (color ?? '#fdf0ea') + '33', color: color ?? 'var(--primary)' }"
-    >
+  <div class="stat-card">
+    <div v-if="icon" class="stat-icon" :style="{ background: (color ?? '#fdf0ea') + '26', color: color ?? 'var(--primary)' }">
       {{ icon }}
     </div>
     <div class="stat-body">
@@ -40,17 +34,32 @@ defineProps<{
   gap: 8px;
   padding: 10px;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
   background: var(--surface);
-  box-shadow: var(--shadow-xs);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass);
+  position: relative;
+  overflow: hidden;
   transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
+    box-shadow 0.3s var(--ease-out),
+    transform 0.3s var(--ease-out);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-shine), transparent);
+  pointer-events: none;
 }
 
 @media (hover: hover) {
   .stat-card:hover {
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md), var(--shadow-glass);
     transform: translateY(-1px);
   }
 }
@@ -58,13 +67,13 @@ defineProps<{
 .stat-icon {
   width: 36px;
   height: 36px;
-  border-radius: 12px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .stat-body {
@@ -79,6 +88,7 @@ defineProps<{
   overflow-wrap: anywhere;
   word-break: break-word;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .stat-label {
@@ -105,9 +115,9 @@ defineProps<{
   color: var(--primary);
   font-weight: 600;
   background: var(--primary-soft);
-  border-radius: 3px;
-  padding: 0 3px;
-  margin: 0 -3px;
+  border-radius: 4px;
+  padding: 0 4px;
+  margin: 0 -4px;
 }
 
 @media (max-width: 400px) {

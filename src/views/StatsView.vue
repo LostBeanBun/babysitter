@@ -522,10 +522,18 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 .overview-tabs {
   display: flex;
   gap: 4px;
-  background: var(--surface-2);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: 999px;
   padding: 4px;
   margin-bottom: 10px;
+  box-shadow: var(--shadow-glass);
+}
+
+:global([data-theme='dark']) .overview-tabs {
+  background: rgba(44, 44, 48, 0.6);
 }
 
 .overview-tab {
@@ -537,7 +545,7 @@ const trendTooltip = (fmt: (v: number) => string) => ({
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  transition: all 0.18s ease;
+  transition: all 0.3s var(--spring);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -546,7 +554,7 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 .overview-tab.active {
   background: var(--surface);
   color: var(--primary-dark);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-glass);
 }
 
 .overview-sub {
@@ -570,12 +578,19 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 }
 
 .summary-item {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
   padding: 9px 8px;
   text-align: center;
-  transition: transform 0.12s ease;
+  transition: transform 0.3s var(--spring);
+  box-shadow: var(--shadow-glass);
+}
+
+:global([data-theme='dark']) .summary-item {
+  background: rgba(44, 44, 48, 0.55);
 }
 
 .summary-item:active {
@@ -640,12 +655,19 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 }
 
 .compare-item {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
   padding: 11px 8px;
   text-align: center;
-  transition: transform 0.12s ease;
+  transition: transform 0.3s var(--spring);
+  box-shadow: var(--shadow-glass);
+}
+
+:global([data-theme='dark']) .compare-item {
+  background: rgba(44, 44, 48, 0.55);
 }
 
 .compare-item:active {

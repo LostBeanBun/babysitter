@@ -125,9 +125,9 @@ async function submit() {
   gap: 4px;
   padding: 12px 6px;
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--glass-border);
   background: var(--surface);
-  transition: all 0.12s ease;
+  transition: all 0.3s var(--spring);
 }
 
 .type-btn.selected {
@@ -157,11 +157,11 @@ async function submit() {
   gap: 5px;
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--glass-border);
   background: var(--surface);
   font-size: 12px;
   color: var(--text-secondary);
-  transition: all 0.12s ease;
+  transition: all 0.3s var(--spring);
 }
 
 .color-dot-btn.selected {
@@ -185,11 +185,11 @@ async function submit() {
   flex: 1;
   padding: 8px;
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--glass-border);
   background: var(--surface);
   font-size: 13px;
   color: var(--text-secondary);
-  transition: all 0.12s ease;
+  transition: all 0.3s var(--spring);
 }
 
 .amount-btn.selected {

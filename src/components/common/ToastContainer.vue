@@ -57,14 +57,15 @@ function handleAction(id: number, onAction?: () => void) {
   gap: 12px;
   max-width: 100%;
   padding: 10px 14px;
-  border-radius: 14px;
-  background: rgba(46, 38, 33, 0.92);
+  border-radius: var(--radius-lg);
+  background: rgba(46, 38, 33, 0.82);
   color: #fff;
   font-size: 13px;
   line-height: 1.5;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-glass), 0 8px 32px rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .toast-message {
@@ -109,13 +110,13 @@ function handleAction(id: number, onAction?: () => void) {
 .toast-enter-active,
 .toast-leave-active {
   transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+    opacity 0.3s var(--ease-out),
+    transform 0.35s var(--spring);
 }
 
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(12px) scale(0.96);
 }
 </style>

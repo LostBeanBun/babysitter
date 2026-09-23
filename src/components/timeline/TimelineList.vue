@@ -347,9 +347,16 @@ const groupedEntries = computed(() => {
   font-weight: 700;
   color: var(--text-secondary);
   margin: 0 4px 6px;
-  padding: 0 6px;
-  background: var(--bg);
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  border: 1px solid var(--glass-border);
   border-radius: 999px;
+}
+
+:global([data-theme='dark']) .tl-day {
+  background: rgba(44, 44, 48, 0.7);
 }
 
 .tl-timeline-item {
@@ -373,31 +380,39 @@ const groupedEntries = computed(() => {
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   cursor: pointer;
   transition:
-    background 0.15s ease,
-    transform 0.12s ease;
+    background 0.25s var(--ease-out),
+    transform 0.3s var(--spring);
 }
 
-.tl-item:hover {
-  background: var(--surface-2);
+@media (hover: hover) {
+  .tl-item:hover {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: var(--glass-blur-light);
+    -webkit-backdrop-filter: var(--glass-blur-light);
+  }
+
+  :global([data-theme='dark']) .tl-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
 }
 
 .tl-item:active {
-  transform: scale(0.99);
+  transform: scale(0.985);
 }
 
 .tl-icon {
   width: 38px;
   height: 38px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.03);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
 .tl-body {

@@ -256,32 +256,49 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   gap: 10px;
 }
 
-/* ===== 卡片基础 ===== */
+/* ===== 卡片基础 — 液态玻璃 ===== */
 .ov-card {
   display: flex;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-xs);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass);
   overflow: hidden;
-  transition: box-shadow 0.2s ease;
+  position: relative;
+  transition:
+    box-shadow 0.3s var(--ease-out),
+    transform 0.3s var(--ease-out);
+}
+
+.ov-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-shine), transparent);
+  pointer-events: none;
 }
 
 @media (hover: hover) {
   .ov-card:hover {
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md), var(--shadow-glass);
+    transform: translateY(-1px);
   }
 }
 
 /* 左侧彩色指示条 */
 .ov-card__accent {
-  width: 3px;
+  width: 3.5px;
   flex-shrink: 0;
 }
 
-.ov-card--milk .ov-card__accent  { background: #C4A8E0; }
-.ov-card--sleep .ov-card__accent { background: #8FAED8; }
-.ov-card--diaper .ov-card__accent { background: #9A8FC8; }
+.ov-card--milk .ov-card__accent  { background: linear-gradient(to bottom, #C4A8E0, #a78bdb); }
+.ov-card--sleep .ov-card__accent { background: linear-gradient(to bottom, #8FAED8, #6a96c7); }
+.ov-card--diaper .ov-card__accent { background: linear-gradient(to bottom, #9A8FC8, #8476b5); }
 
 /* 内容区 */
 .ov-card__content {
@@ -341,6 +358,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   font-variant-numeric: tabular-nums;
   color: var(--text);
   margin: 0;
+  letter-spacing: -0.03em;
 }
 
 .ov-card__unit {
@@ -359,9 +377,9 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   flex-shrink: 0;
 }
 
-.ov-card--milk .ov-card__hero  { color: #9a76c9; }
-.ov-card--sleep .ov-card__hero { color: #6a96c7; }
-.ov-card--diaper .ov-card__hero { color: #8476b5; }
+.ov-card--milk .ov-card__hero  { color: #af52de; }
+.ov-card--sleep .ov-card__hero { color: #0a84ff; }
+.ov-card--diaper .ov-card__hero { color: #bf5af2; }
 
 /* 详情区 */
 .ov-card__details {
@@ -376,7 +394,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   flex-wrap: wrap;
   gap: 2px 12px;
   padding-top: 5px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--glass-border);
   margin-top: auto;
   justify-content: flex-end;
 }
@@ -431,11 +449,13 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   align-items: center;
   gap: 8px;
   background: linear-gradient(135deg, var(--primary-soft), var(--accent-yellow-soft));
-  border: 1px solid rgba(238, 122, 85, 0.28);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: 9px 12px;
   margin-bottom: 8px;
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-glass);
 }
 
 .feed-reminder-banner .fr-icon {
@@ -492,20 +512,22 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   align-items: center;
   gap: 8px;
   background: linear-gradient(135deg, var(--accent-blue-soft), var(--surface));
-  border: 1px solid rgba(130, 174, 222, 0.32);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: 9px 12px;
   margin-bottom: 8px;
   cursor: pointer;
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-glass);
   transition:
-    transform 0.12s ease,
-    box-shadow 0.15s ease;
+    transform 0.3s var(--spring),
+    box-shadow 0.3s var(--ease-out);
 }
 
 .vaccine-banner:active {
-  transform: scale(0.99);
-  box-shadow: var(--shadow-sm);
+  transform: scale(0.98);
+  box-shadow: var(--shadow-md);
 }
 
 .vaccine-banner .vb-icon {
@@ -537,12 +559,5 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   color: var(--accent-blue);
   font-weight: 700;
   margin-left: 3px;
-}
-
-@media (max-width: 520px) {
-  .overview-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
 }
 </style>

@@ -107,13 +107,14 @@ async function submit() {
   align-items: center;
   gap: 2px;
   padding: 10px 6px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: var(--surface-2);
+  border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease;
+    background 0.3s var(--spring),
+    color 0.25s var(--ease-out),
+    box-shadow 0.3s var(--spring);
 }
 
 .milestone-type:active {
@@ -189,8 +190,9 @@ async function submit() {
   align-items: flex-start;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: var(--surface-2);
+  border: 1px solid var(--glass-border);
   font-size: 13px;
   line-height: 1.5;
 }
