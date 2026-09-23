@@ -119,9 +119,6 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
 
 .tabbar-item.active {
   color: var(--primary);
-}
-
-.tabbar-item.active .tabbar-pill {
   background: var(--primary-soft);
   box-shadow: inset 0 0 0 1px var(--glass-inset);
 }

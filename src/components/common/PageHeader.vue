@@ -44,7 +44,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
       <div ref="langWrapRef" class="lang-wrap">
         <button type="button" class="lang-toggle" :title="t('language.title')" :aria-label="t('language.title')"
           aria-haspopup="menu" :aria-expanded="langOpen" @click.stop="toggleLang">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true">
             <circle cx="12" cy="12" r="9" />
             <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
           </svg>
@@ -61,10 +61,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
       </div>
       <button type="button" class="theme-toggle" :title="isDark ? t('theme.toLight') : t('theme.toDark')"
         :aria-label="isDark ? t('theme.toLight') : t('theme.toDark')" @click="toggleTheme">
-        <svg v-if="isDark" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
+        <svg v-if="isDark" viewBox="0 0 24 24" fill="currentColor" width="17" height="17" aria-hidden="true">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
-        <svg v-else viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
+        <svg v-else viewBox="0 0 24 24" fill="currentColor" width="17" height="17" aria-hidden="true">
           <path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-5a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zm9 9a1 1 0 0 1-1 1h-2a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1zM5 12a1 1 0 0 1-1 1H2a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1zm1.05-5.95a1 1 0 0 1 0 1.41l-1.42 1.42a1 1 0 1 1-1.41-1.41l1.42-1.42a1 1 0 0 1 1.41 0zm12.37 0a1 1 0 0 1 0 1.41l-1.42 1.42a1 1 0 1 1-1.41-1.41l1.42-1.42a1 1 0 0 1 1.41 0zM12 19a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1zm-4.95 2.05a1 1 0 0 1 0-1.41l1.42-1.42a1 1 0 1 1 1.41 1.41l-1.42 1.42a1 1 0 0 1-1.41 0zm9.9 0a1 1 0 0 1-1.41 0l-1.42-1.42a1 1 0 1 1 1.41-1.41l1.42 1.42a1 1 0 0 1 0 1.41z" />
         </svg>
       </button>
@@ -151,10 +151,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
 .lang-toggle {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   min-height: 0;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -182,7 +182,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .lang-badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
 }
@@ -245,10 +245,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .theme-toggle {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   min-height: 0;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
