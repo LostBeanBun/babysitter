@@ -18,9 +18,12 @@ export const isDark = ref(resolveDark(saved))
 
 function apply() {
   document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'light')
-  // 同步 PWA 浏览器 UI 主题色
-  const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute('content', isDark.value ? '#1d1916' : '#FDF6EF')
+  // 同步 PWA 浏览器 UI 主题色（与 main.css --bg 对齐）
+  const color = isDark.value ? '#0f0e0c' : '#f2f0ed'
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
+    meta.removeAttribute('media')
+    meta.setAttribute('content', color)
+  })
 }
 
 /** 切换主题并持久化 */

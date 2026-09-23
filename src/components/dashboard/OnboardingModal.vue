@@ -109,7 +109,7 @@ async function onOnboarded() {
   padding: 4px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   font-size: 20px;
@@ -117,10 +117,6 @@ async function onOnboarded() {
   align-items: center;
   justify-content: center;
   transition: all 0.3s var(--spring);
-}
-
-:global([data-theme='dark']) .avatar-option {
-  background: rgba(58, 58, 62, 0.7);
 }
 
 .avatar-option.selected {
@@ -140,7 +136,7 @@ async function onOnboarded() {
   padding: 6px 8px;
   border-radius: var(--radius);
   border: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   font-size: 14px;
@@ -151,10 +147,6 @@ async function onOnboarded() {
   justify-content: center;
   gap: 6px;
   transition: all 0.3s var(--spring);
-}
-
-:global([data-theme='dark']) .gender-option {
-  background: rgba(58, 58, 62, 0.7);
 }
 
 .gender-option.selected {

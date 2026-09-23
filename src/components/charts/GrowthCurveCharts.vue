@@ -6,7 +6,7 @@ import ChartCard from '@/components/charts/ChartCard.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { whoData, ageInMonths, type WhoField, type WhoPercentileKey } from '@/constants/whoGrowth'
 import { estimatePercentile } from '@/utils/growthPercentile'
-import { isDark } from '@/composables/useTheme'
+import { useChartTheme } from '@/composables/useChartTheme'
 import { CHART_COLORS } from '@/constants'
 import { startOfDay } from '@/utils/format'
 import type { BabyGender, GrowthRecord } from '@/types'
@@ -23,9 +23,7 @@ const props = defineProps<{
 const { t } = useI18n()
 
 // 图表配色跟随主题
-const axisColor = computed(() => (isDark.value ? '#b9ab9e' : '#8c7b72'))
-const axisLineColor = computed(() => (isDark.value ? '#42372f' : '#f0e2d4'))
-const splitLineColor = computed(() => (isDark.value ? '#2b251f' : '#f5ece2'))
+const { axisColor, axisLineColor, splitLineColor, whoColors } = useChartTheme()
 
 // WHO 生长曲线说明弹窗
 const growthInfoOpen = ref(false)
@@ -153,14 +151,14 @@ const growthTooltip = (unit: string, field: WhoField, label: string) => ({
   },
 })
 
-/** WHO 参考线颜色（P15/P85 更浅，突出 P3-P97 区间） */
-const WHO_LINE_COLORS: Record<WhoPercentileKey, string> = {
-  p97: '#c4b6a6',
-  p85: '#d8cbbd',
-  p50: '#a49482',
-  p15: '#d8cbbd',
-  p3: '#c4b6a6',
-}
+/** WHO 参考线颜色（P15/P85 更浅，突出 P3-P97 区间；暗色下整体加深避免刺眼） */
+const WHO_LINE_COLORS = computed<Record<WhoPercentileKey, string>>(() => ({
+  p97: whoColors.value.mid,
+  p85: whoColors.value.soft,
+  p50: whoColors.value.strong,
+  p15: whoColors.value.soft,
+  p3: whoColors.value.mid,
+}))
 
 function growthSeries(
   field: WhoField,
@@ -175,8 +173,8 @@ function growthSeries(
     data: whoSeries(field, k),
     symbol: 'none',
     smooth: 0.4,
-    lineStyle: { width: 1, color: WHO_LINE_COLORS[k], type: 'dashed' },
-    itemStyle: { color: WHO_LINE_COLORS[k] },
+    lineStyle: { width: 1, color: WHO_LINE_COLORS.value[k], type: 'dashed' },
+    itemStyle: { color: WHO_LINE_COLORS.value[k] },
   }))
   series.push({
     name: label,
@@ -211,7 +209,7 @@ const weightOption = computed<EChartsOption>(() => ({
   yAxis: {
     type: 'value',
     scale: true,
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}kg`, hideOverlap: true },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}kg`, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   tooltip: growthTooltip('kg', 'weight', t('stats.babyWeight')),
@@ -238,7 +236,7 @@ const heightOption = computed<EChartsOption>(() => ({
   yAxis: {
     type: 'value',
     scale: true,
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}cm`, hideOverlap: true },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}cm`, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   tooltip: growthTooltip('cm', 'length', t('stats.babyHeight')),
@@ -265,7 +263,7 @@ const hcOption = computed<EChartsOption>(() => ({
   yAxis: {
     type: 'value',
     scale: true,
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}cm`, hideOverlap: true },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}cm`, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   tooltip: growthTooltip('cm', 'hc', t('stats.babyHead')),

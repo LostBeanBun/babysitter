@@ -56,26 +56,13 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   height: var(--tabbar-height);
   padding: 5px;
   border-radius: calc(var(--tabbar-height) / 2);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
   border: 1px solid var(--glass-border);
-  box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.1),
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 var(--glass-shine),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-float), inset 0 1px 0 var(--glass-shine), inset 0 -1px 0 var(--glass-edge);
   pointer-events: auto;
   overflow: hidden;
-}
-
-:global([data-theme='dark']) .tabbar-glass {
-  background: rgba(44, 40, 36, 0.72);
-  box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.45),
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 var(--glass-shine),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* 顶部高光线（液态玻璃） */
@@ -136,11 +123,7 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
 
 .tabbar-item.active .tabbar-pill {
   background: var(--primary-soft);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-}
-
-:global([data-theme='dark']) .tabbar-item.active .tabbar-pill {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px var(--glass-inset);
 }
 
 .tabbar-icon {

@@ -348,15 +348,11 @@ const groupedEntries = computed(() => {
   color: var(--text-secondary);
   margin: 0 4px 6px;
   padding: 0 10px;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   border: 1px solid var(--glass-border);
   border-radius: 999px;
-}
-
-:global([data-theme='dark']) .tl-day {
-  background: rgba(44, 44, 48, 0.7);
 }
 
 .tl-timeline-item {
@@ -389,13 +385,9 @@ const groupedEntries = computed(() => {
 
 @media (hover: hover) {
   .tl-item:hover {
-    background: rgba(255, 255, 255, 0.55);
+    background: var(--fill-hover);
     backdrop-filter: var(--glass-blur-light);
     -webkit-backdrop-filter: var(--glass-blur-light);
-  }
-
-  :global([data-theme='dark']) .tl-item:hover {
-    background: rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -412,7 +404,7 @@ const groupedEntries = computed(() => {
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 0 0 1px var(--glass-inset);
 }
 
 .tl-body {
@@ -501,9 +493,9 @@ const groupedEntries = computed(() => {
 
 .tl-item.tl-deleting .tl-delete {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-primary);
   opacity: 1;
-  box-shadow: 0 2px 8px rgba(217, 122, 82, 0.4);
+  box-shadow: 0 2px 8px var(--danger-soft);
 }
 
 .tl-item.tl-deleting .tl-title {
@@ -515,12 +507,12 @@ const groupedEntries = computed(() => {
   100% {
     box-shadow:
       inset 0 0 0 1.5px var(--danger),
-      0 0 0 0 rgba(217, 122, 82, 0.18);
+      0 0 0 0 var(--danger-soft);
   }
   50% {
     box-shadow:
       inset 0 0 0 1.5px var(--danger),
-      0 0 0 4px rgba(217, 122, 82, 0.08);
+      0 0 0 4px var(--danger-soft);
   }
 }
 

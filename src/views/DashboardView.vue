@@ -719,7 +719,7 @@ const editPayload = computed(() => {
   font-size: 21px;
   flex-shrink: 0;
   line-height: 1;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4), var(--shadow-glass);
+  box-shadow: inset 0 0 0 1px var(--glass-inset), var(--shadow-glass);
   transition: transform 0.3s var(--spring);
 }
 
@@ -727,45 +727,45 @@ const editPayload = computed(() => {
   transform: scale(0.94);
 }
 
-/* 每种记录类型的图标专属渐变色（浅色容器 + 主题色），视觉更有层次 */
+/* 每种记录类型的图标专属渐变色（浅色容器 + 主题色），暗色下整体降亮 */
 .quick-btn.feed .quick-icon {
-  background: linear-gradient(135deg, #fde8e0, #f6c9b8);
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.28), rgba(255, 107, 53, 0.16));
 }
 
 .quick-btn.diaper .quick-icon {
-  background: linear-gradient(135deg, #ece5fa, #d5c6f0);
+  background: linear-gradient(135deg, rgba(175, 82, 222, 0.28), rgba(175, 82, 222, 0.16));
 }
 
 .quick-btn.pump .quick-icon {
-  background: linear-gradient(135deg, #fbe4f0, #f2c3dc);
+  background: linear-gradient(135deg, rgba(255, 45, 85, 0.26), rgba(255, 45, 85, 0.14));
 }
 
 .quick-btn.sleep .quick-icon {
-  background: linear-gradient(135deg, #e3eefb, #c2d8f0);
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.26), rgba(0, 122, 255, 0.14));
 }
 
 .quick-btn.growth .quick-icon {
-  background: linear-gradient(135deg, #e4f4ea, #c2e4d0);
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.26), rgba(52, 199, 89, 0.14));
 }
 
 .quick-btn.solidFood .quick-icon {
-  background: linear-gradient(135deg, #fbead8, #f2d0a8);
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.28), rgba(255, 149, 0, 0.16));
 }
 
 .quick-btn.medication .quick-icon {
-  background: linear-gradient(135deg, #fbe3ea, #f2bfce);
+  background: linear-gradient(135deg, rgba(255, 45, 85, 0.22), rgba(175, 82, 222, 0.16));
 }
 
 .quick-btn.vaccination .quick-icon {
-  background: linear-gradient(135deg, #e2f0fb, #bfdcf2);
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.24), rgba(52, 199, 89, 0.14));
 }
 
 .quick-btn.temperature .quick-icon {
-  background: linear-gradient(135deg, #fdf0da, #f5ddae);
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.26), rgba(255, 59, 48, 0.14));
 }
 
 .quick-btn.milestone .quick-icon {
-  background: linear-gradient(135deg, #fdf3dd, #f5e2b4);
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.24), rgba(255, 214, 10, 0.16));
 }
 
 .quick-label {

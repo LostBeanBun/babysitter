@@ -24,7 +24,7 @@ import {
 } from '@/services/stats'
 import { CHART_COLORS } from '@/constants'
 import { formatDuration, formatPercentChange, formatAmount } from '@/utils/format'
-import { isDark } from '@/composables/useTheme'
+import { useChartTheme } from '@/composables/useChartTheme'
 
 const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
@@ -39,9 +39,7 @@ const temperatureStore = useTemperatureStore()
 const { t } = useI18n()
 
 // 图表配色跟随主题
-const axisColor = computed(() => (isDark.value ? '#b9ab9e' : '#8c7b72'))
-const axisLineColor = computed(() => (isDark.value ? '#42372f' : '#f0e2d4'))
-const splitLineColor = computed(() => (isDark.value ? '#2b251f' : '#f5ece2'))
+const { axisColor, axisLineColor, splitLineColor } = useChartTheme()
 
 const now = ref(Date.now())
 const nowTimer = window.setInterval(() => (now.value = Date.now()), 60_000)
@@ -117,7 +115,7 @@ const milkOption = computed<EChartsOption>(() => ({
   },
   yAxis: {
     type: 'value',
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter, hideOverlap: true },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: yFormatter, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
@@ -158,7 +156,7 @@ const sleepOption = computed<EChartsOption>(() => ({
   },
   yAxis: {
     type: 'value',
-    axisLabel: { color: '#8c7b72', fontSize: 10, hideOverlap: true },
+    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
@@ -183,7 +181,7 @@ const diaperOption = computed<EChartsOption>(() => ({
   },
   yAxis: {
     type: 'value',
-    axisLabel: { color: '#8c7b72', fontSize: 10, hideOverlap: true },
+    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
@@ -217,7 +215,7 @@ const pumpOption = computed<EChartsOption>(() => ({
   },
   yAxis: {
     type: 'value',
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: yFormatter, hideOverlap: true },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: yFormatter, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
@@ -260,7 +258,7 @@ const temperatureOption = computed<EChartsOption>(() => ({
     type: 'value',
     min: 35,
     max: 40,
-    axisLabel: { color: '#8c7b72', fontSize: 10, formatter: (v: number) => `${v}℃`, hideOverlap: true },
+    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}℃`, hideOverlap: true },
     splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
@@ -279,7 +277,7 @@ const temperatureOption = computed<EChartsOption>(() => ({
         symbol: 'none',
         label: { show: false },
         data: [{ yAxis: 37.3 }],
-        lineStyle: { color: '#D97A52', type: 'dashed', width: 1 },
+        lineStyle: { color: '#ff7a45', type: 'dashed', width: 1 },
       },
     },
   ],
@@ -522,7 +520,7 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 .overview-tabs {
   display: flex;
   gap: 4px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--surface-2);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
@@ -530,10 +528,6 @@ const trendTooltip = (fmt: (v: number) => string) => ({
   padding: 4px;
   margin-bottom: 10px;
   box-shadow: var(--shadow-glass);
-}
-
-:global([data-theme='dark']) .overview-tabs {
-  background: rgba(44, 44, 48, 0.6);
 }
 
 .overview-tab {
@@ -578,7 +572,7 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 }
 
 .summary-item {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   border: 1px solid var(--glass-border);
@@ -587,10 +581,6 @@ const trendTooltip = (fmt: (v: number) => string) => ({
   text-align: center;
   transition: transform 0.3s var(--spring);
   box-shadow: var(--shadow-glass);
-}
-
-:global([data-theme='dark']) .summary-item {
-  background: rgba(44, 44, 48, 0.55);
 }
 
 .summary-item:active {
@@ -655,7 +645,7 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 }
 
 .compare-item {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   border: 1px solid var(--glass-border);
@@ -664,10 +654,6 @@ const trendTooltip = (fmt: (v: number) => string) => ({
   text-align: center;
   transition: transform 0.3s var(--spring);
   box-shadow: var(--shadow-glass);
-}
-
-:global([data-theme='dark']) .compare-item {
-  background: rgba(44, 44, 48, 0.55);
 }
 
 .compare-item:active {
@@ -706,11 +692,11 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 }
 
 .compare-change.up {
-  color: #d97a52;
+  color: var(--primary);
 }
 
 .compare-change.down {
-  color: #7fae6c;
+  color: var(--accent-green);
 }
 
 .compare-change.none {

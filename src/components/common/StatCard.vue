@@ -73,7 +73,7 @@ defineProps<{
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 1px 0 var(--glass-inset);
 }
 
 .stat-body {

@@ -211,7 +211,7 @@ function onOpen(id: string) {
   gap: 8px;
   padding: 8px 12px;
   border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
@@ -221,10 +221,6 @@ function onOpen(id: string) {
   -webkit-user-select: none;
   touch-action: none;
   transition: transform 0.3s var(--spring), box-shadow 0.3s var(--ease-out);
-}
-
-:global([data-theme='dark']) .floating-ball {
-  background: rgba(30, 30, 34, 0.72);
 }
 
 .floating-ball:active {

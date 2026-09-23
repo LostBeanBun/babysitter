@@ -567,7 +567,7 @@ async function confirmClearAll() {
 .baby-item.active {
   border-color: var(--primary);
   background: var(--primary-soft);
-  box-shadow: var(--shadow-glass), 0 0 0 3px rgba(238, 122, 85, 0.12);
+  box-shadow: var(--shadow-glass), 0 0 0 3px var(--primary-glow);
 }
 
 .baby-avatar {
@@ -615,7 +615,7 @@ async function confirmClearAll() {
   min-height: 0;
   border-radius: var(--radius);
   border: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   font-size: 17px;
@@ -626,10 +626,6 @@ async function confirmClearAll() {
   transition:
     background 0.25s var(--ease-out),
     transform 0.3s var(--spring);
-}
-
-:global([data-theme='dark']) .icon-btn {
-  background: rgba(58, 58, 62, 0.7);
 }
 
 .icon-btn:active {
@@ -705,7 +701,7 @@ async function confirmClearAll() {
   min-height: 0; /* 覆盖全局 button 的 min-height:44px，保持开关比例 */
   border-radius: 999px;
   border: none;
-  background: var(--border);
+  background: var(--track-off);
   transition: background 0.3s var(--ease-out);
   flex-shrink: 0;
   cursor: pointer;
@@ -743,16 +739,12 @@ async function confirmClearAll() {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   border: 1px solid var(--glass-border);
   padding: 4px 11px;
   border-radius: 999px;
-}
-
-:global([data-theme='dark']) .data-counts span {
-  background: rgba(44, 44, 48, 0.55);
 }
 
 .btn-block {
@@ -768,7 +760,7 @@ async function confirmClearAll() {
 
 .export-ok {
   font-size: 12px;
-  color: #7fae6c;
+  color: var(--accent-green);
   text-align: center;
   margin-top: 8px;
 }
@@ -808,7 +800,7 @@ async function confirmClearAll() {
   padding: 6px 8px;
   border-radius: var(--radius);
   border: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   font-size: 14px;
@@ -819,10 +811,6 @@ async function confirmClearAll() {
   justify-content: center;
   gap: 6px;
   transition: all 0.3s var(--spring);
-}
-
-:global([data-theme='dark']) .gender-option {
-  background: rgba(58, 58, 62, 0.7);
 }
 
 .gender-option.selected {
@@ -854,7 +842,7 @@ async function confirmClearAll() {
   padding: 4px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   font-size: 20px;
@@ -862,10 +850,6 @@ async function confirmClearAll() {
   align-items: center;
   justify-content: center;
   transition: all 0.3s var(--spring);
-}
-
-:global([data-theme='dark']) .avatar-option {
-  background: rgba(58, 58, 62, 0.7);
 }
 
 .avatar-option.selected {
