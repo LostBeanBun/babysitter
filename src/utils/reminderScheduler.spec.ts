@@ -8,7 +8,7 @@ import {
 } from '@/utils/reminderScheduler'
 import type { Feeding, Medication, Vaccination, DiaperChange, Baby } from '@/types'
 
-vi.mock('@/i18n', () => ({ default: { global: { t: (key: string) => key } } }))
+vi.mock('@/i18n', () => ({ default: { t: (key: string) => key, language: 'zh-CN' } }))
 
 function makeContext(partial: Partial<ReminderContext> = {}): ReminderContext {
   return {

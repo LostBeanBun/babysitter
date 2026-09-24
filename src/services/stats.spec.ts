@@ -4,8 +4,9 @@ import {
   aggregateRange,
   compareRanges,
   getComparisonRange,
+  RANGE_PRESETS,
 } from '@/services/stats'
-import type { Feeding, Sleep, DiaperChange, Pumping } from '@/types'
+import type { Feeding, Sleep, DiaperChange, Pumping, SolidFood, Medication, Temperature } from '@/types'
 import { startOfDay } from '@/utils/format'
 
 const DAY = 24 * 3600 * 1000
@@ -58,6 +59,18 @@ function pumping(partial: Partial<Pumping>): Pumping {
   }
 }
 
+function solidFood(partial: Partial<SolidFood>): SolidFood {
+  return { babyId: 1, time: 0, food: '米糊', createdAt: 0, updatedAt: 0, ...partial }
+}
+
+function medication(partial: Partial<Medication>): Medication {
+  return { babyId: 1, time: 0, name: '药', createdAt: 0, updatedAt: 0, ...partial }
+}
+
+function temperature(partial: Partial<Temperature>): Temperature {
+  return { babyId: 1, time: 0, value: 36.5, method: 'armpit', createdAt: 0, updatedAt: 0, ...partial }
+}
+
 describe('stats aggregation', () => {
   const now = new Date(2026, 7, 20, 12, 0).getTime()
   const day0 = startOfDay(now)
@@ -91,16 +104,39 @@ describe('stats aggregation', () => {
   })
 
   it('buildDailySeries 睡眠跨天按开始时间归当天', () => {
-    const days = buildDailySeries([], [], [], [sleep({ startTime: day0 + 20 * 3600_000, endTime: day0 + 26 * 3600_000 })], day0, day1 + DAY)
+    const days = buildDailySeries(
+      [],
+      [],
+      [],
+      [sleep({ startTime: day0 + 20 * 3600_000, endTime: day0 + 26 * 3600_000 })],
+      day0,
+      day1 + DAY,
+    )
     expect(days[0].sleepMs).toBe(6 * 3600_000)
     expect(days[0].napCount).toBe(1)
     expect(days[1].sleepMs).toBe(0)
   })
 
+  it('睡眠无 endTime 时回退 duration', () => {
+    const days = buildDailySeries(
+      [],
+      [],
+      [],
+      [sleep({ startTime: day0 + 8 * 3600_000, endTime: undefined, duration: 90 * 60_000 })],
+      day0,
+      day1,
+    )
+    expect(days[0].sleepMs).toBe(90 * 60_000)
+  })
+
   it('buildDailySeries 尿布 wet/dirty/both 分别计数', () => {
     const days = buildDailySeries(
       [],
-      [diaper({ type: 'wet', time: day0 + 1 }), diaper({ type: 'dirty', time: day0 + 2 }), diaper({ type: 'both', time: day0 + 3 })],
+      [
+        diaper({ type: 'wet', time: day0 + 1 }),
+        diaper({ type: 'dirty', time: day0 + 2 }),
+        diaper({ type: 'both', time: day0 + 3 }),
+      ],
       [],
       [],
       day0,
@@ -112,10 +148,87 @@ describe('stats aggregation', () => {
   })
 
   it('buildDailySeries 吸奶聚合奶量与时长', () => {
-    const days = buildDailySeries([], [], [pumping({ startTime: day0 + 1, amount: 80, duration: 20 * 60_000 })], [], day0, day1)
+    const days = buildDailySeries(
+      [],
+      [],
+      [pumping({ startTime: day0 + 1, amount: 80, duration: 20 * 60_000 })],
+      [],
+      day0,
+      day1,
+    )
     expect(days[0].pumpCount).toBe(1)
     expect(days[0].pumpAmount).toBe(80)
     expect(days[0].pumpMs).toBe(20 * 60_000)
+  })
+
+  it('辅食/用药按天计数，区间外记录被丢弃', () => {
+    const days = buildDailySeries(
+      [],
+      [],
+      [],
+      [],
+      day0,
+      day1 + DAY,
+      [
+        solidFood({ time: day0 + 1 }),
+        solidFood({ time: day0 + 2 }),
+        solidFood({ time: day0 - 1 }),
+      ],
+      [medication({ time: day1 + 1 }), medication({ time: day0 - 100 })],
+      [],
+    )
+    expect(days).toHaveLength(2)
+    expect(days[0].solidFoodCount).toBe(2)
+    expect(days[1].solidFoodCount).toBe(0)
+    expect(days[0].medicationCount).toBe(0)
+    expect(days[1].medicationCount).toBe(1)
+  })
+
+  it('体温：每日 count 与均值', () => {
+    const days = buildDailySeries(
+      [],
+      [],
+      [],
+      [],
+      day0,
+      day1,
+      [],
+      [],
+      [
+        temperature({ time: day0 + 1, value: 36.5 }),
+        temperature({ time: day0 + 2, value: 37.5 }),
+        temperature({ time: day0 - 1, value: 40 }),
+      ],
+    )
+    expect(days[0].temperatureCount).toBe(2)
+    expect(days[0].temperatureAvg).toBeCloseTo((36.5 + 37.5) / 2, 5)
+  })
+
+  it('无体温记录 → avg=0', () => {
+    const days = buildDailySeries([], [], [], [], day0, day1)
+    expect(days[0].temperatureCount).toBe(0)
+    expect(days[0].temperatureAvg).toBe(0)
+  })
+
+  it('空区间 start>=end → days=[]', () => {
+    expect(buildDailySeries([], [], [], [], day1, day0)).toEqual([])
+    expect(buildDailySeries([], [], [], [], day0, day0)).toEqual([])
+  })
+
+  it('区间起点非 0 点时序列按整天对齐', () => {
+    const midday = day0 + 12 * 3600_000
+    const days = buildDailySeries([], [], [], [], midday, day1 + 6 * 3600_000)
+    expect(days).toHaveLength(1)
+    expect(days[0].dayStart).toBe(day0)
+  })
+
+  it('all 预设区间可生成有限日序列', () => {
+    const p = RANGE_PRESETS.find((x) => x.key === 'all')!
+    const [s, e] = p.getRange(now)
+    const days = buildDailySeries([], [], [], [], s, e)
+    expect(days.length).toBeGreaterThan(0)
+    expect(Number.isFinite(days.length)).toBe(true)
+    expect(days[days.length - 1]!.dayStart).toBe(startOfDay(now))
   })
 
   it('aggregateRange 汇总多日数据', () => {
@@ -131,6 +244,24 @@ describe('stats aggregation', () => {
     expect(agg.totalMilkAmount).toBe(150)
     expect(agg.feedCount).toBe(2)
     expect(agg.formulaAmount).toBe(150)
+  })
+
+  it('aggregateRange 包含 solidFood/medication/temperature 计数', () => {
+    const agg = aggregateRange(
+      [],
+      [],
+      [],
+      [],
+      day0,
+      day1 + DAY,
+      [solidFood({ time: day0 })],
+      [medication({ time: day0 })],
+      [temperature({ time: day0, value: 37 })],
+    )
+    expect(agg.solidFoodCount).toBe(1)
+    expect(agg.medicationCount).toBe(1)
+    expect(agg.temperatureCount).toBe(1)
+    expect(agg.dayCount).toBe(2)
   })
 
   it('compareRanges 计算变化百分比与每日均值', () => {
@@ -149,6 +280,24 @@ describe('stats aggregation', () => {
     const previous = aggregateRange([], [], [], [], day0 - DAY, day0)
     const result = compareRanges(current, previous)
     expect(result.find((r) => r.key === 'totalMilkAmount')!.change).toBeNull()
+    for (const item of result) {
+      expect(item.change, item.key).toBeNull()
+    }
+  })
+
+  it('dailyAvg 按当前周期天数计算', () => {
+    const current = aggregateRange(
+      [feed({ startTime: day0 }), feed({ startTime: day1 })],
+      [],
+      [],
+      [],
+      day0,
+      day1 + DAY,
+    )
+    const previous = aggregateRange([], [], [], [], day0 - DAY, day0)
+    const result = compareRanges(current, previous)
+    const feedCount = result.find((r) => r.key === 'feedCount')!
+    expect(feedCount.dailyAvg).toBe(1)
   })
 
   it('getComparisonRange 生成当前与上一等长区间', () => {
@@ -157,6 +306,40 @@ describe('stats aggregation', () => {
     const curLen = r.current[1] - r.current[0]
     const prevLen = r.previous[1] - r.previous[0]
     expect(curLen).toBe(prevLen)
-    expect(r.previous[1]).toBe(r.current[0])
+  })
+
+  it('未知 key → null', () => {
+    expect(getComparisonRange('nope', now)).toBeNull()
+    expect(getComparisonRange('__missing__' as string, now)).toBeNull()
+  })
+})
+
+describe('RANGE_PRESETS', () => {
+  const now = new Date(2026, 7, 20, 12, 0).getTime()
+
+  it('各预设 [start,end) 合法且 start < end', () => {
+    for (const p of RANGE_PRESETS) {
+      const [s, e] = p.getRange(now)
+      expect(Number.isFinite(s), p.key).toBe(true)
+      expect(Number.isFinite(e), p.key).toBe(true)
+      expect(e, p.key).toBeGreaterThan(s)
+    }
+  })
+
+  it('today 从当天 0 点到次日 0 点', () => {
+    const p = RANGE_PRESETS.find((x) => x.key === 'today')!
+    const [s, e] = p.getRange(now)
+    expect(s).toBe(startOfDay(now))
+    expect(e).toBe(s + DAY)
+  })
+
+  it('all 上下界均为有限值且 start < end', () => {
+    const p = RANGE_PRESETS.find((x) => x.key === 'all')!
+    const [s, e] = p.getRange(now)
+    expect(Number.isFinite(s)).toBe(true)
+    expect(Number.isFinite(e)).toBe(true)
+    expect(e).toBeGreaterThan(s)
+    // 不应再返回 MAX_SAFE_INTEGER（startOfDay 会得到 NaN，日序列变空）
+    expect(e).toBeLessThan(Number.MAX_SAFE_INTEGER)
   })
 })

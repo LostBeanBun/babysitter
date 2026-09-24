@@ -7,7 +7,8 @@ import type { Baby, Feeding, Medication, Vaccination, DiaperChange, Sleep } from
 import { recommendedIntervalMs } from '@/utils/feedingGuide'
 import i18n from '@/i18n'
 
-const t = i18n.global.t
+const t = (key: string, options?: Record<string, unknown>): string =>
+  String(i18n.t(key, options as never))
 
 export type ReminderType = 'feed' | 'sleep' | 'medication' | 'vaccination' | 'diaper'
 
@@ -217,8 +218,10 @@ export function checkReminders(ctx: ReminderContext): ReminderHit[] {
 }
 
 function formatMin(ms: number): string {
-  const h = Math.floor(ms / 3600_000)
-  const m = Math.round((ms % 3600_000) / 60_000)
+  let totalMin = Math.round(ms / 60_000)
+  if (totalMin < 0) totalMin = 0
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
   if (h > 0) return m > 0 ? `${h} ${t('reminders.hour')} ${m} ${t('reminders.minute')}` : `${h} ${t('reminders.hour')}`
   return `${m} ${t('reminders.minute')}`
 }

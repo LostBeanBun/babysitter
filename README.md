@@ -20,11 +20,12 @@
 
 ## 🛠 技术栈
 
-- Vue 3 + TypeScript + Vite
-- Pinia（状态管理）
-- Dexie.js（IndexedDB 封装，liveQuery 响应式）
-- Apache ECharts + vue-echarts（按需引入，控制包体积）
-- vite-plugin-pwa（PWA 支持）
+- Next.js 16（App Router，静态导出 `output: 'export'`）+ React 19 + TypeScript
+- Zustand（状态管理）
+- Dexie.js + dexie-react-hooks（IndexedDB，useLiveQuery 响应式）
+- Apache ECharts（按需引入，控制包体积）
+- react-i18next（中英双语）
+- PWA：manifest + Service Worker（静态导出兼容）
 
 ## 🚀 本地开发
 
@@ -37,25 +38,25 @@ npm run dev
 
 ```bash
 npm run build
-# 产物在 dist/ 目录
+# 产物在 out/ 目录
 ```
 
 ## 🌐 部署
 
-纯静态站点，可直接部署到 GitHub Pages 或 Cloudflare Pages。
+纯静态站点（`next build` 导出到 `out/`），可直接部署到 GitHub Pages 或 Cloudflare Pages。
 
 ### GitHub Pages
 
 1. 将代码推送到 GitHub 仓库
 2. 仓库 Settings → Pages → Build and deployment → Source 选择 **GitHub Actions**
-3. 创建 `.github/workflows/deploy.yml`（内容见下）并推送
+3. `.github/workflows/deploy.yml` 已配置（构建后上传 `out/`）
 4. 部署完成后访问 `https://<用户名>.github.io/<仓库名>/`
 
 ### Cloudflare Pages
 
 1. 登录 Cloudflare Dashboard → Workers & Pages → Create → Pages
 2. Connect to Git 选择本仓库
-3. Build command: `npm run build`，Build output directory: `dist`
+3. Build command: `npm run build`，Build output directory: `out`
 4. 保存后自动部署，每次推送自动更新
 
 ## 📄 数据说明
@@ -67,21 +68,18 @@ npm run build
 
 ```
 src/
-├── components/     # 组件
-│   ├── charts/     # 图表（ChartCard 等）
-│   ├── common/     # 基础组件（PageHeader / TabBar / BaseModal / StatCard）
-│   ├── forms/      # 记录表单（喂养/睡眠/纸尿裤/吸奶/成长）
-│   └── timeline/   # 时间线组件
-├── composables/    # 组合式函数（liveQuery / useTheme）
-├── constants/      # 类型标签与配色
-├── db/             # Dexie 数据库定义
-├── router/         # 路由与底部导航配置
-├── services/       # 统计聚合、导出导入
-├── stores/         # Pinia 状态
-├── styles/         # 全局样式
-├── types/          # TypeScript 类型
-├── utils/          # 工具函数
-└── views/          # 页面视图
+├── app/              # Next.js App Router 页面与全局样式
+├── components/       # 组件（charts / common / dashboard / forms / timeline / settings）
+├── constants/        # 类型标签与配色
+├── db/               # Dexie 数据库定义
+├── hooks/            # 客户端 hooks（timer / theme / chart / undo）
+├── i18n/             # i18next 与中英语言包
+├── services/         # 统计聚合、导出导入
+├── stores/           # Zustand 状态（baby / theme / toast）
+├── tabs.ts           # 底部导航配置
+├── types/            # TypeScript 类型
+├── utils/            # 工具函数
+└── views/            # 页面视图（Dashboard / Log / Stats / Settings）
 ```
 
 ## 🧹 工程规范

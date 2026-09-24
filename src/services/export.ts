@@ -15,7 +15,8 @@ import type {
 } from '@/types'
 import { downloadBlob, formatDate, formatTime, parseDate, startOfDay } from '@/utils/format'
 
-const t = i18n.global.t
+const t = (key: string, options?: Record<string, unknown>): string =>
+  String(i18n.t(key, options as never))
 
 /** 按语言的标签映射：内部键值 -> 对应语言的显示文本 */
 const LABELS_ZH: Record<string, string> = {
@@ -114,7 +115,7 @@ const LABELS_EN: Record<string, string> = {
 
 /** 获取当前语言标签，未找到返回原键值 */
 function bl(key: string): string {
-  const locale = i18n.global.locale.value
+  const locale = i18n.language || 'zh-CN'
   const map = locale === 'en-US' ? LABELS_EN : LABELS_ZH
   return map[key] ?? key
 }
@@ -125,7 +126,7 @@ const BREAST_SIDE_LABELS_MAP: Record<string, Record<string, string>> = {
   'en-US': { left: 'Left', right: 'Right', both: 'Both' },
 }
 function breastSideLabel(side: string): string {
-  const locale = i18n.global.locale.value
+  const locale = i18n.language || 'zh-CN'
   return BREAST_SIDE_LABELS_MAP[locale]?.[side] ?? side
 }
 
@@ -231,7 +232,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
       formatTime(s.endTime ?? s.startTime),
       bl(s.type),
       '',
-      s.duration ?? Math.round(((s.endTime ?? s.startTime) - s.startTime) / 60000),
+      Math.round((s.duration ?? (s.endTime ?? s.startTime) - s.startTime) / 60000),
       '',
       s.notes ?? '',
     ])
@@ -486,12 +487,14 @@ const RECORD_TYPE_KEY_MAP: Record<string, string> = {
 
 /** 枚举反向映射（导入时将内部键值转为数据字段）——当前版本直接使用内部键值，保留定义以备后续扩展 */
 
-/** 疫苗状态反向映射（中英） */
+/** 疫苗状态反向映射（中英 + 内部键值） */
 const VACCINE_STATUS_REV: Record<string, 'planned' | 'done'> = {
-  [t('vaccination.statusDone')]: 'done',
-  [t('vaccination.statusPlanned')]: 'planned',
+  已接种: 'done',
+  待接种: 'planned',
   Done: 'done',
   Planned: 'planned',
+  done: 'done',
+  planned: 'planned',
 }
 
 /** 将 CSV 行映射为具体记录对象（使用内部键值） */
@@ -508,8 +511,10 @@ function mapCsvRowToRecord(
 
   // 兼容：表头可能是本地化标签或内部键值
   const typeLabel = obj[t('exportCsv.recordType')] ?? obj['记录类型'] ?? obj['Record Type'] ?? obj['recordType']
-  const kind = RECORD_TYPE_KEY_MAP[typeLabel]
-  if (!kind) return null
+  // 单数类型用于 switch，复数 bucket 名用于入库
+  const typeKey = typeLabel
+  const bucket = RECORD_TYPE_KEY_MAP[typeKey]
+  if (!bucket) return null
 
   const dateStr = obj[t('exportCsv.date')] ?? obj['日期'] ?? obj['Date']
   const timeStr = obj[t('exportCsv.time')] ?? obj['时间'] ?? obj['Time']
@@ -533,8 +538,9 @@ function mapCsvRowToRecord(
   if (!startTime) return null
 
   const base = { babyId, createdAt: now, updatedAt: now }
+  const kind = bucket
 
-  switch (kind) {
+  switch (typeKey) {
     case 'feeding': {
       // 兼容新旧格式：item 可能是 "breast·left" 或旧的 "breast_left" 等
       const OLD_TYPE_MAP: Record<string, { type: string; side?: string }> = {
@@ -612,18 +618,17 @@ function mapCsvRowToRecord(
       }
     }
     case 'growth': {
-      // value 格式： "8.5 kg · 70.2 cm · 44 cm"
+      // value 格式： "8.5 kg · 70.2 cm · 44 cm"（身高在前、头围在后）
       const weightMatch = value.match(/([\d.]+)\s*kg/)
-      const heightMatch = value.match(/([\d.]+)\s*cm/)
-      // headMatch 暂不使用，保留以备头围解析扩展
+      const cmMatches = [...value.matchAll(/([\d.]+)\s*cm/g)]
       return {
         kind,
         data: {
           ...base,
           date: startOfDay(startTime),
           weight: weightMatch ? parseFloat(weightMatch[1]) : undefined,
-          height: heightMatch ? parseFloat(heightMatch[1]) : undefined,
-          headCircumference: undefined,
+          height: cmMatches[0] ? parseFloat(cmMatches[0][1]) : undefined,
+          headCircumference: cmMatches[1] ? parseFloat(cmMatches[1][1]) : undefined,
           notes: notes || undefined,
         },
       }
@@ -714,7 +719,15 @@ export async function importAllCsv(
   if (rows.length < 2) throw new Error(t('exportCsv.invalidFile'))
 
   const headers = rows[0]
-  const hasBabyNameCol = headers[0] === t('exportCsv.babyName') || headers[0] === '宝宝名' || headers[0] === 'Baby Name'
+  // 导出表头在中/英下分别是「宝宝」/「Baby」，同时兼容旧「宝宝名」/「Baby Name」
+  const babyHeaderCandidates = new Set([
+    t('exportCsv.babyName'),
+    '宝宝',
+    '宝宝名',
+    'Baby',
+    'Baby Name',
+  ])
+  const hasBabyNameCol = babyHeaderCandidates.has(headers[0])
 
   const babiesMap = new Map<string, { name: string; id: number }>()
   const recordBuckets: Record<string, unknown[]> = {

@@ -2,7 +2,8 @@ import { ageInMonths } from '@/constants/whoGrowth'
 import i18n from '@/i18n'
 import type { Baby } from '@/types'
 
-const t = i18n.global.t
+const t = (key: string, options?: Record<string, unknown>): string =>
+  String(i18n.t(key, options as never))
 
 /** 按月龄返回参考数据分段索引（0:0-1月 1:1-3月 2:3-6月 3:6-9月 4:9-12月 5:12月+） */
 function guideIndex(months: number): number {

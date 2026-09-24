@@ -2,7 +2,8 @@ import type { Baby } from '@/types'
 import { ageInMonths } from '@/constants/whoGrowth'
 import i18n from '@/i18n'
 
-const t = i18n.global.t
+const t = (key: string, options?: Record<string, unknown>): string =>
+  String(i18n.t(key, options as never))
 
 /** 按月龄返回推荐喂奶间隔（毫秒），参考常见育儿指南 */
 export function recommendedIntervalMs(baby?: Baby): number {

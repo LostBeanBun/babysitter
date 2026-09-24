@@ -26,7 +26,7 @@ export function startOfDay(ts: number): number {
 
 /** 格式化时长：秒/分钟 → "X小时Y分" / "Y分钟"（跟随当前界面语言） */
 export function formatDuration(ms: number): string {
-  const t = i18n.global.t
+  const t = (key: string): string => String(i18n.t(key))
   if (!ms || ms < 0) return t('duration.zero')
   const totalMin = Math.floor(ms / 60000)
   if (totalMin < 1) return `${Math.max(1, Math.floor(ms / 1000))}${t('duration.second')}`

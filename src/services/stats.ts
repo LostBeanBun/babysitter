@@ -110,8 +110,11 @@ export function buildDailySeries(
   const days: DayAggregate[] = []
   const startDay = startOfDay(start)
   const endDay = startOfDay(end)
-  for (let t = startDay; t < endDay; t += MS_PER_DAY) {
+  // 按日历日进位，避免 +MS_PER_DAY 在 DST 切换后偏离本地 0 点
+  for (let t = startDay; t < endDay; ) {
     days.push(emptyDay(t))
+    const d = new Date(t)
+    t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime()
   }
   const dayMap = new Map<number, DayAggregate>()
   for (const d of days) dayMap.set(d.dayStart, d)
@@ -120,7 +123,8 @@ export function buildDailySeries(
   for (const s of sleeps) {
     const d = dayMap.get(startOfDay(s.startTime))
     if (!d) continue
-    d.sleepMs += Math.max(0, (s.endTime ?? s.startTime) - s.startTime)
+    const span = s.endTime != null ? s.endTime - s.startTime : (s.duration ?? 0)
+    d.sleepMs += Math.max(0, span)
     if (s.type === 'nap') d.napCount++
     else d.nightCount++
   }
@@ -319,8 +323,9 @@ export function compareRanges(current: RangeAggregate, previous: RangeAggregate)
   ]
 
   return items.map((item) => {
+    // previous 为 0 时无法计算百分比变化
     const change =
-      item.previous === 0 ? (item.current === 0 ? null : null) : ((item.current - item.previous) / item.previous) * 100
+      item.previous === 0 ? null : ((item.current - item.previous) / item.previous) * 100
     const dailyAvg = current.dayCount > 0 ? item.current / current.dayCount : 0
     return {
       key: item.key,
@@ -384,11 +389,12 @@ export const RANGE_PRESETS: RangePreset[] = [
       return [s, e]
     },
   },
-  {
-    key: 'all',
-    label: 'stats.periods.all',
-    getRange: () => [0, Number.MAX_SAFE_INTEGER],
-  },
+    {
+      key: 'all',
+      label: 'stats.periods.all',
+      // 用有限上界：MAX_SAFE_INTEGER 会使 startOfDay 得到 NaN，日序列直接变空
+      getRange: (now) => [0, startOfDay(now) + MS_PER_DAY],
+    },
 ]
 
 /** 对比预设：当前区间 vs 前一个等长区间 */

@@ -1,49 +1,58 @@
-import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
-import { db, clearBabyData } from '@/db'
-import i18n from '@/i18n'
-import { useLiveQuery } from '@/composables/useLiveQuery'
-import type { Baby } from '@/types'
-import { AVATAR_COLORS } from '@/constants'
+'use client'
 
-const t = i18n.global.t
+import { create } from 'zustand'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '@/db'
+import i18n from '@/i18n'
+import { AVATAR_COLORS } from '@/constants'
+import type { Baby } from '@/types'
+
 const ACTIVE_BABY_KEY = 'babysitter.activeBabyId'
 
-/** 宝宝资料 store：管理宝宝列表、当前宝宝选择 */
-export const useBabyStore = defineStore('baby', () => {
-  const { data: babies, loading: babiesLoading } = useLiveQuery(
-    () => db.babies.orderBy('createdAt').toArray(),
-    [] as Baby[],
-  )
-  const activeBabyId = ref<number | null>(null)
+interface BabyState {
+  activeBabyId: number | null
+  setActiveBabyId: (id: number | null) => void
+}
 
-  // 初始化时从 localStorage 恢复当前宝宝
-  const savedId = localStorage.getItem(ACTIVE_BABY_KEY)
-  if (savedId) activeBabyId.value = Number(savedId)
-
-  function selectBaby(id: number) {
-    activeBabyId.value = id
-    localStorage.setItem(ACTIVE_BABY_KEY, String(id))
-  }
-
-  // 宝宝列表加载完成时，若当前未选中任何宝宝（或选中的宝宝已不存在），
-  // 自动选中第一个宝宝。保证 feeding/diaper/pumping/sleep 等数据 store
-  // 能按 activeBabyId 正确过滤；否则 UI 显示回退宝宝但数据全为空。
-  watch(babies, (list) => {
-    if (!list.length) return
-    const found = list.find((b) => b.id === activeBabyId.value)
-    if (!found) {
-      const first = list[0]
-      if (first?.id != null) selectBaby(first.id)
+export const useBabyStore = create<BabyState>((set) => ({
+  // SSR/首帧为空，挂载后由 hydrateActiveBaby 恢复，避免水合不一致
+  activeBabyId: null,
+  setActiveBabyId: (id) => {
+    if (typeof window !== 'undefined') {
+      if (id == null) localStorage.removeItem(ACTIVE_BABY_KEY)
+      else localStorage.setItem(ACTIVE_BABY_KEY, String(id))
     }
-  })
+    set({ activeBabyId: id })
+  },
+}))
 
-  const activeBaby = computed<Baby | null>(() => {
-    if (!babies.value.length) return null
-    const found = babies.value.find((b) => b.id === activeBabyId.value)
-    // 若当前选择的宝宝不存在（如被删除），回退到第一个
-    return found ?? babies.value[0]
-  })
+/** 从 localStorage 恢复当前宝宝（Providers 挂载时调用） */
+export function hydrateActiveBaby(): void {
+  if (typeof window === 'undefined') return
+  const saved = localStorage.getItem(ACTIVE_BABY_KEY)
+  if (!saved) return
+  const id = Number(saved)
+  if (!Number.isFinite(id)) return
+  useBabyStore.setState({ activeBabyId: id })
+}
+
+/** 订阅 babies 表，返回列表与当前激活宝宝 */
+export function useBabies() {
+  const babies = useLiveQuery(() => db.babies.orderBy('createdAt').toArray(), []) ?? []
+  const activeBabyId = useBabyStore((s) => s.activeBabyId)
+  const setActiveBabyId = useBabyStore((s) => s.setActiveBabyId)
+
+  const activeBaby: Baby | undefined = babies.find((b) => b.id === activeBabyId) ?? babies[0]
+
+  // 未选中或选中的宝宝已不存在时，回退到第一个
+  if (babies.length > 0 && babies[0]?.id != null) {
+    const valid = activeBabyId != null && babies.some((b) => b.id === activeBabyId)
+    if (!valid) {
+      const fallback = babies[0]!.id!
+      // 在渲染期间不应 setState；用 microtask
+      queueMicrotask(() => setActiveBabyId(fallback))
+    }
+  }
 
   /** 新增宝宝，自动切换为当前宝宝 */
   async function addBaby(
@@ -64,21 +73,17 @@ export const useBabyStore = defineStore('baby', () => {
       avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
       createdAt: Date.now(),
     })
-    if (id == null) throw new Error(t('errors.addBabyFail'))
-    selectBaby(id)
+    if (id == null) throw new Error(i18n.t('errors.addBabyFail'))
+    setActiveBabyId(id)
     return id
   }
 
-  async function updateBaby(id: number, patch: Partial<Baby>) {
-    await db.babies.update(id, patch)
+  return {
+    babies,
+    activeBaby,
+    // 列表未就绪时透传 store 中的 id，查询不必等 babies 加载完
+    activeBabyId: activeBaby?.id ?? (babies.length === 0 ? activeBabyId : null),
+    setActiveBabyId,
+    addBaby,
   }
-
-  async function deleteBaby(id: number) {
-    // 清理该宝宝全部业务数据（含成长记录），避免产生孤儿数据
-    await clearBabyData(id)
-    await db.babies.delete(id)
-    if (activeBabyId.value === id) activeBabyId.value = null
-  }
-
-  return { babies, babiesLoading, activeBabyId, activeBaby, selectBaby, addBaby, updateBaby, deleteBaby }
-})
+}
