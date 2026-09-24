@@ -38,18 +38,16 @@
   --danger: #ff3b30;
   --danger-soft: rgba(255, 59, 48, 0.1);
 
-  /* 液态玻璃半透明层（iOS Liquid Glass） */
-  --header-bg: rgba(242, 240, 237, 0.58);
-  --modal-mask: rgba(0, 0, 0, 0.28);
-  --glass-border: rgba(255, 255, 255, 0.55);
-  --glass-border-strong: rgba(255, 255, 255, 0.78);
-  --glass-shine: rgba(255, 255, 255, 0.85);
-  --glass-edge: rgba(255, 255, 255, 0.28);
-  --glass-inset: rgba(255, 255, 255, 0.5);
-  --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 -1px 0 rgba(255, 255, 255, 0.2);
-  --glass-blur: blur(28px) saturate(180%);
-  --glass-blur-heavy: blur(48px) saturate(200%);
-  --glass-blur-light: blur(16px) saturate(160%);
+  /* 液态玻璃半透明层 */
+  --header-bg: rgba(242, 240, 237, 0.72);
+  --modal-mask: rgba(0, 0, 0, 0.25);
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-shine: rgba(255, 255, 255, 0.6);
+  --glass-edge: rgba(255, 255, 255, 0.2);
+  --glass-inset: rgba(255, 255, 255, 0.4);
+  --glass-blur: blur(40px) saturate(180%);
+  --glass-blur-heavy: blur(60px) saturate(200%);
+  --glass-blur-light: blur(20px) saturate(150%);
 
   /* 交互填充（hover/active） */
   --fill-hover: rgba(255, 255, 255, 0.55);
@@ -68,17 +66,13 @@
 
   --select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2357534e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 
-  /* 液态玻璃阴影 — 极轻、宽软，靠材质而非投影分层 */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 14px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.03), 0 10px 36px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.05), 0 20px 64px rgba(0, 0, 0, 0.07);
-  --shadow-glass:
-    0 1px 2px rgba(0, 0, 0, 0.03), 0 8px 28px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -1px 0 rgba(255, 255, 255, 0.18);
-  --shadow-float:
-    0 2px 6px rgba(0, 0, 0, 0.06), 0 14px 48px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+  /* 液态玻璃阴影 — 柔和、带色温 */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.06), 0 16px 64px rgba(0, 0, 0, 0.08);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
 
   --tabbar-height: 58px;
   --tabbar-float-gap: 14px;
@@ -168,14 +162,12 @@
   --danger: #ff453a;
   --danger-soft: rgba(255, 69, 58, 0.15);
 
-  --header-bg: rgba(15, 14, 12, 0.55);
-  --modal-mask: rgba(0, 0, 0, 0.52);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-border-strong: rgba(255, 255, 255, 0.2);
-  --glass-shine: rgba(255, 255, 255, 0.14);
-  --glass-edge: rgba(255, 255, 255, 0.06);
-  --glass-inset: rgba(255, 255, 255, 0.08);
-  --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+  --header-bg: rgba(15, 14, 12, 0.72);
+  --modal-mask: rgba(0, 0, 0, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shine: rgba(255, 255, 255, 0.05);
+  --glass-edge: rgba(255, 255, 255, 0.04);
+  --glass-inset: rgba(255, 255, 255, 0.06);
 
   --fill-hover: rgba(255, 255, 255, 0.06);
   --fill-press: rgba(255, 255, 255, 0.04);
@@ -193,15 +185,11 @@
   --select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b0a89f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22), 0 4px 14px rgba(0, 0, 0, 0.28);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.28), 0 10px 36px rgba(0, 0, 0, 0.32);
-  --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.36), 0 20px 64px rgba(0, 0, 0, 0.42);
-  --shadow-glass:
-    0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 28px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
-  --shadow-float:
-    0 2px 6px rgba(0, 0, 0, 0.32), 0 14px 48px rgba(0, 0, 0, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4), 0 16px 64px rgba(0, 0, 0, 0.45);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -328,18 +316,17 @@ textarea {
   }
 }
 
-/* 卡片 — 液态玻璃（双缘高光：顶亮线 + 底 rim） */
+/* 卡片 — 液态玻璃 */
 .card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 42%), var(--surface);
+  background: var(--surface);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
-  border-radius: calc(var(--radius-lg) + 4px);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-glass);
   padding: 14px;
   position: relative;
   overflow: hidden;
-  isolation: isolate;
   transition:
     box-shadow 0.3s var(--ease-out),
     transform 0.3s var(--ease-out);
@@ -349,22 +336,11 @@ textarea {
   content: '';
   position: absolute;
   top: 0;
-  left: 8%;
-  right: 8%;
+  left: 0;
+  right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--glass-shine), transparent);
+  background: linear-gradient(90deg, transparent 10%, var(--glass-shine) 50%, transparent 90%);
   pointer-events: none;
-  z-index: 1;
-}
-
-.card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.22);
-  pointer-events: none;
-  z-index: 1;
 }
 
 .card + .card {
@@ -378,20 +354,19 @@ textarea {
   }
 }
 
-/* 区块标题 — iOS inset grouped header（Caption 次级标签） */
+/* 区块标题 — HIG Headline */
 .section-title {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-md);
   font-weight: 600;
-  color: var(--text-muted);
-  margin: 20px 6px 8px;
+  color: var(--text-secondary);
+  margin: 18px 4px 8px;
   display: flex;
   align-items: center;
   gap: 6px;
-  letter-spacing: 0.02em;
-  text-transform: none;
+  letter-spacing: -0.01em;
 }
 
-/* 按钮 — 44pt 触控 / 连续圆角 / Filled·Tinted·Plain 三档 */
+/* 按钮 — 44pt 最小触控区 / 系统圆角 */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -399,7 +374,7 @@ textarea {
   gap: 6px;
   min-height: 44px;
   padding: 10px 16px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   font-weight: 600;
   font-size: var(--fs-base);
   line-height: 1.2;
@@ -419,57 +394,43 @@ textarea {
 }
 
 .btn:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Filled — 主操作 */
 .btn-primary {
   background: var(--primary-gradient);
   color: var(--on-primary);
-  border: 1px solid rgba(255, 255, 255, 0.28);
   box-shadow:
-    0 4px 18px var(--primary-glow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+    0 4px 16px var(--primary-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .btn-primary:active {
-  box-shadow: 0 2px 10px var(--primary-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px var(--primary-glow);
   transform: scale(var(--tap-scale));
 }
 
-/* Tinted */
 .btn-soft {
   background: var(--primary-soft);
   color: var(--primary-dark);
-  border: 1px solid rgba(255, 107, 53, 0.12);
-  backdrop-filter: var(--glass-blur-light);
-  -webkit-backdrop-filter: var(--glass-blur-light);
 }
 
-/* Plain / 玻璃底 */
 .btn-outline {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 55%), var(--surface-2);
+  background: var(--surface);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
-  border: 1px solid var(--glass-border);
+  border: 1.5px solid var(--glass-border);
   color: var(--text-secondary);
-  box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .btn-outline:active {
-  background: var(--fill-press);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: var(--surface-2);
 }
 
-/* Destructive tinted */
 .btn-danger-soft {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 50%), var(--danger-soft);
+  background: var(--danger-soft);
   color: var(--danger);
-  border: 1px solid rgba(255, 59, 48, 0.12);
-  backdrop-filter: var(--glass-blur-light);
-  -webkit-backdrop-filter: var(--glass-blur-light);
 }
 
 .btn-block {
@@ -480,7 +441,7 @@ textarea {
   min-height: 50px;
   padding: 13px 22px;
   font-size: 16px;
-  border-radius: calc(var(--radius-md) + 2px);
+  border-radius: var(--radius-md);
 }
 
 /* 表单 — HIG 44pt 输入高度 */
@@ -507,12 +468,11 @@ textarea {
   min-height: 44px;
   padding: 9px 12px;
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 50%), var(--surface-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   outline: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), var(--shadow-xs);
   transition:
     border-color 0.25s var(--ease-out),
     box-shadow 0.3s var(--spring),
@@ -541,8 +501,8 @@ input[type='time']::-webkit-date-and-time-value {
 
 .form-input:focus,
 .form-textarea:focus {
-  border-color: rgba(255, 107, 53, 0.55);
-  box-shadow: 0 0 0 4px var(--primary-soft), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3.5px var(--primary-soft);
   background: var(--surface);
 }
 

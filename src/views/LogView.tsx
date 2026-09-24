@@ -1,7 +1,7 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { toast } from '@/stores/toast'
@@ -114,20 +114,11 @@ const filters = [
 type FilterKey = (typeof filters)[number]['key']
 
 export default function LogView() {
-  return (
-    <Suspense fallback={null}>
-      <LogViewInner />
-    </Suspense>
-  )
-}
-
-function LogViewInner() {
   const { t } = useTranslation()
   const { activeBabyId } = useBabies()
   const { isPending, scheduleDelete } = useDeleteUndo()
   const sleepModal = useSleepModal()
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
     document.title = `${t('nav.log')} · ${t('app.name')}`
@@ -392,16 +383,16 @@ function LogViewInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalState])
 
-  // 悬浮球导航过来时自动打开对应表单
+  // 悬浮球导航过来时自动打开对应表单（挂载后读 query，避免 useSearchParams 触发 CSR bailout / 水合竞态）
   const lastTimerKindRef = useRef('')
-  const timerParam = searchParams.get('timer')
   useEffect(() => {
+    const timerParam = new URLSearchParams(window.location.search).get('timer')
     if (timerParam && timerParam !== lastTimerKindRef.current) {
       lastTimerKindRef.current = timerParam
       setModalState({ kind: timerParam as EntryKind })
       router.replace('/log')
     }
-  }, [timerParam, router])
+  }, [router])
 
   function onEdit(entry: TimelineEntry) {
     setModalState({ kind: entry.kind, editing: entry })

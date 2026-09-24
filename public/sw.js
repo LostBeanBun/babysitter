@@ -4,7 +4,7 @@
  * - 仅 cache-first 静态资源（/_next/static、图片、字体等）
  * - 不缓存 RSC/flight（text/x-component）与带 RSC 头的请求，避免劫持客户端路由
  */
-const CACHE = 'babysitter-v3'
+const CACHE = 'babysitter-v4'
 const SHELL = ['/', '/log/', '/stats/', '/settings/', '/manifest.webmanifest', '/favicon.svg']
 
 self.addEventListener('install', (event) => {
