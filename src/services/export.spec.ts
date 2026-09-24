@@ -24,7 +24,7 @@ const { mockDb, downloadSpy } = vi.hoisted(() => {
     vaccinations: makeTable(),
     temperatures: makeTable(),
     milestones: makeTable(),
-    transaction: vi.fn(async (_mode: string, _tables: any[], callback: Function) => {
+    transaction: vi.fn(async (_mode: string, _tables: unknown[], callback: () => Promise<unknown>) => {
       return await callback()
     }),
   }
@@ -255,16 +255,16 @@ describe('importAllCsv', () => {
     // 手动重置所需 mock，避免 clearAllMocks 影响 transaction 等共享 mock
     vi.clearAllMocks()
     // 为所有表配置空返回
-    const tables = ['babies', 'feedings', 'diapers', 'pumpings', 'sleeps', 'growths', 'solidFoods', 'medications', 'vaccinations', 'temperatures', 'milestones']
+    const tables = ['babies', 'feedings', 'diapers', 'pumpings', 'sleeps', 'growths', 'solidFoods', 'medications', 'vaccinations', 'temperatures', 'milestones'] as const
     for (const t of tables) {
-      ;(mockDb as Record<string, any>)[t].where.mockReturnValue({ equals: () => ({ sortBy: async () => [] }) })
-      ;(mockDb as Record<string, any>)[t].clear.mockResolvedValue(undefined)
-      ;(mockDb as Record<string, any>)[t].bulkAdd.mockResolvedValue(undefined)
+      mockDb[t].where.mockReturnValue({ equals: () => ({ sortBy: async () => [] }) })
+      mockDb[t].clear.mockResolvedValue(undefined)
+      mockDb[t].bulkAdd.mockResolvedValue(undefined)
     }
     // babies 表额外需要 add 方法（用于导入时创建宝宝）
     mockDb.babies.add = vi.fn().mockImplementation(async (b) => b.id || 1)
     // transaction mock 会被 clearAllMocks 清除，需重新设置
-    mockDb.transaction = vi.fn(async (_mode: string, _tables: any[], callback: Function) => {
+    mockDb.transaction = vi.fn(async (_mode: string, _tables: unknown[], callback: () => Promise<unknown>) => {
       return await callback()
     })
     // downloadSpy 也需要重置

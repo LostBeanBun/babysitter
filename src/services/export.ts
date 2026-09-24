@@ -1,4 +1,4 @@
-import { db } from '@/db'
+import { db, type BabySitterDB } from '@/db'
 import i18n from '@/i18n'
 import type {
   Feeding,
@@ -803,7 +803,7 @@ export async function importAllCsv(
           ...(r as Record<string, unknown>),
           babyId: babyIdMap.get((r as Record<string, unknown>).babyId as number) ?? babyIdMap.values().next().value!,
         }))
-        await (db as Record<string, any>)[kind].bulkAdd(withRealId)
+        await (db[kind as keyof BabySitterDB] as { bulkAdd: (items: typeof withRealId) => Promise<unknown> }).bulkAdd(withRealId)
       }
     },
   )
