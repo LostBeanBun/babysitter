@@ -6,10 +6,10 @@ export function pad2(n: number): string {
   return n < 10 ? `0${n}` : `${n}`
 }
 
-/** 格式化时间为 HH:mm */
+/** 格式化时间为 HH:mm:ss */
 export function formatTime(ts: number): string {
   const d = new Date(ts)
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
 }
 
 /** 格式化日期为 YYYY-MM-DD */
@@ -62,10 +62,10 @@ export function downloadBlob(content: Blob | string, filename: string, mime: str
   URL.revokeObjectURL(url)
 }
 
-/** 时间戳 → datetime-local 输入框值 */
+/** 时间戳 → datetime-local 输入框值（含秒） */
 export function toDateTimeLocal(ts: number): string {
   const d = new Date(ts)
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
 }
 
 /** datetime-local 输入框值 → 时间戳（无效返回 undefined） */

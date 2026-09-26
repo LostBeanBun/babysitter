@@ -2,6 +2,7 @@
 import { computed, ref, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { showToast } from '@/composables/useToast'
+import { useFormErrors } from '@/composables/useFormErrors'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
@@ -138,6 +139,12 @@ const sfStart = ref(toDateTimeLocal(Date.now()))
 const sfSleepType = ref<SleepType>('nap')
 const sfSleepEnd = ref(toDateTimeLocal(Date.now() + 2 * 3600_000))
 const sfNotes = ref('')
+const sfErr = useFormErrors()
+
+function openSleepFeed() {
+  sfErr.clearAll()
+  sleepFeedOpen.value = true
+}
 
 const FEED_TYPE_CHOICES = Object.entries(FEED_TYPE_LABELS).map(([value, label]) => ({
   value: value as FeedType,
@@ -145,21 +152,22 @@ const FEED_TYPE_CHOICES = Object.entries(FEED_TYPE_LABELS).map(([value, label]) 
 }))
 
 async function saveSleepFeed() {
+  sfErr.clearAll()
   const start = fromDateTimeLocal(sfStart.value)
   const end = fromDateTimeLocal(sfSleepEnd.value)
   if (start == null || isNaN(start)) {
-    alert(t('dashboard.selectStart'))
+    sfErr.set('start', t('dashboard.selectStart'))
     return
   }
   if (end == null || isNaN(end) || end <= start) {
-    alert(t('dashboard.sleepEndAfter'))
+    sfErr.set('sleepEnd', t('dashboard.sleepEndAfter'))
     return
   }
   let amount: number | undefined
   if (sfType.value === 'bottle_formula' || sfType.value === 'bottle_breastmilk') {
     amount = sfAmount.value ? Number(sfAmount.value) : undefined
     if (amount !== undefined && (isNaN(amount) || amount <= 0)) {
-      alert(t('dashboard.invalidAmount'))
+      sfErr.set('amount', t('dashboard.invalidAmount'))
       return
     }
   }
@@ -408,7 +416,7 @@ const editPayload = computed(() => {
       </div>
 
       <!-- 奶睡一键（与快捷记录同组） -->
-      <button class="btn btn-outline sleep-feed-btn" @click="sleepFeedOpen = true">
+      <button class="btn btn-outline sleep-feed-btn" @click="openSleepFeed">
         <span class="sf-btn-icon">🍼😴</span>
         <span>{{ t('dashboard.sleepFeedButton') }}</span>
       </button>
@@ -536,7 +544,11 @@ const editPayload = computed(() => {
           <option v-for="c in FEED_TYPE_CHOICES" :key="c.value" :value="c.value">{{ t(c.label) }}</option>
         </select>
       </div>
-      <div v-if="sfType === 'bottle_formula' || sfType === 'bottle_breastmilk'" class="form-field">
+      <div
+        v-if="sfType === 'bottle_formula' || sfType === 'bottle_breastmilk'"
+        class="form-field"
+        :class="{ 'has-error': sfErr.has('amount') }"
+      >
         <label class="form-label">{{ t('dashboard.sleepFeedAmount') }}</label>
         <input
           v-model="sfAmount"
@@ -546,11 +558,20 @@ const editPayload = computed(() => {
           :placeholder="t('dashboard.sleepFeedAmountPh')"
           class="form-input"
           inputmode="numeric"
+          @input="sfErr.clear('amount')"
         />
+        <p v-if="sfErr.get('amount')" class="field-error">{{ sfErr.get('amount') }}</p>
       </div>
-      <div class="form-field">
+      <div class="form-field" :class="{ 'has-error': sfErr.has('start') }">
         <label class="form-label">{{ t('feed.startLabel') }}</label>
-        <input v-model="sfStart" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
+        <input
+          v-model="sfStart"
+          type="datetime-local" step="1"
+          :placeholder="t('common.selectDateTime')"
+          class="form-input"
+          @input="sfErr.clear('start')"
+        />
+        <p v-if="sfErr.get('start')" class="field-error">{{ sfErr.get('start') }}</p>
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('sleep.typeLabel') }}</label>
@@ -559,9 +580,16 @@ const editPayload = computed(() => {
           <option value="night">{{ t('sleep.types.night') }}</option>
         </select>
       </div>
-      <div class="form-field">
+      <div class="form-field" :class="{ 'has-error': sfErr.has('sleepEnd') }">
         <label class="form-label">{{ t('sleep.endLabel') }}</label>
-        <input v-model="sfSleepEnd" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
+        <input
+          v-model="sfSleepEnd"
+          type="datetime-local" step="1"
+          :placeholder="t('common.selectDateTime')"
+          class="form-input"
+          @input="sfErr.clear('sleepEnd')"
+        />
+        <p v-if="sfErr.get('sleepEnd')" class="field-error">{{ sfErr.get('sleepEnd') }}</p>
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('sleep.notesLabel') }}（{{ t('common.optional') }}）</label>

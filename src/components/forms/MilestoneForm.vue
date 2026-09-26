@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useMilestoneStore } from '@/stores/milestone'
 import { MILESTONE_TYPE_LIST } from '@/constants'
+import { useFormErrors } from '@/composables/useFormErrors'
 import { MILESTONE_GUIDE, milestoneGuideRange } from '@/constants/milestoneGuide'
 import type { MilestoneType } from '@/types'
 import FormNotes from '@/components/common/FormNotes.vue'
@@ -17,6 +18,7 @@ const props = defineProps<{
 const emit = defineEmits<{ saved: []; cancelled: [] }>()
 
 const milestoneStore = useMilestoneStore()
+const err = useFormErrors()
 
 const type = ref<MilestoneType>(props.editing?.type ?? 'roll')
 const time = ref(toDateTimeLocal(props.editing?.time ?? Date.now()))
@@ -24,9 +26,10 @@ const notes = ref(props.editing?.notes ?? '')
 const guideOpen = ref(false)
 
 async function submit() {
+  err.clearAll()
   const ts = fromDateTimeLocal(time.value)
   if (ts == null || isNaN(ts)) {
-    alert(t('milestone.invalidTime'))
+    err.set('time', t('milestone.invalidTime'))
     return
   }
   if (props.editing) {
@@ -75,16 +78,23 @@ async function submit() {
       <div v-if="guideOpen" class="guide-list">
         <div v-for="item in MILESTONE_GUIDE" :key="item.labelKey" class="guide-item">
           <span class="guide-item-icon">{{ item.icon }}</span>
-          <span class="guide-item-range">{{ milestoneGuideRange(item) }}</span>
+          <span class="guide-item-range">{{ milestoneGuideRange(item) }} {{ t('duration.monthShort') }}</span>
           <span class="guide-item-text">{{ t(item.labelKey) }}</span>
         </div>
         <p class="guide-note">{{ t('stats.milestoneGuideNote') }}</p>
       </div>
     </div>
 
-    <div class="form-field">
+    <div class="form-field" :class="{ 'has-error': err.has('time') }">
       <label class="form-label">{{ t('milestone.timeLabel') }}</label>
-      <input v-model="time" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
+      <input
+        v-model="time"
+        type="datetime-local" step="1"
+        :placeholder="t('common.selectDateTime')"
+        class="form-input"
+        @input="err.clear('time')"
+      />
+      <p v-if="err.get('time')" class="field-error">{{ err.get('time') }}</p>
     </div>
 
     <FormNotes v-model="notes" :label="t('milestone.notesLabel')" :placeholder="t('common.optional')" />

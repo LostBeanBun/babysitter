@@ -1,5 +1,7 @@
 import { db, type BabySitterDB } from '@/db'
 import i18n from '@/i18n'
+import zhCN from '@/i18n/locales/zh-CN'
+import enUS from '@/i18n/locales/en-US'
 import type {
   Feeding,
   DiaperChange,
@@ -16,6 +18,30 @@ import type {
 import { downloadBlob, formatDate, formatTime, parseDate, startOfDay } from '@/utils/format'
 
 const t = i18n.global.t
+
+/** 表头别名（导入用）：zh/en 两语言列名 + 内部键值，兼容任意语言导出的文件 */
+const HEADER_ALIASES: Record<string, string[]> = {
+  babyName: [zhCN.exportCsv.babyName, enUS.exportCsv.babyName, 'babyName'],
+  recordType: [zhCN.exportCsv.recordType, enUS.exportCsv.recordType, 'recordType'],
+  date: [zhCN.exportCsv.date, enUS.exportCsv.date, 'date'],
+  time: [zhCN.exportCsv.time, enUS.exportCsv.time, 'time'],
+  endDate: [zhCN.exportCsv.endDate, enUS.exportCsv.endDate, 'endDate'],
+  endTime: [zhCN.exportCsv.endTime, enUS.exportCsv.endTime, 'endTime'],
+  item: [zhCN.exportCsv.item, enUS.exportCsv.item, 'item'],
+  value: [zhCN.exportCsv.value, enUS.exportCsv.value, 'value'],
+  duration: [zhCN.exportCsv.duration, enUS.exportCsv.duration, 'duration'],
+  status: [zhCN.exportCsv.status, enUS.exportCsv.status, 'status'],
+  notes: [zhCN.exportCsv.notes, enUS.exportCsv.notes, 'notes'],
+}
+
+/** 按表头取单元格：当前 locale 列名 -> zh -> en -> 内部键值，未命中返回 '' */
+function headerCell(obj: Record<string, string>, key: string): string {
+  for (const alias of [t(`exportCsv.${key}`), ...HEADER_ALIASES[key]]) {
+    const v = obj[alias]
+    if (v !== undefined) return v
+  }
+  return ''
+}
 
 /** 按语言的标签映射：内部键值 -> 对应语言的显示文本 */
 const LABELS_ZH: Record<string, string> = {
@@ -129,6 +155,23 @@ function breastSideLabel(side: string): string {
   return BREAST_SIDE_LABELS_MAP[locale]?.[side] ?? side
 }
 
+/** 显示文本 -> 内部键值反查表（导入用：zh/en 标签、亲喂侧标签、内部键值自身） */
+const LABEL_REV: Map<string, string> = (() => {
+  const m = new Map<string, string>()
+  for (const k of Object.keys(LABELS_ZH)) m.set(k, k)
+  for (const map of [LABELS_ZH, LABELS_EN]) {
+    for (const [k, v] of Object.entries(map)) if (!m.has(v)) m.set(v, k)
+  }
+  for (const byLocale of Object.values(BREAST_SIDE_LABELS_MAP)) {
+    for (const [k, v] of Object.entries(byLocale)) if (!m.has(v)) m.set(v, k)
+  }
+  return m
+})()
+
+function toInternal(label: string): string {
+  return LABEL_REV.get(label) ?? label
+}
+
 /** CSV 转义：含逗号/引号/换行时包裹引号 */
 export function csvEscape(v: string | number | undefined | null): string {
   if (v === undefined || v === null) return ''
@@ -160,7 +203,7 @@ function csvHeader(withBaby: boolean): Row {
 
 /**
  * 生成单个宝宝的全部记录 CSV 数据行（不含表头）。
- * 使用双语标签，格式为 "English/中文"，确保跨 locale 可读。
+ * 列值使用当前 locale 的本地化标签；导入时经 zh/en 双语反查表还原为内部键值。
  * babyName 提供时每行首列插入宝宝名（用于多宝宝合并导出）。
  */
 export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
@@ -176,8 +219,8 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
       bl('feeding'),
       formatDate(f.startTime),
       formatTime(f.startTime),
-      '',
-      '',
+      f.endTime ? formatDate(f.endTime) : '',
+      f.endTime ? formatTime(f.endTime) : '',
       typeLabel,
       f.amount ? `${f.amount} ml` : '',
       f.duration ? Math.round(f.duration / 60000) : '',
@@ -210,8 +253,8 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
       bl('pumping'),
       formatDate(p.startTime),
       formatTime(p.startTime),
-      '',
-      '',
+      p.endTime ? formatDate(p.endTime) : '',
+      p.endTime ? formatTime(p.endTime) : '',
       breastSideLabel(p.side),
       p.amount ? `${p.amount} ml` : '',
       p.duration ? Math.round(p.duration / 60000) : '',
@@ -484,17 +527,7 @@ const RECORD_TYPE_KEY_MAP: Record<string, string> = {
   milestone: 'milestones',
 }
 
-/** 枚举反向映射（导入时将内部键值转为数据字段）——当前版本直接使用内部键值，保留定义以备后续扩展 */
-
-/** 疫苗状态反向映射（中英） */
-const VACCINE_STATUS_REV: Record<string, 'planned' | 'done'> = {
-  [t('vaccination.statusDone')]: 'done',
-  [t('vaccination.statusPlanned')]: 'planned',
-  Done: 'done',
-  Planned: 'planned',
-}
-
-/** 将 CSV 行映射为具体记录对象（使用内部键值） */
+/** 将 CSV 行映射为具体记录对象（列值为本地化标签或内部键值，统一经 toInternal 反查） */
 function mapCsvRowToRecord(
   row: string[],
   headers: string[],
@@ -506,20 +539,20 @@ function mapCsvRowToRecord(
     obj[h] = row[idx] ?? ''
   })
 
-  // 兼容：表头可能是本地化标签或内部键值
-  const typeLabel = obj[t('exportCsv.recordType')] ?? obj['记录类型'] ?? obj['Record Type'] ?? obj['recordType']
-  const kind = RECORD_TYPE_KEY_MAP[typeLabel]
+  // 表头可能是当前 locale / zh / en 的列名或内部键值
+  const typeLabel = headerCell(obj, 'recordType')
+  const kind = RECORD_TYPE_KEY_MAP[toInternal(typeLabel)]
   if (!kind) return null
 
-  const dateStr = obj[t('exportCsv.date')] ?? obj['日期'] ?? obj['Date']
-  const timeStr = obj[t('exportCsv.time')] ?? obj['时间'] ?? obj['Time']
-  const endDateStr = obj[t('exportCsv.endDate')] ?? obj['结束日期'] ?? obj['End Date']
-  const endTimeStr = obj[t('exportCsv.endTime')] ?? obj['结束时间'] ?? obj['End Time']
-  const item = obj[t('exportCsv.item')] ?? obj['项目'] ?? obj['Item']
-  const value = obj[t('exportCsv.value')] ?? obj['数值'] ?? obj['Value']
-  const duration = obj[t('exportCsv.duration')] ?? obj['时长'] ?? obj['Duration']
-  const status = obj[t('exportCsv.status')] ?? obj['状态'] ?? obj['Status']
-  const notes = obj[t('exportCsv.notes')] ?? obj['备注'] ?? obj['Notes']
+  const dateStr = headerCell(obj, 'date')
+  const timeStr = headerCell(obj, 'time')
+  const endDateStr = headerCell(obj, 'endDate')
+  const endTimeStr = headerCell(obj, 'endTime')
+  const item = headerCell(obj, 'item')
+  const value = headerCell(obj, 'value')
+  const duration = headerCell(obj, 'duration')
+  const status = headerCell(obj, 'status')
+  const notes = headerCell(obj, 'notes')
 
   const parseDateTime = (date: string, time: string): number => {
     if (!date) return 0
@@ -535,7 +568,7 @@ function mapCsvRowToRecord(
   const base = { babyId, createdAt: now, updatedAt: now }
 
   switch (kind) {
-    case 'feeding': {
+    case 'feedings': {
       // 兼容新旧格式：item 可能是 "breast·left" 或旧的 "breast_left" 等
       const OLD_TYPE_MAP: Record<string, { type: string; side?: string }> = {
         breast_left: { type: 'breast', side: 'left' },
@@ -549,11 +582,11 @@ function mapCsvRowToRecord(
         feedType = mapped.type
         feedSide = mapped.side
       } else if (item.includes('·')) {
-        const [t, s] = item.split('·').map((p) => p.trim())
-        feedType = t || item
-        feedSide = s || undefined
+        const [rawType, rawSide] = item.split('·').map((p) => p.trim())
+        feedType = toInternal(rawType || item)
+        feedSide = rawSide ? toInternal(rawSide) : undefined
       } else {
-        feedType = item
+        feedType = toInternal(item)
         feedSide = undefined
       }
       return {
@@ -570,27 +603,27 @@ function mapCsvRowToRecord(
         },
       }
     }
-    case 'diaper': {
-      // value 格式：color · amount（内部键值）
+    case 'diapers': {
+      // value 格式：color · amount（导入时反查为内部键值）
       const parts = value.split('·').map((p) => p.trim())
       return {
         kind,
         data: {
           ...base,
-          type: item, // 内部键值
+          type: toInternal(item),
           time: startTime,
-          color: parts[0] || undefined,
-          amount: parts[1] || undefined,
+          color: parts[0] ? toInternal(parts[0]) : undefined,
+          amount: parts[1] ? toInternal(parts[1]) : undefined,
           notes: notes || undefined,
         },
       }
     }
-    case 'pumping': {
+    case 'pumpings': {
       return {
         kind,
         data: {
           ...base,
-          side: item, // 内部键值
+          side: toInternal(item),
           startTime,
           endTime: endTime || undefined,
           duration: duration ? parseInt(duration) * 60000 : undefined,
@@ -599,36 +632,35 @@ function mapCsvRowToRecord(
         },
       }
     }
-    case 'sleep': {
+    case 'sleeps': {
       return {
         kind,
         data: {
           ...base,
-          type: item, // 内部键值
+          type: toInternal(item),
           startTime,
           endTime: endTime || startTime + 60 * 60000,
           notes: notes || undefined,
         },
       }
     }
-    case 'growth': {
-      // value 格式： "8.5 kg · 70.2 cm · 44 cm"
+    case 'growths': {
+      // value 格式："8.5 kg · 70.2 cm · 44 cm"（身高、头围按出现顺序）
       const weightMatch = value.match(/([\d.]+)\s*kg/)
-      const heightMatch = value.match(/([\d.]+)\s*cm/)
-      // headMatch 暂不使用，保留以备头围解析扩展
+      const cmMatches = [...value.matchAll(/([\d.]+)\s*cm/g)]
       return {
         kind,
         data: {
           ...base,
           date: startOfDay(startTime),
           weight: weightMatch ? parseFloat(weightMatch[1]) : undefined,
-          height: heightMatch ? parseFloat(heightMatch[1]) : undefined,
-          headCircumference: undefined,
+          height: cmMatches[0] ? parseFloat(cmMatches[0][1]) : undefined,
+          headCircumference: cmMatches[1] ? parseFloat(cmMatches[1][1]) : undefined,
           notes: notes || undefined,
         },
       }
     }
-    case 'solidFood': {
+    case 'solidFoods': {
       return {
         kind,
         data: {
@@ -640,7 +672,7 @@ function mapCsvRowToRecord(
         },
       }
     }
-    case 'medication': {
+    case 'medications': {
       return {
         kind,
         data: {
@@ -652,7 +684,7 @@ function mapCsvRowToRecord(
         },
       }
     }
-    case 'vaccination': {
+    case 'vaccinations': {
       return {
         kind,
         data: {
@@ -660,30 +692,30 @@ function mapCsvRowToRecord(
           date: startOfDay(startTime),
           name: item,
           dose: value || undefined,
-          status: VACCINE_STATUS_REV[status] || 'planned',
+          status: toInternal(status) === 'done' ? 'done' : 'planned',
           notes: notes || undefined,
         },
       }
     }
-    case 'temperature': {
+    case 'temperatures': {
       const tempMatch = value.match(/([\d.]+)\s*℃?/)
       return {
         kind,
         data: {
           ...base,
           time: startTime,
-          method: item || undefined, // 内部键值
+          method: item ? toInternal(item) : undefined,
           value: tempMatch ? parseFloat(tempMatch[1]) : 0,
           notes: notes || undefined,
         },
       }
     }
-    case 'milestone': {
+    case 'milestones': {
       return {
         kind,
         data: {
           ...base,
-          type: item, // 内部键值
+          type: toInternal(item),
           time: startTime,
           notes: notes || undefined,
         },
@@ -714,7 +746,7 @@ export async function importAllCsv(
   if (rows.length < 2) throw new Error(t('exportCsv.invalidFile'))
 
   const headers = rows[0]
-  const hasBabyNameCol = headers[0] === t('exportCsv.babyName') || headers[0] === '宝宝名' || headers[0] === 'Baby Name'
+  const hasBabyNameCol = [t('exportCsv.babyName'), ...HEADER_ALIASES.babyName].includes(headers[0])
 
   const babiesMap = new Map<string, { name: string; id: number }>()
   const recordBuckets: Record<string, unknown[]> = {
@@ -731,6 +763,7 @@ export async function importAllCsv(
   }
 
   const now = Date.now()
+  let mappedCount = 0
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i]
@@ -747,7 +780,8 @@ export async function importAllCsv(
       babyId = babiesMap.get(babyName)!.id
     } else {
       if (babiesMap.size === 0) {
-        babiesMap.set('默认宝宝', { name: '默认宝宝', id: -1 })
+        const defaultBabyName = t('exportCsv.defaultBaby')
+        babiesMap.set(defaultBabyName, { name: defaultBabyName, id: -1 })
       }
       babyId = babiesMap.values().next().value!.id
     }
@@ -755,8 +789,12 @@ export async function importAllCsv(
     const mapped = mapCsvRowToRecord(row, headers, babyId, now)
     if (mapped) {
       recordBuckets[mapped.kind].push(mapped.data)
+      mappedCount++
     }
   }
+
+  // 一条记录都没识别出：不是本应用导出的文件，拒绝导入（避免清库后写入空数据）
+  if (mappedCount === 0) throw new Error(t('exportCsv.invalidFile'))
 
   const babyIdMap = new Map<number, number>()
   const babyNames = Array.from(babiesMap.entries())

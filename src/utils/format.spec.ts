@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pad2, startOfDay, formatPercentChange, formatAmount, fromDateTimeLocal } from '@/utils/format'
+import { pad2, startOfDay, formatPercentChange, formatAmount, fromDateTimeLocal, toDateTimeLocal, formatTime } from '@/utils/format'
 
 describe('format utils', () => {
   it('pad2 补零', () => {
@@ -45,5 +45,16 @@ describe('format utils', () => {
     }
     expect(fromDateTimeLocal('')).toBeUndefined()
     expect(fromDateTimeLocal('not-a-date')).toBeUndefined()
+  })
+
+  it('toDateTimeLocal 输出含秒', () => {
+    const ts = new Date(2026, 7, 20, 15, 30, 45).getTime()
+    expect(toDateTimeLocal(ts)).toBe('2026-08-20T15:30:45')
+    expect(fromDateTimeLocal(toDateTimeLocal(ts))).toBe(ts)
+  })
+
+  it('formatTime 输出 HH:mm:ss', () => {
+    const ts = new Date(2026, 7, 20, 8, 5, 3).getTime()
+    expect(formatTime(ts)).toBe('08:05:03')
   })
 })

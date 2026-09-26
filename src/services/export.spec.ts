@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { csvEscape, toCsv, buildBabyCsvRows, exportBabyCsvs, exportAllBabiesCsv, parseCsv, importAllCsv, type BabyCsvData } from '@/services/export'
 import type { Feeding, Baby } from '@/types'
+import i18n from '@/i18n'
 
 const { mockDb, downloadSpy } = vi.hoisted(() => {
   const makeTable = () => ({
@@ -10,7 +11,7 @@ const { mockDb, downloadSpy } = vi.hoisted(() => {
     })),
     clear: vi.fn<() => Promise<void>>(async () => {}),
     bulkAdd: vi.fn<(items: unknown[]) => Promise<void>>(async () => {}),
-    add: vi.fn<() => Promise<number>>(async () => 1),
+    add: vi.fn<(baby: { name: string }) => Promise<number>>(async () => 1),
   })
   const mockDb = {
     babies: makeTable(),
@@ -125,7 +126,7 @@ describe('buildBabyCsvRows', () => {
     // 数据行使用当前语言标签
     expect(row[0]).toBe('喂养')
     expect(row[1]).toBe('2026-01-01')
-    expect(row[2]).toBe('08:00')
+    expect(row[2]).toBe('08:00:00')
     expect(row[6]).toBe('120 ml')
   })
 
@@ -275,5 +276,192 @@ describe('importAllCsv', () => {
     const csv = 'exportCsv.recordType,exportCsv.date,exportCsv.time,exportCsv.endDate,exportCsv.endTime,exportCsv.item,exportCsv.value,exportCsv.duration,exportCsv.status,exportCsv.notes'
     const file = new File([csv], 'empty.csv', { type: 'text/csv' })
     await expect(importAllCsv(file)).rejects.toThrow('exportCsv.invalidFile')
+  })
+
+  it('时间列带秒（HH:mm:ss）时保留到秒', async () => {
+    const csv =
+      'exportCsv.recordType,exportCsv.date,exportCsv.time,exportCsv.endDate,exportCsv.endTime,exportCsv.item,exportCsv.value,exportCsv.duration,exportCsv.status,exportCsv.notes\n' +
+      'feeding,2026-01-01,08:30:15,,,breast,,,,'
+    const file = new File([csv], 'seconds.csv', { type: 'text/csv' })
+    const result = await importAllCsv(file)
+    expect(result.feedings).toBe(1)
+    const [items] = mockDb.feedings.bulkAdd.mock.calls[0]
+    const [first] = items as Array<{ startTime: number }>
+    const d = new Date(first.startTime)
+    expect(d.getHours()).toBe(8)
+    expect(d.getMinutes()).toBe(30)
+    expect(d.getSeconds()).toBe(15)
+  })
+
+  it('时间列不带秒（HH:mm）时兼容旧文件', async () => {
+    const csv =
+      'exportCsv.recordType,exportCsv.date,exportCsv.time,exportCsv.endDate,exportCsv.endTime,exportCsv.item,exportCsv.value,exportCsv.duration,exportCsv.status,exportCsv.notes\n' +
+      'feeding,2026-01-01,08:30,,,breast,,,,'
+    const file = new File([csv], 'legacy.csv', { type: 'text/csv' })
+    const result = await importAllCsv(file)
+    expect(result.feedings).toBe(1)
+    const [items] = mockDb.feedings.bulkAdd.mock.calls[0]
+    const [first] = items as Array<{ startTime: number }>
+    const d = new Date(first.startTime)
+    expect(d.getHours()).toBe(8)
+    expect(d.getMinutes()).toBe(30)
+    expect(d.getSeconds()).toBe(0)
+  })
+
+  it('完整往返：本地化标签反查为内部键值（zh-CN，全记录类型）', async () => {
+    const t0 = new Date(2026, 0, 1, 8, 30, 15).getTime()
+    const data: BabyCsvData = {
+      feedings: [
+        makeFeeding({ type: 'breast', side: 'left', amount: undefined, duration: 600000, startTime: t0 }),
+        makeFeeding({
+          type: 'bottle_breastmilk',
+          amount: 150,
+          startTime: new Date(2026, 0, 1, 9, 0, 5).getTime(),
+          endTime: new Date(2026, 0, 1, 9, 20, 30).getTime(),
+        }),
+      ],
+      diapers: [{ babyId: 1, type: 'both', color: 'yellow', amount: 'small', time: t0, createdAt: 0, updatedAt: 0 }],
+      pumpings: [
+        {
+          babyId: 1,
+          side: 'both',
+          amount: 120,
+          duration: 900000,
+          startTime: t0,
+          endTime: t0 + 900000,
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      ],
+      sleeps: [{ babyId: 1, type: 'nap', startTime: t0, endTime: t0 + 3600000, createdAt: 0, updatedAt: 0 }],
+      growths: [{ babyId: 1, date: t0, weight: 8.5, height: 70.2, headCircumference: 44, createdAt: 0, updatedAt: 0 }],
+      solidFoods: [{ babyId: 1, time: t0, food: '南瓜泥', amount: '半碗', createdAt: 0, updatedAt: 0 }],
+      medications: [{ babyId: 1, time: t0, name: '维生素D', dose: '1滴', createdAt: 0, updatedAt: 0 }],
+      vaccinations: [{ babyId: 1, name: 'BCG', date: t0, status: 'done', createdAt: 0, updatedAt: 0 }],
+      temperatures: [{ babyId: 1, time: t0, value: 36.8, method: 'armpit', createdAt: 0, updatedAt: 0 }],
+      milestones: [{ babyId: 1, type: 'roll', time: t0, createdAt: 0, updatedAt: 0 }],
+    }
+    const csv =
+      'exportCsv.babyName,exportCsv.recordType,exportCsv.date,exportCsv.time,exportCsv.endDate,exportCsv.endTime,exportCsv.item,exportCsv.value,exportCsv.duration,exportCsv.status,exportCsv.notes\r\n' +
+      toCsv(buildBabyCsvRows(data, '小满'))
+    const result = await importAllCsv(new File([csv], 'roundtrip.csv', { type: 'text/csv' }))
+    expect(result).toEqual({
+      babies: 1,
+      feedings: 2,
+      diapers: 1,
+      pumpings: 1,
+      sleeps: 1,
+      growths: 1,
+      solidFoods: 1,
+      medications: 1,
+      vaccinations: 1,
+      temperatures: 1,
+      milestones: 1,
+    })
+
+    const [feedItems] = mockDb.feedings.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(feedItems[0]).toMatchObject({ type: 'breast', side: 'left', duration: 600000, babyId: 1 })
+    expect(feedItems[0].amount).toBeUndefined()
+    expect(feedItems[0].startTime).toBe(t0)
+    expect(feedItems[1]).toMatchObject({ type: 'bottle_breastmilk', amount: 150 })
+    expect(feedItems[1].endTime).toBe(new Date(2026, 0, 1, 9, 20, 30).getTime())
+    expect(feedItems[0].endTime).toBeUndefined()
+
+    const [diaperItems] = mockDb.diapers.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(diaperItems[0]).toMatchObject({ type: 'both', color: 'yellow', amount: 'small', time: t0 })
+
+    const [pumpItems] = mockDb.pumpings.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(pumpItems[0]).toMatchObject({ side: 'both', amount: 120, duration: 900000, startTime: t0 })
+    expect(pumpItems[0].endTime).toBe(t0 + 900000)
+
+    const [sleepItems] = mockDb.sleeps.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(sleepItems[0]).toMatchObject({ type: 'nap', startTime: t0, endTime: t0 + 3600000 })
+
+    const [growthItems] = mockDb.growths.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(growthItems[0]).toMatchObject({
+      date: new Date(2026, 0, 1).getTime(),
+      weight: 8.5,
+      height: 70.2,
+      headCircumference: 44,
+    })
+
+    const [sfItems] = mockDb.solidFoods.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(sfItems[0]).toMatchObject({ food: '南瓜泥', amount: '半碗', time: t0 })
+
+    const [medItems] = mockDb.medications.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(medItems[0]).toMatchObject({ name: '维生素D', dose: '1滴', time: t0 })
+
+    const [vacItems] = mockDb.vaccinations.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(vacItems[0]).toMatchObject({ name: 'BCG', status: 'done', date: new Date(2026, 0, 1).getTime() })
+
+    const [tempItems] = mockDb.temperatures.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(tempItems[0]).toMatchObject({ value: 36.8, method: 'armpit', time: t0 })
+
+    const [msItems] = mockDb.milestones.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(msItems[0]).toMatchObject({ type: 'roll', time: t0 })
+  })
+
+  it('英文标签同样反查为内部键值（en-US locale）', async () => {
+    i18n.global.locale.value = 'en-US'
+    try {
+      const t0 = new Date(2026, 0, 1, 7, 5, 9).getTime()
+      const data: BabyCsvData = {
+        feedings: [makeFeeding({ type: 'breast', side: 'both', amount: undefined, duration: undefined, startTime: t0 })],
+        diapers: [],
+        pumpings: [],
+        sleeps: [],
+        growths: [],
+        solidFoods: [],
+        medications: [],
+        vaccinations: [],
+        temperatures: [],
+        milestones: [],
+      }
+      const csv =
+        'exportCsv.babyName,exportCsv.recordType,exportCsv.date,exportCsv.time,exportCsv.endDate,exportCsv.endTime,exportCsv.item,exportCsv.value,exportCsv.duration,exportCsv.status,exportCsv.notes\r\n' +
+        toCsv(buildBabyCsvRows(data, 'Baby A'))
+      const result = await importAllCsv(new File([csv], 'en.csv', { type: 'text/csv' }))
+      expect(result).toMatchObject({ babies: 1, feedings: 1 })
+      const [items] = mockDb.feedings.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+      expect(items[0]).toMatchObject({ type: 'breast', side: 'both', startTime: t0, babyId: 1 })
+    } finally {
+      i18n.global.locale.value = 'zh-CN'
+    }
+  })
+
+  it('中文真实表头可导入（别名回退，不依赖当前 locale）', async () => {
+    const csv =
+      '宝宝,记录类型,日期,时间,结束日期,结束时间,类型 / 名称,数值,时长(分钟),状态,备注\r\n' +
+      '小满,喂养,2026-01-01,08:30:15,,,亲喂,,,,'
+    const result = await importAllCsv(new File([csv], 'zh-headers.csv', { type: 'text/csv' }))
+    expect(result).toMatchObject({ babies: 1, feedings: 1 })
+    const [items] = mockDb.feedings.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(items[0]).toMatchObject({ type: 'breast', babyId: 1 })
+    const d = new Date(items[0].startTime as number)
+    expect([d.getHours(), d.getMinutes(), d.getSeconds()]).toEqual([8, 30, 15])
+    const [babyItems] = mockDb.babies.add.mock.calls
+    expect(babyItems[0].name).toBe('小满')
+  })
+
+  it('英文真实表头可导入（大小写变体 + 宝宝名列）', async () => {
+    const csv =
+      'Baby,Record type,Date,Time,End date,End time,Type / Name,Value,Duration (min),Status,Notes\r\n' +
+      'Baby A,Feeding,2026-01-01,08:30:15,,,Breastfeed,,,,'
+    const result = await importAllCsv(new File([csv], 'en-headers.csv', { type: 'text/csv' }))
+    expect(result).toMatchObject({ babies: 1, feedings: 1 })
+    const [items] = mockDb.feedings.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(items[0]).toMatchObject({ type: 'breast', babyId: 1 })
+    const d = new Date(items[0].startTime as number)
+    expect([d.getHours(), d.getMinutes(), d.getSeconds()]).toEqual([8, 30, 15])
+    const [babyItems] = mockDb.babies.add.mock.calls
+    expect(babyItems[0].name).toBe('Baby A')
+  })
+
+  it('非本应用 CSV（无记录类型行）拒绝导入，不触发清库', async () => {
+    const csv = 'a,b,c\r\n1,2,3\r\n4,5,6'
+    const file = new File([csv], 'foreign.csv', { type: 'text/csv' })
+    await expect(importAllCsv(file)).rejects.toThrow('exportCsv.invalidFile')
+    expect(mockDb.feedings.clear).not.toHaveBeenCalled()
+    expect(mockDb.babies.add).not.toHaveBeenCalled()
   })
 })

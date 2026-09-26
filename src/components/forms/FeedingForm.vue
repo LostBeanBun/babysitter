@@ -6,6 +6,7 @@ import { FEED_TYPE_LIST, BREAST_SIDE_LIST } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/format'
 import { useFeedingStore } from '@/stores/feeding'
 import { useActiveTimer } from '@/composables/useActiveTimer'
+import { useFormErrors } from '@/composables/useFormErrors'
 import { showToast } from '@/composables/useToast'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
@@ -28,6 +29,7 @@ const emit = defineEmits<{ saved: []; cancelled: []; startRecord: [] }>()
 
 const feedingStore = useFeedingStore()
 const activeTimer = useActiveTimer()
+const err = useFormErrors()
 
 const type = ref<FeedType>(props.editing?.type ?? 'breast')
 const side = ref<BreastSide>(props.editing?.side ?? 'left')
@@ -49,10 +51,14 @@ const durationText = computed(() => {
 })
 
 const submitLabel = computed(() => {
-  if (isEditing.value) return t('common.saveEdit')
   if (isRecording.value) return t('feed.endRecord')
+  if (isEditing.value) return t('common.saveEdit')
+  if (!isBreast.value) return t('common.save')
   return t('feed.startRecord')
 })
+
+/** 瓶喂用单时间点；亲喂或计时中用开始/结束区间 */
+const showTimePair = computed(() => isBreast.value || isRecording.value)
 
 onMounted(() => {
   if (activeEntry.value) {
@@ -68,49 +74,103 @@ onMounted(() => {
   }
 })
 
+/** 瓶喂奶量必填；合法返回数值，非法标记字段错误返回 null */
+function parseAmount(): number | null {
+  const amt = amount.value ? Number(amount.value) : NaN
+  if (!amount.value || isNaN(amt) || amt <= 0) {
+    err.set('amount', t('feed.invalidAmount'))
+    return null
+  }
+  return amt
+}
+
 async function submit() {
+  err.clearAll()
   try {
-    const start = fromDateTimeLocal(startTime.value) ?? Date.now()
+    const start = fromDateTimeLocal(startTime.value)
+    if (start == null) {
+      err.set('startTime', t('feed.invalidStart'))
+      return
+    }
     const end = endTime.value ? fromDateTimeLocal(endTime.value) : undefined
 
+    // 计时中：结束记录，结束时间写回（空则取当前时间）
     if (isRecording.value && activeEntry.value) {
       const endTs = end ?? Date.now()
+      if (endTs <= start) {
+        err.set('endTime', t('feed.invalidOrder'))
+        return
+      }
       await feedingStore.update(activeEntry.value.recordId, {
         endTime: endTs,
-        duration: endTs > start ? endTs - start : undefined,
+        duration: endTs - start,
       })
       activeTimer.reset(activeEntry.value.id)
       emit('saved')
       return
     }
 
+    // 编辑
     if (isEditing.value && props.editing) {
-      await feedingStore.update(props.editing.id, {
-        type: type.value,
-        side: isBreast.value ? side.value : undefined,
-        startTime: start,
-        endTime: end,
-        duration: end && end > start ? end - start : undefined,
-        amount: isBreast.value ? undefined : amount.value ? Number(amount.value) : undefined,
-        notes: notes.value || undefined,
-      })
+      if (isBreast.value) {
+        if (end != null && end <= start) {
+          err.set('endTime', t('feed.invalidOrder'))
+          return
+        }
+        await feedingStore.update(props.editing.id, {
+          type: type.value,
+          side: side.value,
+          startTime: start,
+          endTime: end,
+          duration: end && end > start ? end - start : undefined,
+          amount: undefined,
+          notes: notes.value || undefined,
+        })
+      } else {
+        const amt = parseAmount()
+        if (amt == null) return
+        await feedingStore.update(props.editing.id, {
+          type: type.value,
+          side: undefined,
+          startTime: start,
+          endTime: undefined,
+          duration: undefined,
+          amount: amt,
+          notes: notes.value || undefined,
+        })
+      }
       emit('saved')
       return
     }
 
     if (isBreast.value) {
-      const id = await feedingStore.add({ type: type.value, side: side.value, startTime: start, notes: notes.value || undefined })
-      activeTimer.start('feeding', id, start)
-    } else {
-      const amt = Number(amount.value)
-      if (!amount.value || isNaN(amt) || amt <= 0) {
-        alert(t('feed.invalidAmount'))
+      // 亲喂：结束时间已填 → 直接保存；空 → 从输入开始时间启动计时
+      if (end != null) {
+        if (end <= start) {
+          err.set('endTime', t('feed.invalidOrder'))
+          return
+        }
+        await feedingStore.add({
+          type: type.value,
+          side: side.value,
+          startTime: start,
+          endTime: end,
+          notes: notes.value || undefined,
+        })
+        emit('saved')
         return
       }
-      const id = await feedingStore.add({ type: type.value, startTime: start, amount: amt, notes: notes.value || undefined })
+      const id = await feedingStore.add({ type: type.value, side: side.value, startTime: start, notes: notes.value || undefined })
       activeTimer.start('feeding', id, start)
+      emit('startRecord')
+      return
     }
-    emit('startRecord')
+
+    // 瓶喂：单时间点直接保存，不启动计时
+    const amt = parseAmount()
+    if (amt == null) return
+    await feedingStore.add({ type: type.value, startTime: start, amount: amt, notes: notes.value || undefined })
+    emit('saved')
   } catch {
     showToast(t('errors.generic'))
   }
@@ -130,6 +190,7 @@ async function submit() {
         :style="
           type === opt.value ? { background: opt.color + '22', borderColor: opt.color, color: opt.color } : undefined
         "
+        :disabled="isRecording"
         @click="type = opt.value"
       >
         <span class="type-icon">{{ opt.icon }}</span>
@@ -144,6 +205,7 @@ async function submit() {
         type="button"
         class="side-btn"
         :class="{ selected: side === s.value }"
+        :disabled="isRecording"
         @click="side = s.value"
       >
         <span>{{ s.icon }}</span>
@@ -151,7 +213,7 @@ async function submit() {
       </button>
     </div>
 
-    <div v-if="!isBreast" class="form-field">
+    <div v-if="!isBreast" class="form-field" :class="{ 'has-error': err.has('amount') }">
       <label class="form-label">{{ t('feed.amountLabel') }}</label>
       <input
         v-model="amount"
@@ -161,27 +223,52 @@ async function submit() {
         :placeholder="t('feed.amountPlaceholder')"
         class="form-input"
         inputmode="decimal"
+        :disabled="isRecording"
+        @input="err.clear('amount')"
       />
+      <p v-if="err.get('amount')" class="field-error">{{ err.get('amount') }}</p>
     </div>
 
-    <div class="time-row">
-      <div class="form-field">
-        <label class="form-label">{{ t('feed.startLabel') }}</label>
-        <input
-          v-model="startTime"
-          type="datetime-local"
-          :placeholder="t('common.selectDateTime')"
-          class="form-input"
-          :disabled="isRecording"
-        />
+    <template v-if="showTimePair">
+      <div class="time-row">
+        <div class="form-field" :class="{ 'has-error': err.has('startTime') }">
+          <label class="form-label">{{ t('feed.startLabel') }}</label>
+          <input
+            v-model="startTime"
+            type="datetime-local" step="1"
+            :placeholder="t('common.selectDateTime')"
+            class="form-input"
+            :disabled="isRecording"
+            @input="err.clear('startTime')"
+          />
+          <p v-if="err.get('startTime')" class="field-error">{{ err.get('startTime') }}</p>
+        </div>
+        <div class="form-field" :class="{ 'has-error': err.has('endTime') }">
+          <label class="form-label">{{ t('feed.endLabel') }}</label>
+          <input
+            v-model="endTime"
+            type="datetime-local" step="1"
+            :placeholder="t('common.selectDateTime')"
+            class="form-input"
+            @input="err.clear('endTime')"
+          />
+          <p v-if="err.get('endTime')" class="field-error">{{ err.get('endTime') }}</p>
+        </div>
       </div>
-      <div class="form-field">
-        <label class="form-label">{{ t('feed.endLabel') }}</label>
-        <input v-model="endTime" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
-      </div>
-    </div>
 
-    <p v-if="durationText" class="duration-hint">{{ durationText }}</p>
+      <p v-if="durationText" class="duration-hint">{{ durationText }}</p>
+    </template>
+    <div v-else class="form-field" :class="{ 'has-error': err.has('startTime') }">
+      <label class="form-label">{{ t('feed.timeLabel') }}</label>
+      <input
+        v-model="startTime"
+        type="datetime-local" step="1"
+        :placeholder="t('common.selectDateTime')"
+        class="form-input"
+        @input="err.clear('startTime')"
+      />
+      <p v-if="err.get('startTime')" class="field-error">{{ err.get('startTime') }}</p>
+    </div>
 
     <FormNotes v-model="notes" :label="t('feed.notesLabel')" :placeholder="t('common.optional')" />
 
@@ -217,6 +304,12 @@ async function submit() {
 
 .type-btn.selected {
   border-width: 1.5px;
+}
+
+.type-btn:disabled,
+.side-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .type-icon {

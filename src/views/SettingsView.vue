@@ -9,10 +9,12 @@ import { loadReminders, saveReminders, type ReminderConfig, type ReminderType } 
 import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ReminderParam from '@/components/settings/ReminderParam.vue'
+import { useFormErrors } from '@/composables/useFormErrors'
 import type { Baby, BabyGender } from '@/types'
 
 const babyStore = useBabyStore()
 const { t } = useI18n()
+const err = useFormErrors()
 
 const recordCounts = ref({
   feedings: 0,
@@ -134,6 +136,7 @@ onMounted(async () => {
 })
 
 function openAddBaby() {
+  err.clearAll()
   babyName.value = ''
   babyGender.value = ''
   babyBirthDate.value = ''
@@ -142,6 +145,7 @@ function openAddBaby() {
 }
 
 function openEditBaby(b: Baby) {
+  err.clearAll()
   babyName.value = b.name
   babyGender.value = b.gender ?? ''
   babyBirthDate.value = b.birthDate ?? ''
@@ -150,10 +154,21 @@ function openEditBaby(b: Baby) {
 }
 
 async function saveBaby() {
+  err.clearAll()
   const name = babyName.value.trim()
-  // 宝宝名称/性别/出生日期均为必填（出生日期用于月龄换算与生长曲线参考线）
-  if (!name || !babyBirthDate.value) return
-  if (babyModal.value?.mode === 'add' && !babyGender.value) return
+  // 宝宝名称/出生日期必填，新增时性别必填（出生日期用于月龄换算与生长曲线参考线）
+  if (!name) {
+    err.set('name', t('settings.needName'))
+    return
+  }
+  if (!babyBirthDate.value) {
+    err.set('birthDate', t('settings.needBirthDate'))
+    return
+  }
+  if (babyModal.value?.mode === 'add' && !babyGender.value) {
+    err.set('gender', t('settings.needGender'))
+    return
+  }
   if (babyModal.value?.mode === 'edit' && babyModal.value.id != null) {
     await babyStore.updateBaby(babyModal.value.id, {
       name,
@@ -434,11 +449,18 @@ async function confirmClearAll() {
       :title="babyModal?.mode === 'edit' ? t('settings.editBaby') : t('settings.addBaby')"
       @close="babyModal = null"
     >
-      <div class="form-field">
+      <div class="form-field" :class="{ 'has-error': err.has('name') }">
         <label class="form-label">{{ t('settings.babyName') }} *</label>
-        <input v-model="babyName" type="text" :placeholder="t('settings.babyNamePh')" class="form-input" />
+        <input
+          v-model="babyName"
+          type="text"
+          :placeholder="t('settings.babyNamePh')"
+          class="form-input"
+          @input="err.clear('name')"
+        />
+        <p v-if="err.get('name')" class="field-error">{{ err.get('name') }}</p>
       </div>
-      <div class="form-field">
+      <div class="form-field" :class="{ 'has-error': err.has('gender') }">
         <label class="form-label">{{ t('settings.genderLabel') }} {{ babyModal?.mode === 'add' ? '*' : '' }}</label>
         <div class="gender-picker" role="radiogroup">
           <button
@@ -447,7 +469,7 @@ async function confirmClearAll() {
             :class="{ selected: babyGender === 'boy' }"
             :aria-checked="babyGender === 'boy'"
             role="radio"
-            @click="babyGender = 'boy'"
+            @click="babyGender = 'boy'; err.clear('gender')"
           >
             <span class="gender-emoji">👦</span>{{ t('settings.genderBoy') }}
           </button>
@@ -457,15 +479,23 @@ async function confirmClearAll() {
             :class="{ selected: babyGender === 'girl' }"
             :aria-checked="babyGender === 'girl'"
             role="radio"
-            @click="babyGender = 'girl'"
+            @click="babyGender = 'girl'; err.clear('gender')"
           >
             <span class="gender-emoji">👧</span>{{ t('settings.genderGirl') }}
           </button>
         </div>
+        <p v-if="err.get('gender')" class="field-error">{{ err.get('gender') }}</p>
       </div>
-      <div class="form-field">
+      <div class="form-field" :class="{ 'has-error': err.has('birthDate') }">
         <label class="form-label">{{ t('settings.birthDate') }} *</label>
-        <input v-model="babyBirthDate" type="date" :placeholder="t('common.selectDate')" class="form-input" />
+        <input
+          v-model="babyBirthDate"
+          type="date"
+          :placeholder="t('common.selectDate')"
+          class="form-input"
+          @input="err.clear('birthDate')"
+        />
+        <p v-if="err.get('birthDate')" class="field-error">{{ err.get('birthDate') }}</p>
       </div>
       <div class="form-field">
         <label class="form-label">{{ t('settings.avatarLabel') }}</label>
@@ -484,11 +514,7 @@ async function confirmClearAll() {
       </div>
       <div class="form-actions">
         <button class="btn btn-outline" @click="babyModal = null">{{ t('common.cancel') }}</button>
-        <button
-          class="btn btn-primary"
-          :disabled="!babyName.trim() || !babyBirthDate || (babyModal?.mode === 'add' && !babyGender)"
-          @click="saveBaby"
-        >
+        <button class="btn btn-primary" @click="saveBaby">
           {{ t('settings.saveBaby') }}
         </button>
       </div>

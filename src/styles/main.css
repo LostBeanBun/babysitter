@@ -540,6 +540,40 @@ select.form-input:focus {
   min-height: 56px;
 }
 
+/* —— 表单校验错误态 —— */
+.form-field.has-error .form-input,
+.form-field.has-error .form-textarea,
+.form-field.has-error select.form-input {
+  border-color: var(--danger);
+}
+
+.form-field.has-error .form-input:focus,
+.form-field.has-error .form-textarea:focus,
+.form-field.has-error select.form-input:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3.5px var(--danger-soft);
+}
+
+.form-field.has-error .gender-picker {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.field-error {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--danger);
+  margin-top: 6px;
+}
+
+.form-error {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--danger);
+  margin-bottom: 10px;
+}
+
 /* 弹窗遮罩 — 液态玻璃模糊 */
 .modal-mask {
   position: fixed;

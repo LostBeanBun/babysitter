@@ -26,7 +26,7 @@ export function milestoneGuideForAge(months: number): MilestoneGuideItem | undef
   return MILESTONE_GUIDE.find((g) => months >= g.from && months <= g.to)
 }
 
-/** 生成显示标签：如「1-3 月」 */
+/** 生成月龄范围（如「1-3」；单位由调用方用 duration.monthShort 拼接） */
 export function milestoneGuideRange(item: MilestoneGuideItem): string {
-  return item.from === item.to ? `${item.from} 月` : `${item.from}-${item.to} 月`
+  return item.from === item.to ? `${item.from}` : `${item.from}-${item.to}`
 }

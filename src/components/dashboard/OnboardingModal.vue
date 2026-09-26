@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useBabyStore } from '@/stores/baby'
+import { useFormErrors } from '@/composables/useFormErrors'
 import { BABY_AVATARS } from '@/constants'
 import type { BabyGender } from '@/types'
 
@@ -11,6 +12,7 @@ const emit = defineEmits<{ close: [] }>()
 
 const { t } = useI18n()
 const babyStore = useBabyStore()
+const err = useFormErrors()
 
 const onboardName = ref('')
 const onboardGender = ref<BabyGender | ''>('')
@@ -18,9 +20,21 @@ const onboardBirthDate = ref('')
 const onboardAvatar = ref('')
 
 async function onOnboarded() {
+  err.clearAll()
   const name = onboardName.value.trim()
   // 名称/性别/出生日期均为必填（出生日期用于月龄换算与生长曲线参考线）
-  if (!name || !onboardBirthDate.value || !onboardGender.value) return
+  if (!name) {
+    err.set('name', t('settings.needName'))
+    return
+  }
+  if (!onboardBirthDate.value) {
+    err.set('birthDate', t('settings.needBirthDate'))
+    return
+  }
+  if (!onboardGender.value) {
+    err.set('gender', t('settings.needGender'))
+    return
+  }
   await babyStore.addBaby(
     name,
     onboardGender.value,
@@ -39,15 +53,29 @@ async function onOnboarded() {
 
 <template>
   <BaseModal :show="show" :title="t('settings.addBaby')" @close="emit('close')">
-    <div class="form-field">
+    <div class="form-field" :class="{ 'has-error': err.has('name') }">
       <label class="form-label">{{ t('settings.babyName') }} *</label>
-      <input v-model="onboardName" type="text" :placeholder="t('dashboard.onboardingNamePh')" class="form-input" />
+      <input
+        v-model="onboardName"
+        type="text"
+        :placeholder="t('dashboard.onboardingNamePh')"
+        class="form-input"
+        @input="err.clear('name')"
+      />
+      <p v-if="err.get('name')" class="field-error">{{ err.get('name') }}</p>
     </div>
-    <div class="form-field">
+    <div class="form-field" :class="{ 'has-error': err.has('birthDate') }">
       <label class="form-label">{{ t('settings.birthDate') }} *</label>
-      <input v-model="onboardBirthDate" type="date" :placeholder="t('common.selectDate')" class="form-input" />
+      <input
+        v-model="onboardBirthDate"
+        type="date"
+        :placeholder="t('common.selectDate')"
+        class="form-input"
+        @input="err.clear('birthDate')"
+      />
+      <p v-if="err.get('birthDate')" class="field-error">{{ err.get('birthDate') }}</p>
     </div>
-    <div class="form-field">
+    <div class="form-field" :class="{ 'has-error': err.has('gender') }">
       <label class="form-label">{{ t('settings.genderLabel') }} *</label>
       <div class="gender-picker" role="radiogroup">
         <button
@@ -56,7 +84,7 @@ async function onOnboarded() {
           :class="{ selected: onboardGender === 'boy' }"
           :aria-checked="onboardGender === 'boy'"
           role="radio"
-          @click="onboardGender = 'boy'"
+          @click="onboardGender = 'boy'; err.clear('gender')"
         >
           <span class="gender-emoji">👦</span>{{ t('settings.genderBoy') }}
         </button>
@@ -66,11 +94,12 @@ async function onOnboarded() {
           :class="{ selected: onboardGender === 'girl' }"
           :aria-checked="onboardGender === 'girl'"
           role="radio"
-          @click="onboardGender = 'girl'"
+          @click="onboardGender = 'girl'; err.clear('gender')"
         >
           <span class="gender-emoji">👧</span>{{ t('settings.genderGirl') }}
         </button>
       </div>
+      <p v-if="err.get('gender')" class="field-error">{{ err.get('gender') }}</p>
     </div>
     <div class="form-field">
       <label class="form-label">{{ t('settings.avatarLabel') }}</label>
@@ -87,11 +116,7 @@ async function onOnboarded() {
         </button>
       </div>
     </div>
-    <button
-      class="btn btn-primary btn-block btn-lg"
-      :disabled="!onboardName.trim() || !onboardBirthDate || !onboardGender"
-      @click="onOnboarded"
-    >
+    <button class="btn btn-primary btn-block btn-lg" @click="onOnboarded">
       {{ t('common.start') }}
     </button>
   </BaseModal>

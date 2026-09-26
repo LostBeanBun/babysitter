@@ -5,6 +5,7 @@ import type { TemperatureMethod } from '@/types'
 import { TEMP_METHOD_LIST } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useTemperatureStore } from '@/stores/temperature'
+import { useFormErrors } from '@/composables/useFormErrors'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 
@@ -16,6 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{ saved: []; cancelled: [] }>()
 
 const temperatureStore = useTemperatureStore()
+const err = useFormErrors()
 
 const value = ref<string>(props.editing?.value != null ? String(props.editing.value) : '')
 const method = ref<TemperatureMethod | ''>(props.editing?.method ?? '')
@@ -23,14 +25,15 @@ const time = ref(toDateTimeLocal(props.editing?.time ?? Date.now()))
 const notes = ref(props.editing?.notes ?? '')
 
 async function submit() {
+  err.clearAll()
   const v = Number(value.value)
   if (value.value === '' || isNaN(v) || v < 35 || v > 43) {
-    alert(t('temperature.invalidValue'))
+    err.set('value', t('temperature.invalidValue'))
     return
   }
   const ts = fromDateTimeLocal(time.value)
   if (ts == null || isNaN(ts)) {
-    alert(t('temperature.invalidTime'))
+    err.set('time', t('temperature.invalidTime'))
     return
   }
   if (props.editing) {
@@ -54,7 +57,7 @@ async function submit() {
 
 <template>
   <div class="temperature-form">
-    <div class="form-field">
+    <div class="form-field" :class="{ 'has-error': err.has('value') }">
       <label class="form-label">{{ t('temperature.valueLabel') }}</label>
       <div class="value-wrap">
         <input
@@ -66,9 +69,11 @@ async function submit() {
           :placeholder="t('temperature.valuePlaceholder')"
           class="form-input"
           inputmode="decimal"
+          @input="err.clear('value')"
         />
-        <span class="value-unit">℃</span>
+        <span class="value-unit">°C</span>
       </div>
+      <p v-if="err.get('value')" class="field-error">{{ err.get('value') }}</p>
     </div>
 
     <p class="form-label">{{ t('temperature.methodLabel') }}</p>
@@ -86,9 +91,16 @@ async function submit() {
       </button>
     </div>
 
-    <div class="form-field">
+    <div class="form-field" :class="{ 'has-error': err.has('time') }">
       <label class="form-label">{{ t('temperature.timeLabel') }}</label>
-      <input v-model="time" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
+      <input
+        v-model="time"
+        type="datetime-local" step="1"
+        :placeholder="t('common.selectDateTime')"
+        class="form-input"
+        @input="err.clear('time')"
+      />
+      <p v-if="err.get('time')" class="field-error">{{ err.get('time') }}</p>
     </div>
 
     <FormNotes v-model="notes" :label="t('temperature.notesLabel')" :placeholder="t('common.optional')" />

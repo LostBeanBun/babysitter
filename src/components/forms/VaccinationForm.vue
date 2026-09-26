@@ -13,6 +13,7 @@ import {
   type VaccinePlanCategory,
 } from '@/constants/vaccinePlan'
 import BaseModal from '@/components/common/BaseModal.vue'
+import { useFormErrors } from '@/composables/useFormErrors'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 
@@ -25,6 +26,7 @@ const emit = defineEmits<{ saved: []; cancelled: [] }>()
 
 const vaccinationStore = useVaccinationStore()
 const babyStore = useBabyStore()
+const err = useFormErrors()
 
 const name = ref(props.editing?.name ?? '')
 const dose = ref(props.editing?.dose ?? '')
@@ -62,13 +64,14 @@ function pickFromPlan(item: VaccinePlanItem) {
 }
 
 async function submit() {
+  err.clearAll()
   if (!name.value.trim()) {
-    alert(t('vaccination.invalidName'))
+    err.set('name', t('vaccination.invalidName'))
     return
   }
   const d = fromDateTimeLocal(date.value + 'T00:00:00')
   if (d == null || isNaN(d)) {
-    alert(t('vaccination.invalidDate'))
+    err.set('date', t('vaccination.invalidDate'))
     return
   }
   if (props.editing) {
@@ -94,14 +97,21 @@ async function submit() {
 
 <template>
   <div class="vaccination-form">
-    <div class="form-field">
+    <div class="form-field" :class="{ 'has-error': err.has('name') }">
       <label class="form-label">{{ t('vaccination.nameLabel') }}</label>
       <div class="name-row">
-        <input v-model="name" type="text" :placeholder="t('vaccination.namePlaceholder')" class="form-input" />
+        <input
+          v-model="name"
+          type="text"
+          :placeholder="t('vaccination.namePlaceholder')"
+          class="form-input"
+          @input="err.clear('name')"
+        />
         <button type="button" class="btn btn-outline plan-btn" @click="planOpen = true">
           📋 {{ t('vaccination.planPicker') }}
         </button>
       </div>
+      <p v-if="err.get('name')" class="field-error">{{ err.get('name') }}</p>
     </div>
 
     <div class="form-field">
@@ -109,9 +119,16 @@ async function submit() {
       <input v-model="dose" type="text" :placeholder="t('vaccination.dosePlaceholder')" class="form-input" />
     </div>
 
-    <div class="form-field">
+    <div class="form-field" :class="{ 'has-error': err.has('date') }">
       <label class="form-label">{{ t('vaccination.dateLabel') }}</label>
-      <input v-model="date" type="date" :placeholder="t('common.selectDate')" class="form-input" />
+      <input
+        v-model="date"
+        type="date"
+        :placeholder="t('common.selectDate')"
+        class="form-input"
+        @input="err.clear('date')"
+      />
+      <p v-if="err.get('date')" class="field-error">{{ err.get('date') }}</p>
     </div>
 
     <p class="form-label">{{ t('vaccination.statusLabel') }}</p>

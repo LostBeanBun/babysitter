@@ -52,10 +52,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
         </button>
         <div v-show="langOpen" class="lang-menu" role="menu">
           <button type="button" role="menuitem" :class="{ active: locale === 'zh-CN' }" @click="chooseLang('zh-CN')">
-            中文
+            {{ t('language.zh') }}
           </button>
           <button type="button" role="menuitem" :class="{ active: locale === 'en-US' }" @click="chooseLang('en-US')">
-            English
+            {{ t('language.en') }}
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { SLEEP_TYPE_LABELS } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/format'
 import { useSleepStore } from '@/stores/sleep'
 import { useActiveTimer } from '@/composables/useActiveTimer'
+import { useFormErrors } from '@/composables/useFormErrors'
 import { showToast } from '@/composables/useToast'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
@@ -19,6 +20,7 @@ const emit = defineEmits<{ saved: []; cancelled: []; startRecord: [] }>()
 
 const sleepStore = useSleepStore()
 const activeTimer = useActiveTimer()
+const err = useFormErrors()
 
 const type = ref<SleepType>(props.editing?.type ?? 'nap')
 const notes = ref(props.editing?.notes ?? '')
@@ -55,14 +57,20 @@ onMounted(() => {
 })
 
 async function submit() {
+  err.clearAll()
   try {
-    const start = fromDateTimeLocal(startTime.value) ?? Date.now()
+    const start = fromDateTimeLocal(startTime.value)
+    if (start == null) {
+      err.set('startTime', t('sleep.invalidStart'))
+      return
+    }
     const end = endTime.value ? fromDateTimeLocal(endTime.value) : undefined
 
+    // 计时中：结束记录，结束时间写回（空则取当前时间）
     if (isRecording.value && activeEntry.value) {
       const endTs = end ?? Date.now()
       if (endTs <= start) {
-        alert(t('sleep.invalidOrder'))
+        err.set('endTime', t('sleep.invalidOrder'))
         return
       }
       await sleepStore.update(activeEntry.value.recordId, {
@@ -75,12 +83,12 @@ async function submit() {
     }
 
     if (isEditing.value && props.editing) {
-      if (!end) {
-        alert(t('sleep.invalidRange'))
+      if (end == null) {
+        err.set('endTime', t('sleep.invalidRange'))
         return
       }
       if (end <= start) {
-        alert(t('sleep.invalidOrder'))
+        err.set('endTime', t('sleep.invalidOrder'))
         return
       }
       await sleepStore.update(props.editing.id, {
@@ -93,6 +101,16 @@ async function submit() {
       return
     }
 
+    // 新记录：结束时间已填 → 直接保存；空 → 从输入开始时间启动计时
+    if (end != null) {
+      if (end <= start) {
+        err.set('endTime', t('sleep.invalidOrder'))
+        return
+      }
+      await sleepStore.add({ type: type.value, startTime: start, endTime: end, notes: notes.value || undefined })
+      emit('saved')
+      return
+    }
     const id = await sleepStore.add({ type: type.value, startTime: start, notes: notes.value || undefined })
     activeTimer.start('sleep', id, start)
     emit('startRecord')
@@ -112,6 +130,7 @@ async function submit() {
         type="button"
         class="type-btn"
         :class="{ selected: type === key }"
+        :disabled="isRecording"
         @click="type = key"
       >
         <span class="type-icon">{{ key === 'night' ? '🌙' : '😴' }}</span>
@@ -120,19 +139,28 @@ async function submit() {
     </div>
 
     <div class="time-row">
-      <div class="form-field">
+      <div class="form-field" :class="{ 'has-error': err.has('startTime') }">
         <label class="form-label">{{ t('sleep.startLabel') }}</label>
         <input
           v-model="startTime"
-          type="datetime-local"
+          type="datetime-local" step="1"
           :placeholder="t('common.selectDateTime')"
           class="form-input"
           :disabled="isRecording"
+          @input="err.clear('startTime')"
         />
+        <p v-if="err.get('startTime')" class="field-error">{{ err.get('startTime') }}</p>
       </div>
-      <div class="form-field">
+      <div class="form-field" :class="{ 'has-error': err.has('endTime') }">
         <label class="form-label">{{ t('sleep.endLabel') }}</label>
-        <input v-model="endTime" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
+        <input
+          v-model="endTime"
+          type="datetime-local" step="1"
+          :placeholder="t('common.selectDateTime')"
+          class="form-input"
+          @input="err.clear('endTime')"
+        />
+        <p v-if="err.get('endTime')" class="field-error">{{ err.get('endTime') }}</p>
       </div>
     </div>
 
@@ -174,6 +202,11 @@ async function submit() {
   border-color: var(--primary);
   background: var(--primary-soft);
   color: var(--primary-dark);
+}
+
+.type-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .type-icon { font-size: 20px; }

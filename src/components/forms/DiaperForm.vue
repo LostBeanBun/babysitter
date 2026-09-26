@@ -5,6 +5,7 @@ import type { DiaperType, DiaperColor, DiaperAmount } from '@/types'
 import { DIAPER_TYPE_LIST, DIAPER_COLOR_LABELS, DIAPER_COLOR_DOTS, DIAPER_AMOUNT_LABELS } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useDiaperStore } from '@/stores/diaper'
+import { useFormErrors } from '@/composables/useFormErrors'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 
@@ -16,6 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{ saved: []; cancelled: [] }>()
 
 const diaperStore = useDiaperStore()
+const err = useFormErrors()
 
 const type = ref<DiaperType>(props.editing?.type ?? 'wet')
 const color = ref<DiaperColor | ''>(props.editing?.color ?? '')
@@ -24,7 +26,12 @@ const time = ref(toDateTimeLocal(props.editing?.time ?? Date.now()))
 const notes = ref(props.editing?.notes ?? '')
 
 async function submit() {
-  const ts = fromDateTimeLocal(time.value) ?? Date.now()
+  err.clearAll()
+  const ts = fromDateTimeLocal(time.value)
+  if (ts == null) {
+    err.set('time', t('diaper.invalidTime'))
+    return
+  }
   if (props.editing) {
     await diaperStore.update(props.editing.id, {
       type: type.value,
@@ -99,9 +106,16 @@ async function submit() {
       </div>
     </div>
 
-    <div class="form-field">
+    <div class="form-field" :class="{ 'has-error': err.has('time') }">
       <label class="form-label">{{ t('diaper.timeLabel') }}</label>
-      <input v-model="time" type="datetime-local" :placeholder="t('common.selectDateTime')" class="form-input" />
+      <input
+        v-model="time"
+        type="datetime-local" step="1"
+        :placeholder="t('common.selectDateTime')"
+        class="form-input"
+        @input="err.clear('time')"
+      />
+      <p v-if="err.get('time')" class="field-error">{{ err.get('time') }}</p>
     </div>
 
     <FormNotes v-model="notes" :label="t('diaper.notesLabel')" :placeholder="t('common.optional')" />

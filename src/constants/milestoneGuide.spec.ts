@@ -22,8 +22,8 @@ describe('milestoneGuide', () => {
     expect(milestoneGuideForAge(100)).toBeUndefined()
   })
 
-  it('milestoneGuideRange 生成月龄标签', () => {
-    expect(milestoneGuideRange(MILESTONE_GUIDE[0])).toBe('1-3 月')
-    expect(milestoneGuideRange(MILESTONE_GUIDE[3])).toBe('10-12 月')
+  it('milestoneGuideRange 生成月龄范围', () => {
+    expect(milestoneGuideRange(MILESTONE_GUIDE[0])).toBe('1-3')
+    expect(milestoneGuideRange(MILESTONE_GUIDE[3])).toBe('10-12')
   })
 })
