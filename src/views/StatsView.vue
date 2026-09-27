@@ -439,23 +439,25 @@ const trendTooltip = (fmt: (v: number) => string) => ({
 
     <!-- 趋势：趋势图 + 成长曲线 -->
     <template v-else-if="activeView === 'trend'">
-      <ChartCard
-        :title="t('stats.charts.milkTitle')"
-        :subtitle="`${rangeLabel} · ${t('stats.charts.milkSub')}`"
-        :option="milkOption"
-      />
-      <ChartCard :title="t('stats.charts.sleepTitle')" :subtitle="rangeLabel" :option="sleepOption" />
-      <ChartCard
-        :title="t('stats.charts.diaperTitle')"
-        :subtitle="`${rangeLabel} · ${t('stats.charts.diaperSub')}`"
-        :option="diaperOption"
-      />
-      <ChartCard :title="t('stats.charts.pumpTitle')" :subtitle="rangeLabel" :option="pumpOption" />
-      <ChartCard
-        :title="t('stats.charts.temperatureTitle')"
-        :subtitle="`${rangeLabel} · ${t('stats.charts.temperatureSub')}`"
-        :option="temperatureOption"
-      />
+      <div class="trend-grid">
+        <ChartCard
+          :title="t('stats.charts.milkTitle')"
+          :subtitle="`${rangeLabel} · ${t('stats.charts.milkSub')}`"
+          :option="milkOption"
+        />
+        <ChartCard :title="t('stats.charts.sleepTitle')" :subtitle="rangeLabel" :option="sleepOption" />
+        <ChartCard
+          :title="t('stats.charts.diaperTitle')"
+          :subtitle="`${rangeLabel} · ${t('stats.charts.diaperSub')}`"
+          :option="diaperOption"
+        />
+        <ChartCard :title="t('stats.charts.pumpTitle')" :subtitle="rangeLabel" :option="pumpOption" />
+        <ChartCard
+          :title="t('stats.charts.temperatureTitle')"
+          :subtitle="`${rangeLabel} · ${t('stats.charts.temperatureSub')}`"
+          :option="temperatureOption"
+        />
+      </div>
 
       <!-- 成长曲线 -->
       <p class="section-title">{{ t('stats.growthSection') }}</p>
@@ -510,6 +512,23 @@ const trendTooltip = (fmt: (v: number) => string) => ({
   min-width: 0;
   border-radius: var(--radius);
   box-shadow: var(--shadow-xs);
+}
+
+/* ===== 平板适配（700–1439px）：趋势图两列、筛选控件收窄 ===== */
+@media (min-width: 700px) and (max-width: 1439px) {
+  .range-select {
+    max-width: 360px;
+  }
+
+  .trend-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .trend-grid .card + .card {
+    margin-top: 0;
+  }
 }
 
 .overview-card {

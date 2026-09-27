@@ -372,6 +372,19 @@ const hcSubtitle = computed(() => growthSubtitle('hc', hcPoints.value))
 </template>
 
 <style scoped>
+/* ===== 平板适配（700–1439px）：WHO 成长曲线两列 ===== */
+@media (min-width: 700px) and (max-width: 1439px) {
+  .growth-curve-charts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .growth-curve-charts .card + .card {
+    margin-top: 0;
+  }
+}
+
 .growth-info-btn {
   flex-shrink: 0;
   min-height: 0;

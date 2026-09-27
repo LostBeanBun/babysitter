@@ -579,6 +579,13 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   box-shadow: var(--shadow-xs);
 }
 
+/* ===== 平板适配（700–1439px）：筛选下拉不再拉满整行 ===== */
+@media (min-width: 700px) and (max-width: 1439px) {
+  .filter-select {
+    max-width: 320px;
+  }
+}
+
 .date-toggle {
   position: relative;
   width: 44px;

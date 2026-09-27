@@ -851,17 +851,18 @@ async function confirmClearAll() {
 }
 
 /* PC/平板：设置页为表单型页面，限宽居中避免内容被拉得过宽 */
-@media (min-width: 900px) {
-  .settings-page {
-    max-width: 720px;
-    margin: 0 auto;
-  }
+  /* 平板竖屏（700–899）与 PC：内容列居中收窄 */
+  @media (min-width: 700px) {
+    .settings-page {
+      max-width: 720px;
+      margin: 0 auto;
+    }
 
-  .avatar-picker {
-    max-width: 480px;
-    margin: 0 auto;
+    .avatar-picker {
+      max-width: 480px;
+      margin: 0 auto;
+    }
   }
-}
 
 .avatar-option {
   min-height: 44px;

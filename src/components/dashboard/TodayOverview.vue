@@ -310,11 +310,13 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   gap: 6px;
 }
 
-/* 头部：图标 + 标签 + 右侧上次时间 */
+/* 头部：图标 + 标签 + 右侧上次时间（空间不足时徽标换到第二行，而非挤压标签） */
 .ov-card__head {
   display: flex;
   align-items: center;
   gap: 5px;
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
 
 .ov-card__icon {
@@ -327,6 +329,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   font-weight: 600;
   color: var(--text);
   letter-spacing: 0.1px;
+  white-space: nowrap;
 }
 
 /* 标题行右侧：上次结束时间 */
@@ -342,12 +345,14 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   flex-shrink: 0;
 }
 
-/* 主数值行：左侧大数字 + 右侧参考 */
+/* 主数值行：左侧大数字 + 右侧参考（放不下时参考下移一行，大数字不折断） */
 .ov-card__hero-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 4px;
+  flex-wrap: wrap;
+  row-gap: 2px;
 }
 
 /* 主数值：大号粗体，视觉焦点 */
@@ -359,6 +364,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   color: var(--text);
   margin: 0;
   letter-spacing: -0.03em;
+  white-space: nowrap;
 }
 
 .ov-card__unit {
@@ -368,13 +374,14 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   margin-left: 2px;
 }
 
-/* 参考量：主数值行右侧 */
+/* 参考量：主数值行右侧（换行后右对齐） */
 .ov-card__guide {
   font-size: 11px;
   color: var(--text-muted);
   font-style: italic;
   white-space: nowrap;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .ov-card--milk .ov-card__hero  { color: #af52de; }
@@ -433,7 +440,8 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 }
 
 /* ===== 响应式 ===== */
-@media (max-width: 520px) {
+/* 手机（≤699）：单列大卡 */
+@media (max-width: 699px) {
   .overview-grid {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -441,6 +449,17 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 
   .ov-card__hero {
     font-size: 22px;
+  }
+}
+
+/* 平板竖屏（700–899）：两列，信息量最大的奶量卡独占整行 */
+@media (min-width: 700px) and (max-width: 899px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ov-card--milk {
+    grid-column: 1 / -1;
   }
 }
 
