@@ -107,6 +107,10 @@ const lastSleep = computed(() => {
   const sorted = [...sleepStore.sleeps].sort((a, b) => (b.endTime ?? b.startTime) - (a.endTime ?? a.startTime))
   return sorted[0]
 })
+const lastDiaper = computed(() => {
+  const sorted = [...diaperStore.diapers].sort((a, b) => b.time - a.time)
+  return sorted[0]
+})
 const sinceMs = computed(() => {
   if (!lastFeeding.value) return null
   const end = lastFeeding.value.endTime ?? lastFeeding.value.startTime
@@ -116,6 +120,10 @@ const sinceSleepMs = computed(() => {
   if (!lastSleep.value) return null
   const end = lastSleep.value.endTime ?? lastSleep.value.startTime
   return props.now - end
+})
+const sinceDiaperMs = computed(() => {
+  if (!lastDiaper.value) return null
+  return props.now - lastDiaper.value.time
 })
 const recommendedMs = computed(() => recommendedIntervalMs(activeBaby.value))
 const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommendedMs.value)
@@ -237,6 +245,12 @@ const guide = computed(() => dailyGuide(activeBaby.value))
           <div class="ov-card__head">
             <span class="ov-card__icon">🧷</span>
             <span class="ov-card__label">{{ t('dashboard.statDiaper') }}</span>
+            <span v-if="lastDiaper" class="ov-card__alert">
+              {{ formatTime(lastDiaper.time) }}
+              <template v-if="sinceDiaperMs != null && sinceDiaperMs >= 0"
+                > · {{ formatDuration(sinceDiaperMs) }}{{ t('common.ago') }}</template
+              >
+            </span>
           </div>
           <div class="ov-card__hero-row">
             <p class="ov-card__hero">{{ todayDiapers.length }}<span class="ov-card__unit">{{ t('common.timesShort') }}</span></p>
