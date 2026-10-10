@@ -54,7 +54,7 @@ const nowTimer = window.setInterval(() => (now.value = Date.now()), 60_000)
 onUnmounted(() => window.clearInterval(nowTimer))
 
 // 时间范围选择
-const rangeKey = ref('7d')
+const rangeKey = ref('today')
 const range = computed(() => RANGE_PRESETS.find((p) => p.key === rangeKey.value)!)
 const rangeStart = computed(() => range.value.getRange(now.value)[0])
 const rangeEnd = computed(() => range.value.getRange(now.value)[1])
