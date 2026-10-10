@@ -3,6 +3,8 @@
  * months 为建议接种月龄（0 表示出生时）；实际接种日期由宝宝出生日期推算。
  * 免费 = 国家免疫规划疫苗；自费 = 常见自费（二类）疫苗。
  */
+import { addMonths, formatDate, parseDateOnly } from '@/utils/format'
+
 export interface VaccinePlanItem {
   /** 疫苗名称 */
   name: string
@@ -70,11 +72,7 @@ export const SELF_PAID_VACCINE_PLAN: VaccinePlanItem[] = [
 
 /** 出生日期 + 月龄 → 建议接种日期（YYYY-MM-DD，月末溢出钳制） */
 export function planDateFromBirth(birthDate: string, months: number): string {
-  const d = new Date(birthDate + 'T00:00:00')
-  const m = d.getMonth() + months
-  const y = d.getFullYear() + Math.floor(m / 12)
-  const mm = ((m % 12) + 12) % 12
-  const day = Math.min(d.getDate(), new Date(y, mm + 1, 0).getDate())
-  const dt = new Date(y, mm, day)
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+  const birth = parseDateOnly(birthDate)
+  if (birth == null) return ''
+  return formatDate(addMonths(birth, months))
 }

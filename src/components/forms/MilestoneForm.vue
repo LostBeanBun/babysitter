@@ -5,8 +5,10 @@ import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useMilestoneStore } from '@/stores/milestone'
 import { MILESTONE_TYPE_LIST } from '@/constants'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { useRecordForm } from '@/composables/useRecordForm'
 import { MILESTONE_GUIDE, milestoneGuideRange } from '@/constants/milestoneGuide'
 import type { MilestoneType } from '@/types'
+import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 
@@ -25,28 +27,23 @@ const time = ref(toDateTimeLocal(props.editing?.time ?? Date.now()))
 const notes = ref(props.editing?.notes ?? '')
 const guideOpen = ref(false)
 
-async function submit() {
-  err.clearAll()
+function validate() {
   const ts = fromDateTimeLocal(time.value)
   if (ts == null || isNaN(ts)) {
     err.set('time', t('milestone.invalidTime'))
-    return
+    return null
   }
-  if (props.editing) {
-    await milestoneStore.update(props.editing.id, {
-      time: ts,
-      type: type.value,
-      notes: notes.value || undefined,
-    })
-  } else {
-    await milestoneStore.add({
-      time: ts,
-      type: type.value,
-      notes: notes.value || undefined,
-    })
-  }
-  emit('saved')
+  return { time: ts, type: type.value, notes: notes.value || undefined }
 }
+
+const { submit } = useRecordForm({
+  err,
+  editing: props.editing,
+  validate,
+  add: (payload) => milestoneStore.add(payload),
+  update: (id, payload) => milestoneStore.update(id, payload),
+  onSaved: () => emit('saved'),
+})
 </script>
 
 <template>
@@ -85,17 +82,15 @@ async function submit() {
       </div>
     </div>
 
-    <div class="form-field" :class="{ 'has-error': err.has('time') }">
-      <label class="form-label">{{ t('milestone.timeLabel') }}</label>
-      <input
-        v-model="time"
-        type="datetime-local" step="1"
-        :placeholder="t('common.selectDateTime')"
-        class="form-input"
-        @input="err.clear('time')"
-      />
-      <p v-if="err.get('time')" class="field-error">{{ err.get('time') }}</p>
-    </div>
+    <TextField
+      v-model="time"
+      type="datetime-local"
+      step="1"
+      :label="t('milestone.timeLabel')"
+      :errors="err"
+      error-key="time"
+      :placeholder="t('common.selectDateTime')"
+    />
 
     <FormNotes v-model="notes" :label="t('milestone.notesLabel')" :placeholder="t('common.optional')" />
 

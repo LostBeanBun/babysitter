@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DiaperType, DiaperColor, DiaperAmount } from '@/types'
 import { DIAPER_TYPE_LIST, DIAPER_COLOR_LABELS, DIAPER_COLOR_DOTS, DIAPER_AMOUNT_LABELS } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useDiaperStore } from '@/stores/diaper'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { useRecordForm } from '@/composables/useRecordForm'
+import ChoiceGrid, { type ChoiceOption } from '@/components/common/ChoiceGrid.vue'
+import FormField from '@/components/common/FormField.vue'
+import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 
@@ -25,56 +29,41 @@ const amount = ref<DiaperAmount | ''>(props.editing?.amount ?? '')
 const time = ref(toDateTimeLocal(props.editing?.time ?? Date.now()))
 const notes = ref(props.editing?.notes ?? '')
 
-async function submit() {
-  err.clearAll()
+const typeOptions = computed<ChoiceOption[]>(() =>
+  DIAPER_TYPE_LIST.map((opt) => ({ value: opt.value, icon: opt.icon, label: t(opt.label), color: opt.color })),
+)
+
+function validate() {
   const ts = fromDateTimeLocal(time.value)
   if (ts == null) {
     err.set('time', t('diaper.invalidTime'))
-    return
+    return null
   }
-  if (props.editing) {
-    await diaperStore.update(props.editing.id, {
-      type: type.value,
-      time: ts,
-      color: color.value || undefined,
-      amount: amount.value || undefined,
-      notes: notes.value || undefined,
-    })
-  } else {
-    await diaperStore.add({
-      type: type.value,
-      time: ts,
-      color: color.value || undefined,
-      amount: amount.value || undefined,
-      notes: notes.value || undefined,
-    })
+  return {
+    type: type.value,
+    time: ts,
+    color: color.value || undefined,
+    amount: amount.value || undefined,
+    notes: notes.value || undefined,
   }
-  emit('saved')
 }
+
+const { submit } = useRecordForm({
+  err,
+  editing: props.editing,
+  validate,
+  add: (payload) => diaperStore.add(payload),
+  update: (id, payload) => diaperStore.update(id, payload),
+  onSaved: () => emit('saved'),
+})
 </script>
 
 <template>
   <div class="diaper-form">
     <p class="form-label">{{ t('diaper.typeLabel') }}</p>
-    <div class="type-grid">
-      <button
-        v-for="opt in DIAPER_TYPE_LIST"
-        :key="opt.value"
-        type="button"
-        class="type-btn"
-        :class="{ selected: type === opt.value }"
-        :style="
-          type === opt.value ? { background: opt.color + '22', borderColor: opt.color, color: opt.color } : undefined
-        "
-        @click="type = opt.value"
-      >
-        <span class="type-icon">{{ opt.icon }}</span>
-        <span class="type-label">{{ t(opt.label) }}</span>
-      </button>
-    </div>
+    <ChoiceGrid v-model="type" :options="typeOptions" />
 
-    <div class="form-field">
-      <label class="form-label">{{ t('diaper.colorLabel') }}</label>
+    <FormField :label="t('diaper.colorLabel')" tag="p">
       <div class="color-row">
         <button
           v-for="(label, key) in DIAPER_COLOR_LABELS"
@@ -88,10 +77,9 @@ async function submit() {
           <span class="color-label">{{ t(label) }}</span>
         </button>
       </div>
-    </div>
+    </FormField>
 
-    <div class="form-field">
-      <label class="form-label">{{ t('diaper.amountLabel') }}</label>
+    <FormField :label="t('diaper.amountLabel')" tag="p">
       <div class="amount-row">
         <button
           v-for="(label, key) in DIAPER_AMOUNT_LABELS"
@@ -104,19 +92,17 @@ async function submit() {
           {{ t(label) }}
         </button>
       </div>
-    </div>
+    </FormField>
 
-    <div class="form-field" :class="{ 'has-error': err.has('time') }">
-      <label class="form-label">{{ t('diaper.timeLabel') }}</label>
-      <input
-        v-model="time"
-        type="datetime-local" step="1"
-        :placeholder="t('common.selectDateTime')"
-        class="form-input"
-        @input="err.clear('time')"
-      />
-      <p v-if="err.get('time')" class="field-error">{{ err.get('time') }}</p>
-    </div>
+    <TextField
+      v-model="time"
+      type="datetime-local"
+      step="1"
+      :label="t('diaper.timeLabel')"
+      :errors="err"
+      error-key="time"
+      :placeholder="t('common.selectDateTime')"
+    />
 
     <FormNotes v-model="notes" :label="t('diaper.notesLabel')" :placeholder="t('common.optional')" />
 
@@ -125,41 +111,6 @@ async function submit() {
 </template>
 
 <style scoped>
-.type-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.type-btn {
-  min-height: 44px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 6px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
-  background: var(--surface);
-  transition: all 0.3s var(--spring);
-}
-
-.type-btn.selected {
-  border-width: 1.5px;
-}
-
-.type-icon {
-  font-size: 20px;
-}
-
-.type-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
 .color-row {
   display: flex;
   flex-wrap: wrap;

@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { TemperatureMethod } from '@/types'
 import { TEMP_METHOD_LIST } from '@/constants'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useTemperatureStore } from '@/stores/temperature'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { useRecordForm } from '@/composables/useRecordForm'
+import ChoiceGrid, { type ChoiceOption } from '@/components/common/ChoiceGrid.vue'
+import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 
@@ -24,143 +27,70 @@ const method = ref<TemperatureMethod | ''>(props.editing?.method ?? '')
 const time = ref(toDateTimeLocal(props.editing?.time ?? Date.now()))
 const notes = ref(props.editing?.notes ?? '')
 
-async function submit() {
-  err.clearAll()
+const methodOptions = computed<ChoiceOption[]>(() =>
+  TEMP_METHOD_LIST.map((opt) => ({ value: opt.value, icon: opt.icon, label: t(opt.label) })),
+)
+
+function validate() {
   const v = Number(value.value)
   if (value.value === '' || isNaN(v) || v < 35 || v > 43) {
     err.set('value', t('temperature.invalidValue'))
-    return
+    return null
   }
   const ts = fromDateTimeLocal(time.value)
   if (ts == null || isNaN(ts)) {
     err.set('time', t('temperature.invalidTime'))
-    return
+    return null
   }
-  if (props.editing) {
-    await temperatureStore.update(props.editing.id, {
-      time: ts,
-      value: v,
-      method: method.value || undefined,
-      notes: notes.value || undefined,
-    })
-  } else {
-    await temperatureStore.add({
-      time: ts,
-      value: v,
-      method: method.value || undefined,
-      notes: notes.value || undefined,
-    })
+  return {
+    time: ts,
+    value: v,
+    method: method.value || undefined,
+    notes: notes.value || undefined,
   }
-  emit('saved')
 }
+
+const { submit } = useRecordForm({
+  err,
+  editing: props.editing,
+  validate,
+  add: (payload) => temperatureStore.add(payload),
+  update: (id, payload) => temperatureStore.update(id, payload),
+  onSaved: () => emit('saved'),
+})
 </script>
 
 <template>
   <div class="temperature-form">
-    <div class="form-field" :class="{ 'has-error': err.has('value') }">
-      <label class="form-label">{{ t('temperature.valueLabel') }}</label>
-      <div class="value-wrap">
-        <input
-          v-model="value"
-          type="number"
-          min="35"
-          max="43"
-          step="0.1"
-          :placeholder="t('temperature.valuePlaceholder')"
-          class="form-input"
-          inputmode="decimal"
-          @input="err.clear('value')"
-        />
-        <span class="value-unit">°C</span>
-      </div>
-      <p v-if="err.get('value')" class="field-error">{{ err.get('value') }}</p>
-    </div>
+    <TextField
+      v-model="value"
+      type="number"
+      min="35"
+      max="43"
+      step="0.1"
+      inputmode="decimal"
+      suffix="°C"
+      :label="t('temperature.valueLabel')"
+      :errors="err"
+      error-key="value"
+      :placeholder="t('temperature.valuePlaceholder')"
+    />
 
     <p class="form-label">{{ t('temperature.methodLabel') }}</p>
-    <div class="method-grid">
-      <button
-        v-for="opt in TEMP_METHOD_LIST"
-        :key="opt.value"
-        type="button"
-        class="method-btn"
-        :class="{ selected: method === opt.value }"
-        @click="method = method === opt.value ? '' : opt.value"
-      >
-        <span class="method-icon">{{ opt.icon }}</span>
-        <span class="method-label">{{ t(opt.label) }}</span>
-      </button>
-    </div>
+    <ChoiceGrid v-model="method" :options="methodOptions" :columns="4" clearable />
 
-    <div class="form-field" :class="{ 'has-error': err.has('time') }">
-      <label class="form-label">{{ t('temperature.timeLabel') }}</label>
-      <input
-        v-model="time"
-        type="datetime-local" step="1"
-        :placeholder="t('common.selectDateTime')"
-        class="form-input"
-        @input="err.clear('time')"
-      />
-      <p v-if="err.get('time')" class="field-error">{{ err.get('time') }}</p>
-    </div>
+    <TextField
+      v-model="time"
+      type="datetime-local"
+      step="1"
+      :label="t('temperature.timeLabel')"
+      :errors="err"
+      error-key="time"
+      :placeholder="t('common.selectDateTime')"
+    />
 
     <FormNotes v-model="notes" :label="t('temperature.notesLabel')" :placeholder="t('common.optional')" />
 
     <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
   </div>
 </template>
-
-<style scoped>
-.value-wrap {
-  position: relative;
-}
-
-.value-wrap .form-input {
-  padding-right: 34px;
-}
-
-.value-unit {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  color: var(--text-muted);
-  pointer-events: none;
-}
-
-.method-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.method-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-height: 44px;
-  padding: 10px 4px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
-  background: var(--surface);
-  transition: all 0.3s var(--spring);
-}
-
-.method-btn.selected {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.method-icon {
-  font-size: 18px;
-}
-
-.method-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-</style>

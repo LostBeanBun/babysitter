@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useGrowthStore } from '@/stores/growth'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { useRecordForm } from '@/composables/useRecordForm'
+import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 
@@ -32,106 +34,90 @@ const headCircumference = ref<string>(
 )
 const notes = ref(props.editing?.notes ?? '')
 
-async function submit() {
-  err.clearAll()
+function validate() {
   const d = fromDateTimeLocal(date.value + 'T00:00:00')
   if (d == null || isNaN(d)) {
     err.set('date', t('growth.invalidDate'))
-    return
+    return null
   }
   const w = weight.value ? Number(weight.value) : undefined
   const h = height.value ? Number(height.value) : undefined
   const hc = headCircumference.value ? Number(headCircumference.value) : undefined
   if (w !== undefined && (isNaN(w) || w <= 0)) {
     err.set('weight', t('growth.invalidWeight'))
-    return
+    return null
   }
   if (h !== undefined && (isNaN(h) || h <= 0)) {
     err.set('height', t('growth.invalidHeight'))
-    return
+    return null
   }
   if (hc !== undefined && (isNaN(hc) || hc <= 0)) {
     err.set('head', t('growth.invalidHead'))
-    return
+    return null
   }
   if (w === undefined && h === undefined && hc === undefined) {
     err.formError.value = t('growth.invalidEmpty')
-    return
+    return null
   }
-
-  if (props.editing) {
-    await growthStore.update(props.editing.id, {
-      date: d,
-      weight: w,
-      height: h,
-      headCircumference: hc,
-      notes: notes.value || undefined,
-    })
-  } else {
-    await growthStore.add({ date: d, weight: w, height: h, headCircumference: hc, notes: notes.value || undefined })
-  }
-  emit('saved')
+  return { date: d, weight: w, height: h, headCircumference: hc, notes: notes.value || undefined }
 }
+
+const { submit } = useRecordForm({
+  err,
+  editing: props.editing,
+  validate,
+  add: (payload) => growthStore.add(payload),
+  update: (id, payload) => growthStore.update(id, payload),
+  onSaved: () => emit('saved'),
+})
 </script>
 
 <template>
   <div class="growth-form">
-    <div class="form-field" :class="{ 'has-error': err.has('date') }">
-      <label class="form-label">{{ t('growth.dateLabel') }}</label>
-      <input
-        v-model="date"
-        type="date"
-        :placeholder="t('common.selectDate')"
-        class="form-input"
-        @input="err.clear('date')"
-      />
-      <p v-if="err.get('date')" class="field-error">{{ err.get('date') }}</p>
-    </div>
+    <TextField
+      v-model="date"
+      type="date"
+      :label="t('growth.dateLabel')"
+      :errors="err"
+      error-key="date"
+      :placeholder="t('common.selectDate')"
+    />
 
-    <div class="form-field" :class="{ 'has-error': err.has('weight') }">
-      <label class="form-label">{{ t('growth.weightLabel') }}</label>
-      <input
-        v-model="weight"
-        type="number"
-        min="0"
-        step="0.1"
-        :placeholder="t('growth.weightPlaceholder')"
-        class="form-input"
-        inputmode="decimal"
-        @input="err.clear('weight')"
-      />
-      <p v-if="err.get('weight')" class="field-error">{{ err.get('weight') }}</p>
-    </div>
+    <TextField
+      v-model="weight"
+      type="number"
+      min="0"
+      step="0.1"
+      inputmode="decimal"
+      :label="t('growth.weightLabel')"
+      :errors="err"
+      error-key="weight"
+      :placeholder="t('growth.weightPlaceholder')"
+    />
 
-    <div class="form-field" :class="{ 'has-error': err.has('height') }">
-      <label class="form-label">{{ t('growth.heightLabel') }}</label>
-      <input
-        v-model="height"
-        type="number"
-        min="0"
-        step="0.5"
-        :placeholder="t('growth.heightPlaceholder')"
-        class="form-input"
-        inputmode="decimal"
-        @input="err.clear('height')"
-      />
-      <p v-if="err.get('height')" class="field-error">{{ err.get('height') }}</p>
-    </div>
+    <TextField
+      v-model="height"
+      type="number"
+      min="0"
+      step="0.5"
+      inputmode="decimal"
+      :label="t('growth.heightLabel')"
+      :errors="err"
+      error-key="height"
+      :placeholder="t('growth.heightPlaceholder')"
+    />
 
-    <div class="form-field" :class="{ 'has-error': err.has('head') }">
-      <label class="form-label">{{ t('growth.headLabel') }}</label>
-      <input
-        v-model="headCircumference"
-        type="number"
-        min="0"
-        step="0.1"
-        :placeholder="t('growth.headPlaceholder')"
-        class="form-input"
-        inputmode="decimal"
-        @input="err.clear('head')"
-      />
-      <p v-if="err.get('head')" class="field-error">{{ err.get('head') }}</p>
-    </div>
+    <TextField
+      v-model="headCircumference"
+      type="number"
+      min="0"
+      step="0.1"
+      inputmode="decimal"
+      :label="t('growth.headLabel')"
+      :errors="err"
+      error-key="head"
+      :placeholder="t('growth.headPlaceholder')"
+    />
 
     <p v-if="err.formError.value" class="form-error">{{ err.formError.value }}</p>
 
