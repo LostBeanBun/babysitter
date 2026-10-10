@@ -10,6 +10,7 @@ import { useVaccinationStore } from '@/stores/vaccination'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import { startOfDay, formatDuration, formatAmount, formatTime } from '@/utils/format'
 import { MS_PER_DAY } from '@/constants'
+import { computeTodayStats } from '@/services/todayStats'
 import { recommendedIntervalMs, recommendedIntervalLabel } from '@/utils/feedingGuide'
 import { dailyGuide } from '@/utils/dailyGuides'
 
@@ -78,23 +79,15 @@ function vaccineDaysLeft(date: number): number {
 }
 
 // 今日汇总
-const totalMilk = computed(() => todayFeedings.value.reduce((sum, f) => sum + (f.amount ?? 0), 0))
-const feedCount = computed(() => todayFeedings.value.length)
-/** 今日泵出总量（吸奶产出） */
-const pumpTotal = computed(() => todayPumpings.value.reduce((s, p) => s + (p.amount ?? 0), 0))
-/** 今日瓶喂母乳消耗量 */
-const bottleBreastmilkTotal = computed(() =>
-  todayFeedings.value.filter((f) => f.type === 'bottle_breastmilk').reduce((s, f) => s + (f.amount ?? 0), 0),
-)
-/** 母乳库存 = 泵出 − 瓶喂母乳消耗（可为负：消耗多于泵出） */
-const breastStock = computed(() => pumpTotal.value - bottleBreastmilkTotal.value)
-
-const sleepTotal = computed(() =>
-  todaySleeps.value.reduce((sum, s) => {
-    const s0 = Math.max(s.startTime, todayStart.value)
-    const e0 = Math.min(s.endTime ?? s.startTime, todayEnd.value)
-    return sum + Math.max(0, e0 - s0)
-  }, 0),
+const stats = computed(() =>
+  computeTodayStats({
+    feedings: todayFeedings.value,
+    diapers: todayDiapers.value,
+    pumpings: todayPumpings.value,
+    sleeps: todaySleeps.value,
+    todayStart: todayStart.value,
+    todayEnd: todayEnd.value,
+  }),
 )
 
 // —— 喂奶提醒 ——
@@ -202,20 +195,20 @@ const guide = computed(() => dailyGuide(activeBaby.value))
             </span>
           </div>
           <div class="ov-card__hero-row">
-            <p class="ov-card__hero">{{ formatAmount(totalMilk) || '0 ml' }}</p>
+            <p class="ov-card__hero">{{ formatAmount(stats.totalMilk) || '0 ml' }}</p>
             <span v-if="guide" class="ov-card__guide">{{ t('dashboard.guideDaily') }} {{ guide.milk }}</span>
           </div>
           <div class="ov-card__details">
             <div class="ov-dt ov-dt--spread">
-              <span class="ov-dt__label">{{ t('dashboard.feedCount') }} <span class="ov-dt__value">{{ feedCount }}{{ t('common.timesShort') }}</span></span>
+              <span class="ov-dt__label">{{ t('dashboard.feedCount') }} <span class="ov-dt__value">{{ stats.feedCount }}{{ t('common.timesShort') }}</span></span>
             </div>
           </div>
           <div class="ov-card__footer">
             <div class="ov-dt">
-              <span class="ov-dt__label">{{ t('dashboard.pumpCount') }} <span class="ov-dt__value">{{ todayPumpings.length }}{{ t('common.timesShort') }}</span></span>
+              <span class="ov-dt__label">{{ t('dashboard.pumpCount') }} <span class="ov-dt__value">{{ stats.pumpCount }}{{ t('common.timesShort') }}</span></span>
             </div>
             <div class="ov-dt">
-              <span class="ov-dt__label">{{ t('dashboard.breastStock') }} <span class="ov-dt__value">{{ formatAmount(breastStock) }}</span></span>
+              <span class="ov-dt__label">{{ t('dashboard.breastStock') }} <span class="ov-dt__value">{{ formatAmount(stats.breastStock) }}</span></span>
             </div>
           </div>
         </div>
@@ -233,7 +226,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
             </span>
           </div>
           <div class="ov-card__hero-row">
-            <p class="ov-card__hero">{{ formatDuration(sleepTotal) }}</p>
+            <p class="ov-card__hero">{{ formatDuration(stats.sleepMs) }}</p>
             <span v-if="guide" class="ov-card__guide">{{ t('dashboard.guideDaily') }} {{ guide.sleep }}</span>
           </div>
         </div>
@@ -253,7 +246,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
             </span>
           </div>
           <div class="ov-card__hero-row">
-            <p class="ov-card__hero">{{ todayDiapers.length }}<span class="ov-card__unit">{{ t('common.timesShort') }}</span></p>
+            <p class="ov-card__hero">{{ stats.diaperCount }}<span class="ov-card__unit">{{ t('common.timesShort') }}</span></p>
             <span v-if="guide" class="ov-card__guide">{{ t('dashboard.guideDaily') }} {{ guide.diaper }}</span>
           </div>
         </div>

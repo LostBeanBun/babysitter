@@ -1,4 +1,5 @@
 import { db, type BabySitterDB } from '@/db'
+import { RECORD_TABLES } from '@/db/tables'
 import i18n from '@/i18n'
 import zhCN from '@/i18n/locales/zh-CN'
 import enUS from '@/i18n/locales/en-US'
@@ -19,19 +20,13 @@ import { downloadBlob, formatDate, formatTime, parseDate, startOfDay } from '@/u
 
 const t = i18n.global.t
 
+/** CSV 数据列（不含可选宝宝名列），列序单一来源 */
+const CSV_COLUMN_KEYS = ['recordType', 'date', 'time', 'endDate', 'endTime', 'item', 'value', 'duration', 'status', 'notes'] as const
+
 /** 表头别名（导入用）：zh/en 两语言列名 + 内部键值，兼容任意语言导出的文件 */
 const HEADER_ALIASES: Record<string, string[]> = {
   babyName: [zhCN.exportCsv.babyName, enUS.exportCsv.babyName, 'babyName'],
-  recordType: [zhCN.exportCsv.recordType, enUS.exportCsv.recordType, 'recordType'],
-  date: [zhCN.exportCsv.date, enUS.exportCsv.date, 'date'],
-  time: [zhCN.exportCsv.time, enUS.exportCsv.time, 'time'],
-  endDate: [zhCN.exportCsv.endDate, enUS.exportCsv.endDate, 'endDate'],
-  endTime: [zhCN.exportCsv.endTime, enUS.exportCsv.endTime, 'endTime'],
-  item: [zhCN.exportCsv.item, enUS.exportCsv.item, 'item'],
-  value: [zhCN.exportCsv.value, enUS.exportCsv.value, 'value'],
-  duration: [zhCN.exportCsv.duration, enUS.exportCsv.duration, 'duration'],
-  status: [zhCN.exportCsv.status, enUS.exportCsv.status, 'status'],
-  notes: [zhCN.exportCsv.notes, enUS.exportCsv.notes, 'notes'],
+  ...Object.fromEntries(CSV_COLUMN_KEYS.map((k) => [k, [zhCN.exportCsv[k], enUS.exportCsv[k], k]])),
 }
 
 /** 按表头取单元格：当前 locale 列名 -> zh -> en -> 内部键值，未命中返回 '' */
@@ -66,14 +61,14 @@ const LABELS_ZH: Record<string, string> = {
   both: '尿+便',
   // 纸尿裤颜色
   yellow: '黄色',
-  brown: '褐色',
+  brown: '棕色',
   green: '绿色',
   black: '黑色',
   red: '红色',
   other: '其他',
   // 纸尿裤量
   small: '少量',
-  medium: '中等',
+  medium: '适中',
   large: '大量',
   // 吸奶侧
   left: '左侧',
@@ -87,7 +82,7 @@ const LABELS_ZH: Record<string, string> = {
   // 体温方式
   armpit: '腋下',
   ear: '耳温',
-  forehead: '额头',
+  forehead: '额温',
   rectal: '肛温',
 }
 
@@ -155,6 +150,13 @@ function breastSideLabel(side: string): string {
   return BREAST_SIDE_LABELS_MAP[locale]?.[side] ?? side
 }
 
+/** 旧版 CSV 标签别名（兼容历史导出文件的反查） */
+const LEGACY_LABEL_ALIASES: [string, string][] = [
+  ['褐色', 'brown'],
+  ['中等', 'medium'],
+  ['额头', 'forehead'],
+]
+
 /** 显示文本 -> 内部键值反查表（导入用：zh/en 标签、亲喂侧标签、内部键值自身） */
 const LABEL_REV: Map<string, string> = (() => {
   const m = new Map<string, string>()
@@ -165,6 +167,7 @@ const LABEL_REV: Map<string, string> = (() => {
   for (const byLocale of Object.values(BREAST_SIDE_LABELS_MAP)) {
     for (const [k, v] of Object.entries(byLocale)) if (!m.has(v)) m.set(v, k)
   }
+  for (const [label, key] of LEGACY_LABEL_ALIASES) if (!m.has(label)) m.set(label, key)
   return m
 })()
 
@@ -184,21 +187,33 @@ export function toCsv(rows: (string | number | undefined | null)[][]): string {
   return rows.map((r) => r.map(csvEscape).join(',')).join('\r\n')
 }
 
+type Row = (string | number | undefined | null)[]
+
 /** CSV 表头（仅本地化展示） */
 function csvHeader(withBaby: boolean): Row {
-  const cols = [
-    t('exportCsv.recordType'),
-    t('exportCsv.date'),
-    t('exportCsv.time'),
-    t('exportCsv.endDate'),
-    t('exportCsv.endTime'),
-    t('exportCsv.item'),
-    t('exportCsv.value'),
-    t('exportCsv.duration'),
-    t('exportCsv.status'),
-    t('exportCsv.notes'),
-  ]
+  const cols = CSV_COLUMN_KEYS.map((k) => t(`exportCsv.${k}`))
   return withBaby ? [t('exportCsv.babyName'), ...cols] : cols
+}
+
+/** 开始时间两列：[date, time] */
+function startCells(ts: number): [string, string] {
+  return [formatDate(ts), formatTime(ts)]
+}
+
+/** 结束时间两列：无值时留空 */
+function endCells(ts?: number): [string, string] {
+  return ts ? [formatDate(ts), formatTime(ts)] : ['', '']
+}
+
+/** 时长列：ms → 分钟（无值留空） */
+function minCell(ms?: number): number | string {
+  return ms ? Math.round(ms / 60000) : ''
+}
+
+/** 一条记录行：宝宝名前列 + 固定 10 列（type..notes） */
+function makeRow(nameCol: Row, type: string, cells: [string, string, string, string, string, string, number | string, string, string]): Row {
+  const [date, time, endDate, endTime, item, value, duration, status, notes] = cells
+  return [...nameCol, bl(type), date, time, endDate, endTime, item, value, duration, status, notes]
 }
 
 /**
@@ -207,77 +222,40 @@ function csvHeader(withBaby: boolean): Row {
  * babyName 提供时每行首列插入宝宝名（用于多宝宝合并导出）。
  */
 export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
-  const withBaby = babyName !== undefined
+  const nameCol: Row = babyName !== undefined ? [babyName] : []
   const rows: Row[] = []
-  const nameCol = (): Row => (withBaby ? [babyName] : [])
 
   // 喂养
   for (const f of data.feedings) {
     const typeLabel = f.type === 'breast' && f.side ? bl(f.type) + '·' + breastSideLabel(f.side) : bl(f.type)
-    rows.push([
-      ...nameCol(),
-      bl('feeding'),
-      formatDate(f.startTime),
-      formatTime(f.startTime),
-      f.endTime ? formatDate(f.endTime) : '',
-      f.endTime ? formatTime(f.endTime) : '',
-      typeLabel,
-      f.amount ? `${f.amount} ml` : '',
-      f.duration ? Math.round(f.duration / 60000) : '',
-      '',
-      f.notes ?? '',
-    ])
+    const [ed, et] = endCells(f.endTime)
+    const [d, tm] = startCells(f.startTime)
+    rows.push(makeRow(nameCol, 'feeding', [d, tm, ed, et, typeLabel, f.amount ? `${f.amount} ml` : '', minCell(f.duration), '', f.notes ?? '']))
   }
 
   // 纸尿裤
-  for (const d of data.diapers) {
-    rows.push([
-      ...nameCol(),
-      bl('diaper'),
-      formatDate(d.time),
-      formatTime(d.time),
-      '',
-      '',
-      bl(d.type),
-      [d.color ? bl(d.color) : '', d.amount ? bl(d.amount) : ''].filter(Boolean).join(' · '),
-      '',
-      '',
-      d.notes ?? '',
-    ])
+  for (const g of data.diapers) {
+    const [d, tm] = startCells(g.time)
+    const value = [g.color ? bl(g.color) : '', g.amount ? bl(g.amount) : ''].filter(Boolean).join(' · ')
+    rows.push(makeRow(nameCol, 'diaper', [d, tm, '', '', bl(g.type), value, '', '', g.notes ?? '']))
   }
 
   // 吸奶
   for (const p of data.pumpings) {
-    rows.push([
-      ...nameCol(),
-      bl('pumping'),
-      formatDate(p.startTime),
-      formatTime(p.startTime),
-      p.endTime ? formatDate(p.endTime) : '',
-      p.endTime ? formatTime(p.endTime) : '',
-      breastSideLabel(p.side),
-      p.amount ? `${p.amount} ml` : '',
-      p.duration ? Math.round(p.duration / 60000) : '',
-      '',
-      p.notes ?? '',
-    ])
+    const [ed, et] = endCells(p.endTime)
+    const [d, tm] = startCells(p.startTime)
+    rows.push(
+      makeRow(nameCol, 'pumping', [d, tm, ed, et, breastSideLabel(p.side), p.amount ? `${p.amount} ml` : '', minCell(p.duration), '', p.notes ?? '']),
+    )
   }
 
   // 睡眠
   for (const s of data.sleeps) {
-    rows.push([
-      ...nameCol(),
-      bl('sleep'),
-      formatDate(s.startTime),
-      formatTime(s.startTime),
-      formatDate(s.endTime ?? s.startTime),
-      formatTime(s.endTime ?? s.startTime),
-      bl(s.type),
-      '',
-      s.duration ?? Math.round(((s.endTime ?? s.startTime) - s.startTime) / 60000),
-      '',
-      s.notes ?? '',
-    ])
+    const endTs = s.endTime ?? s.startTime
+    const durMs = s.duration ?? endTs - s.startTime
+    const [d, tm] = startCells(s.startTime)
+    const [ed, et] = startCells(endTs)
+    rows.push(makeRow(nameCol, 'sleep', [d, tm, ed, et, bl(s.type), '', minCell(durMs), '', s.notes ?? '']))
   }
 
   // 成长记录
@@ -286,160 +264,51 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
     if (g.weight != null) parts.push(`${g.weight} kg`)
     if (g.height != null) parts.push(`${g.height} cm`)
     if (g.headCircumference != null) parts.push(`${g.headCircumference} cm`)
-    rows.push([
-      ...nameCol(),
-      bl('growth'),
-      formatDate(g.date),
-      '',
-      '',
-      '',
-      '',
-      parts.join(' · '),
-      '',
-      '',
-      g.notes ?? '',
-    ])
+    rows.push(makeRow(nameCol, 'growth', [formatDate(g.date), '', '', '', '', parts.join(' · '), '', '', g.notes ?? '']))
   }
 
   // 辅食
   for (const sf of data.solidFoods) {
-    rows.push([
-      ...nameCol(),
-      bl('solidFood'),
-      formatDate(sf.time),
-      formatTime(sf.time),
-      '',
-      '',
-      sf.food,
-      sf.amount ?? '',
-      '',
-      '',
-      sf.notes ?? '',
-    ])
+    const [d, tm] = startCells(sf.time)
+    rows.push(makeRow(nameCol, 'solidFood', [d, tm, '', '', sf.food, sf.amount ?? '', '', '', sf.notes ?? '']))
   }
 
   // 用药
   for (const m of data.medications) {
-    rows.push([
-      ...nameCol(),
-      bl('medication'),
-      formatDate(m.time),
-      formatTime(m.time),
-      '',
-      '',
-      m.name,
-      m.dose ?? '',
-      '',
-      '',
-      m.notes ?? '',
-    ])
+    const [d, tm] = startCells(m.time)
+    rows.push(makeRow(nameCol, 'medication', [d, tm, '', '', m.name, m.dose ?? '', '', '', m.notes ?? '']))
   }
 
   // 疫苗
   for (const v of data.vaccinations) {
-    rows.push([
-      ...nameCol(),
-      bl('vaccination'),
-      formatDate(v.date),
-      '',
-      '',
-      '',
-      v.name,
-      v.dose ?? '',
-      '',
-      bl(v.status),
-      v.notes ?? '',
-    ])
+    rows.push(makeRow(nameCol, 'vaccination', [formatDate(v.date), '', '', '', v.name, v.dose ?? '', '', bl(v.status), v.notes ?? '']))
   }
 
   // 体温
   for (const tmp of data.temperatures) {
-    rows.push([
-      ...nameCol(),
-      bl('temperature'),
-      formatDate(tmp.time),
-      formatTime(tmp.time),
-      '',
-      '',
-      tmp.method ? bl(tmp.method) : '',
-      tmp.value != null && tmp.value !== 0 ? `${tmp.value} ℃` : '',
-      '',
-      '',
-      tmp.notes ?? '',
-    ])
+    const [d, tm] = startCells(tmp.time)
+    rows.push(
+      makeRow(nameCol, 'temperature', [
+        d,
+        tm,
+        '',
+        '',
+        tmp.method ? bl(tmp.method) : '',
+        tmp.value != null && tmp.value !== 0 ? `${tmp.value} ℃` : '',
+        '',
+        '',
+        tmp.notes ?? '',
+      ]),
+    )
   }
 
   // 里程碑
   for (const ms of data.milestones) {
-    rows.push([
-      ...nameCol(),
-      bl('milestone'),
-      formatDate(ms.time),
-      formatTime(ms.time),
-      '',
-      '',
-      bl(ms.type),
-      '',
-      '',
-      '',
-      ms.notes ?? '',
-    ])
+    const [d, tm] = startCells(ms.time)
+    rows.push(makeRow(nameCol, 'milestone', [d, tm, '', '', bl(ms.type), '', '', '', ms.notes ?? '']))
   }
 
   return rows
-}
-
-/** 读取单个宝宝的全部记录（按时间排序） */
-async function fetchBabyData(babyId: number): Promise<BabyCsvData> {
-  if (!Number.isFinite(babyId) || babyId <= 0) {
-    throw new Error('Invalid babyId for export')
-  }
-  const [feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures, milestones] =
-    await Promise.all([
-      db.feedings.where('babyId').equals(babyId).sortBy('startTime'),
-      db.diapers.where('babyId').equals(babyId).sortBy('time'),
-      db.pumpings.where('babyId').equals(babyId).sortBy('startTime'),
-      db.sleeps.where('babyId').equals(babyId).sortBy('startTime'),
-      db.growths.where('babyId').equals(babyId).sortBy('date'),
-      db.solidFoods.where('babyId').equals(babyId).sortBy('time'),
-      db.medications.where('babyId').equals(babyId).sortBy('time'),
-      db.vaccinations.where('babyId').equals(babyId).sortBy('date'),
-      db.temperatures.where('babyId').equals(babyId).sortBy('time'),
-      // milestones 表在 v4 新增 babyId 索引，若数据库版本过旧可能抛错，做兼容处理
-      db.milestones.where('babyId').equals(babyId).sortBy('time').catch(() => []),
-    ])
-  return { feedings, diapers, pumpings, sleeps, growths, solidFoods, medications, vaccinations, temperatures, milestones }
-}
-
-/** 导出单个宝宝 CSV（十类记录合并为单个文件，统一宽表结构） */
-export async function exportBabyCsvs(baby: Baby): Promise<void> {
-  if (baby.id === undefined || baby.id === null || !Number.isFinite(baby.id) || baby.id <= 0) {
-    throw new Error('Invalid baby id for export')
-  }
-  const data = await fetchBabyData(baby.id)
-  const rows: Row[] = [csvHeader(false), ...buildBabyCsvRows(data)]
-  const stamp = formatDate(Date.now())
-  downloadBlob(
-    '\ufeff' + toCsv(rows),
-    t('exportCsv.allFileName', { name: baby.name, stamp }),
-    'text/csv;charset=utf-8',
-  )
-}
-
-/** 一键导出全部宝宝的全部记录为单个合并 CSV（首列标识宝宝名） */
-export async function exportAllBabiesCsv(): Promise<void> {
-  const babies = await db.babies.toArray()
-  const rows: Row[] = [csvHeader(true)]
-  for (const baby of babies) {
-    const data = await fetchBabyData(baby.id!)
-    rows.push(...buildBabyCsvRows(data, baby.name))
-  }
-  const stamp = formatDate(Date.now())
-  downloadBlob(
-    '\ufeff' + toCsv(rows),
-    t('exportCsv.allBabiesFileName', { stamp }),
-    'text/csv;charset=utf-8',
-  )
 }
 
 /** 单个宝宝的全部记录数据（供 CSV 行生成使用） */
@@ -456,7 +325,47 @@ export interface BabyCsvData {
   milestones: Milestone[]
 }
 
-type Row = (string | number | undefined | null)[]
+/** 读取单个宝宝的全部记录（按时间排序） */
+async function fetchBabyData(babyId: number): Promise<BabyCsvData> {
+  if (!Number.isFinite(babyId) || babyId <= 0) {
+    throw new Error('Invalid babyId for export')
+  }
+  const entries = await Promise.all(
+    RECORD_TABLES.map(async (r) => {
+      const query = db[r.name].where('babyId').equals(babyId).sortBy(r.timeField) as Promise<unknown[]>
+      // milestones 表在 v4 新增 babyId 索引，若数据库版本过旧可能抛错，做兼容处理
+      const list = r.name === 'milestones' ? await query.catch(() => []) : await query
+      return [r.name, list] as const
+    }),
+  )
+  return Object.fromEntries(entries) as unknown as BabyCsvData
+}
+
+/** 下载 CSV（带 BOM） */
+function downloadCsv(rows: Row[], filename: string): void {
+  downloadBlob('\ufeff' + toCsv(rows), filename, 'text/csv;charset=utf-8')
+}
+
+/** 导出单个宝宝 CSV（十类记录合并为单个文件，统一宽表结构） */
+export async function exportBabyCsvs(baby: Baby): Promise<void> {
+  if (baby.id === undefined || baby.id === null || !Number.isFinite(baby.id) || baby.id <= 0) {
+    throw new Error('Invalid baby id for export')
+  }
+  const data = await fetchBabyData(baby.id)
+  const rows: Row[] = [csvHeader(false), ...buildBabyCsvRows(data)]
+  downloadCsv(rows, t('exportCsv.allFileName', { name: baby.name, stamp: formatDate(Date.now()) }))
+}
+
+/** 一键导出全部宝宝的全部记录为单个合并 CSV（首列标识宝宝名） */
+export async function exportAllBabiesCsv(): Promise<void> {
+  const babies = await db.babies.toArray()
+  const rows: Row[] = [csvHeader(true)]
+  for (const baby of babies) {
+    const data = await fetchBabyData(baby.id!)
+    rows.push(...buildBabyCsvRows(data, baby.name))
+  }
+  downloadCsv(rows, t('exportCsv.allBabiesFileName', { stamp: formatDate(Date.now()) }))
+}
 
 /** 解析 CSV 文本（支持 BOM、引号转义、字段内逗号/换行） */
 export function parseCsv(text: string): string[][] {
@@ -513,18 +422,21 @@ export function parseCsv(text: string): string[][] {
   return rows
 }
 
-/** 导入用：CSV 表头键名（内部键值）与内部类型映射（复数，对应 recordBuckets 键） */
-const RECORD_TYPE_KEY_MAP: Record<string, string> = {
-  feeding: 'feedings',
-  diaper: 'diapers',
-  pumping: 'pumpings',
-  sleep: 'sleeps',
-  growth: 'growths',
-  solidFood: 'solidFoods',
-  medication: 'medications',
-  vaccination: 'vaccinations',
-  temperature: 'temperatures',
-  milestone: 'milestones',
+/** 导入用：记录种类 → 表名（复数）映射 */
+const RECORD_TYPE_KEY_MAP: Record<string, string> = Object.fromEntries(RECORD_TABLES.map((r) => [r.kind, r.name]))
+
+/** 解析 "date time" → 时间戳（date 为空返回 0） */
+function parseDateTime(date: string, time: string): number {
+  if (!date) return 0
+  const d = parseDate(`${date} ${time || '00:00'}`)
+  return d ?? new Date(`${date}T${time || '00:00'}`).getTime()
+}
+
+/** 兼容旧格式：breast_left 等下划线写法 */
+const OLD_FEED_TYPE_MAP: Record<string, { type: string; side?: string }> = {
+  breast_left: { type: 'breast', side: 'left' },
+  breast_right: { type: 'breast', side: 'right' },
+  breast_both: { type: 'breast', side: 'both' },
 }
 
 /** 将 CSV 行映射为具体记录对象（列值为本地化标签或内部键值，统一经 toInternal 反查） */
@@ -554,12 +466,6 @@ function mapCsvRowToRecord(
   const status = headerCell(obj, 'status')
   const notes = headerCell(obj, 'notes')
 
-  const parseDateTime = (date: string, time: string): number => {
-    if (!date) return 0
-    const d = parseDate(`${date} ${time || '00:00'}`)
-    return d ?? new Date(`${date}T${time || '00:00'}`).getTime()
-  }
-
   const startTime = parseDateTime(dateStr, timeStr)
   const endTime = parseDateTime(endDateStr, endTimeStr)
 
@@ -570,15 +476,10 @@ function mapCsvRowToRecord(
   switch (kind) {
     case 'feedings': {
       // 兼容新旧格式：item 可能是 "breast·left" 或旧的 "breast_left" 等
-      const OLD_TYPE_MAP: Record<string, { type: string; side?: string }> = {
-        breast_left: { type: 'breast', side: 'left' },
-        breast_right: { type: 'breast', side: 'right' },
-        breast_both: { type: 'breast', side: 'both' },
-      }
       let feedType: string
       let feedSide: string | undefined
-      if (item in OLD_TYPE_MAP) {
-        const mapped = OLD_TYPE_MAP[item]
+      if (item in OLD_FEED_TYPE_MAP) {
+        const mapped = OLD_FEED_TYPE_MAP[item]
         feedType = mapped.type
         feedSide = mapped.side
       } else if (item.includes('·')) {
@@ -725,22 +626,11 @@ function mapCsvRowToRecord(
   return null
 }
 
+/** 导入结果计数 */
+export type ImportCsvResult = { babies: number } & Record<(typeof RECORD_TABLES)[number]['name'], number>
+
 /** 导入 CSV 备份（覆盖当前数据） */
-export async function importAllCsv(
-  file: File,
-): Promise<{
-  babies: number
-  feedings: number
-  diapers: number
-  pumpings: number
-  sleeps: number
-  growths: number
-  solidFoods: number
-  medications: number
-  vaccinations: number
-  temperatures: number
-  milestones: number
-}> {
+export async function importAllCsv(file: File): Promise<ImportCsvResult> {
   const text = await file.text()
   const rows = parseCsv(text)
   if (rows.length < 2) throw new Error(t('exportCsv.invalidFile'))
@@ -749,18 +639,7 @@ export async function importAllCsv(
   const hasBabyNameCol = [t('exportCsv.babyName'), ...HEADER_ALIASES.babyName].includes(headers[0])
 
   const babiesMap = new Map<string, { name: string; id: number }>()
-  const recordBuckets: Record<string, unknown[]> = {
-    feedings: [],
-    diapers: [],
-    pumpings: [],
-    sleeps: [],
-    growths: [],
-    solidFoods: [],
-    medications: [],
-    vaccinations: [],
-    temperatures: [],
-    milestones: [],
-  }
+  const recordBuckets = Object.fromEntries(RECORD_TABLES.map((r) => [r.name, [] as unknown[]]))
 
   const now = Date.now()
   let mappedCount = 0
@@ -802,61 +681,28 @@ export async function importAllCsv(
 
   await db.transaction(
     'rw',
-    [
-      db.babies,
-      db.feedings,
-      db.diapers,
-      db.pumpings,
-      db.sleeps,
-      db.growths,
-      db.solidFoods,
-      db.medications,
-      db.vaccinations,
-      db.temperatures,
-      db.milestones,
-    ],
+    [db.babies, ...RECORD_TABLES.map((r) => db[r.name])],
     async () => {
-      await Promise.all([
-        db.babies.clear(),
-        db.feedings.clear(),
-        db.diapers.clear(),
-        db.pumpings.clear(),
-        db.sleeps.clear(),
-        db.growths.clear(),
-        db.solidFoods.clear(),
-        db.medications.clear(),
-        db.vaccinations.clear(),
-        db.temperatures.clear(),
-        db.milestones.clear(),
-      ])
+      await Promise.all([db.babies.clear(), ...RECORD_TABLES.map((r) => db[r.name].clear())])
 
       for (const [, { name, id: tempId }] of babyNames) {
         const realId = (await db.babies.add({ name, avatarColor: '#FF6B6B', createdAt: now }))!
         babyIdMap.set(tempId, realId)
       }
 
-      for (const [kind, records] of Object.entries(recordBuckets)) {
+      for (const [name, records] of Object.entries(recordBuckets)) {
         if (records.length === 0) continue
         const withRealId = records.map((r) => ({
           ...(r as Record<string, unknown>),
           babyId: babyIdMap.get((r as Record<string, unknown>).babyId as number) ?? babyIdMap.values().next().value!,
         }))
-        await (db[kind as keyof BabySitterDB] as { bulkAdd: (items: typeof withRealId) => Promise<unknown> }).bulkAdd(withRealId)
+        await (db[name as keyof BabySitterDB] as { bulkAdd: (items: typeof withRealId) => Promise<unknown> }).bulkAdd(withRealId)
       }
     },
   )
 
   return {
     babies: babyNames.length,
-    feedings: recordBuckets.feedings.length,
-    diapers: recordBuckets.diapers.length,
-    pumpings: recordBuckets.pumpings.length,
-    sleeps: recordBuckets.sleeps.length,
-    growths: recordBuckets.growths.length,
-    solidFoods: recordBuckets.solidFoods.length,
-    medications: recordBuckets.medications.length,
-    vaccinations: recordBuckets.vaccinations.length,
-    temperatures: recordBuckets.temperatures.length,
-    milestones: recordBuckets.milestones.length,
-  }
+    ...Object.fromEntries(RECORD_TABLES.map((r) => [r.name, recordBuckets[r.name].length])),
+  } as ImportCsvResult
 }

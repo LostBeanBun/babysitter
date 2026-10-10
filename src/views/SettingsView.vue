@@ -4,19 +4,22 @@ import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
 import { exportBabyCsvs, exportAllBabiesCsv, importAllCsv } from '@/services/export'
-import { BABY_AVATARS } from '@/constants'
+import { BABY_AVATARS, MS_PER_DAY } from '@/constants'
+import { ageInMonths } from '@/utils/age'
 import { loadReminders, saveReminders, type ReminderConfig, type ReminderType } from '@/utils/reminderScheduler'
 import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ReminderParam from '@/components/settings/ReminderParam.vue'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { showToast } from '@/composables/useToast'
 import type { Baby, BabyGender } from '@/types'
 
 const babyStore = useBabyStore()
 const { t } = useI18n()
 const err = useFormErrors()
 
-const recordCounts = ref({
+/** 记录计数清零值（清空数据后复位） */
+const EMPTY_COUNTS = {
   feedings: 0,
   diapers: 0,
   pumpings: 0,
@@ -27,7 +30,9 @@ const recordCounts = ref({
   vaccinations: 0,
   temperatures: 0,
   milestones: 0,
-})
+}
+
+const recordCounts = ref({ ...EMPTY_COUNTS })
 const babyModal = ref<{ mode: 'add' | 'edit'; id?: number } | null>(null)
 const babyName = ref('')
 const babyGender = ref<BabyGender | ''>('')
@@ -200,10 +205,9 @@ function babyAge(b: Baby): string {
   if (!b.birthDate) return t('settings.noBirthDate')
   const diff = Date.now() - new Date(b.birthDate + 'T00:00:00').getTime()
   if (diff < 0) return t('settings.birthdayUpcoming')
-  const months = Math.floor(diff / (1000 * 60 * 60 * 24 * 30.44))
+  const months = Math.floor(ageInMonths(b.birthDate, Date.now()))
   if (months < 1) {
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    return t('settings.ageDays', { n: days })
+    return t('settings.ageDays', { n: Math.floor(diff / MS_PER_DAY) })
   }
   if (months < 12) return t('settings.ageMonths', { n: months })
   const years = Math.floor(months / 12)
@@ -213,12 +217,15 @@ function babyAge(b: Baby): string {
 async function handleExportBabyCsv() {
   if (!activeBaby.value) return
   await exportBabyCsvs(activeBaby.value)
-  exportSuccess.value = true
-  setTimeout(() => (exportSuccess.value = false), 3000)
+  flashExportSuccess()
 }
 
 async function handleExportAllCsv() {
   await exportAllBabiesCsv()
+  flashExportSuccess()
+}
+
+function flashExportSuccess() {
   exportSuccess.value = true
   setTimeout(() => (exportSuccess.value = false), 3000)
 }
@@ -230,7 +237,7 @@ async function handleImportFile(e: Event) {
   importBusy.value = true
   try {
     const result = await importAllCsv(file)
-    alert(
+    showToast(
       t('settings.importSuccess', {
         babies: result.babies,
         feedings: result.feedings,
@@ -244,10 +251,11 @@ async function handleImportFile(e: Event) {
         temperatures: result.temperatures,
         milestones: result.milestones,
       }),
+      { duration: 6000 },
     )
     recordCounts.value = await countAllRecords()
   } catch {
-    alert(t('settings.importFailed'))
+    showToast(t('settings.importFailed'))
   } finally {
     importBusy.value = false
     if (importFileRef.value) importFileRef.value.value = ''
@@ -261,18 +269,7 @@ async function confirmClearAll() {
     // 同步重置内存中的当前宝宝，避免残留旧 id 在后续导入时"巧合命中"
     babyStore.activeBabyId = null
     localStorage.removeItem('babysitter.activeBabyId')
-    recordCounts.value = {
-      feedings: 0,
-      diapers: 0,
-      pumpings: 0,
-      sleeps: 0,
-      growths: 0,
-      solidFoods: 0,
-      medications: 0,
-      vaccinations: 0,
-      temperatures: 0,
-      milestones: 0,
-    }
+    recordCounts.value = { ...EMPTY_COUNTS }
     clearAllConfirm.value = false
   } finally {
     clearBusy.value = false

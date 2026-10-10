@@ -4,6 +4,7 @@
  * 数据源：CDC 提供的 WHO Growth Charts Percentiles（基于 WHO MGRS 2006 LMS 参数）
  * 由 LMS 参数按 Box-Cox 公式精确计算：X = M * (1 + L*S*Z)^(1/L)（L≠0）
  */
+import type { BabyGender } from '@/types'
 
 export interface WhoPoint {
   /** 月龄 0-24 */
@@ -79,12 +80,6 @@ export function whoData(gender?: BabyGender): WhoPoint[] {
   return gender === 'boy' ? WHO_BOY : WHO_GIRL
 }
 
-/** 按出生日期计算月龄（允许分数月龄，用于插值） */
-export function ageInMonths(birthDate: string, date: number): number {
-  const birth = new Date(birthDate + 'T00:00:00').getTime()
-  return (date - birth) / (30.44 * 24 * 3600_000)
-}
-
 export type WhoField = 'weight' | 'length' | 'hc'
 export type WhoPercentileKey = keyof WhoPoint['weight']
 
@@ -103,14 +98,3 @@ export function interpolateWho(data: WhoPoint[], month: number, field: WhoField,
   }
   return data[data.length - 1][field][key]
 }
-
-import type { BabyGender } from '@/types'
-
-/** 生长百分位标签 */
-export const WHO_PERCENTILES = [
-  { key: 'p3' as const, label: 'P3' },
-  { key: 'p15' as const, label: 'P15' },
-  { key: 'p50' as const, label: 'P50' },
-  { key: 'p85' as const, label: 'P85' },
-  { key: 'p97' as const, label: 'P97' },
-]

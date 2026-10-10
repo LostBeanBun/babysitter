@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { useMedicationStore } from '@/stores/medication'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { useRecordForm } from '@/composables/useRecordForm'
+import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 
@@ -22,66 +24,49 @@ const dose = ref(props.editing?.dose ?? '')
 const time = ref(toDateTimeLocal(props.editing?.time ?? Date.now()))
 const notes = ref(props.editing?.notes ?? '')
 
-async function submit() {
-  err.clearAll()
+function validate() {
   if (!name.value.trim()) {
     err.set('name', t('medication.invalidName'))
-    return
+    return null
   }
   const ts = fromDateTimeLocal(time.value)
   if (ts == null || isNaN(ts)) {
     err.set('time', t('medication.invalidTime'))
-    return
+    return null
   }
-  if (props.editing) {
-    await medicationStore.update(props.editing.id, {
-      time: ts,
-      name: name.value.trim(),
-      dose: dose.value || undefined,
-      notes: notes.value || undefined,
-    })
-  } else {
-    await medicationStore.add({
-      time: ts,
-      name: name.value.trim(),
-      dose: dose.value || undefined,
-      notes: notes.value || undefined,
-    })
+  return {
+    time: ts,
+    name: name.value.trim(),
+    dose: dose.value || undefined,
+    notes: notes.value || undefined,
   }
-  emit('saved')
 }
+
+const { submit } = useRecordForm({
+  err,
+  editing: props.editing,
+  validate,
+  add: (payload) => medicationStore.add(payload),
+  update: (id, payload) => medicationStore.update(id, payload),
+  onSaved: () => emit('saved'),
+})
 </script>
 
 <template>
   <div class="medication-form">
-    <div class="form-field" :class="{ 'has-error': err.has('name') }">
-      <label class="form-label">{{ t('medication.nameLabel') }}</label>
-      <input
-        v-model="name"
-        type="text"
-        :placeholder="t('medication.namePlaceholder')"
-        class="form-input"
-        @input="err.clear('name')"
-      />
-      <p v-if="err.get('name')" class="field-error">{{ err.get('name') }}</p>
-    </div>
+    <TextField v-model="name" :label="t('medication.nameLabel')" :errors="err" error-key="name" :placeholder="t('medication.namePlaceholder')" />
 
-    <div class="form-field">
-      <label class="form-label">{{ t('medication.doseLabel') }}</label>
-      <input v-model="dose" type="text" :placeholder="t('medication.dosePlaceholder')" class="form-input" />
-    </div>
+    <TextField v-model="dose" :label="t('medication.doseLabel')" :placeholder="t('medication.dosePlaceholder')" />
 
-    <div class="form-field" :class="{ 'has-error': err.has('time') }">
-      <label class="form-label">{{ t('medication.timeLabel') }}</label>
-      <input
-        v-model="time"
-        type="datetime-local" step="1"
-        :placeholder="t('common.selectDateTime')"
-        class="form-input"
-        @input="err.clear('time')"
-      />
-      <p v-if="err.get('time')" class="field-error">{{ err.get('time') }}</p>
-    </div>
+    <TextField
+      v-model="time"
+      type="datetime-local"
+      step="1"
+      :label="t('medication.timeLabel')"
+      :errors="err"
+      error-key="time"
+      :placeholder="t('common.selectDateTime')"
+    />
 
     <FormNotes v-model="notes" :label="t('medication.notesLabel')" :placeholder="t('common.optional')" />
 

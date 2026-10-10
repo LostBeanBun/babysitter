@@ -4,11 +4,12 @@ import { useI18n } from 'vue-i18n'
 import type { EChartsOption } from 'echarts'
 import ChartCard from '@/components/charts/ChartCard.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import { whoData, ageInMonths, type WhoField, type WhoPercentileKey } from '@/constants/whoGrowth'
+import { whoData, type WhoField, type WhoPercentileKey } from '@/constants/whoGrowth'
+import { ageInMonths } from '@/utils/age'
 import { estimatePercentile } from '@/utils/growthPercentile'
 import { useChartTheme } from '@/composables/useChartTheme'
 import { CHART_COLORS } from '@/constants'
-import { startOfDay } from '@/utils/format'
+import { startOfDay, addMonths, parseDateOnly } from '@/utils/format'
 import type { BabyGender, GrowthRecord } from '@/types'
 
 const props = defineProps<{
@@ -40,19 +41,11 @@ const growthRecords = computed(() => {
 const hasBirthDate = computed(() => Boolean(props.birthDate))
 
 /** 出生日 0 点时间戳（时间轴原点） */
-const birthTs = computed(() => {
-  const b = props.birthDate
-  return b ? new Date(b + 'T00:00:00').getTime() : 0
-})
+const birthTs = computed(() => (props.birthDate ? (parseDateOnly(props.birthDate) ?? 0) : 0))
 
 /** 月龄 → 日历日期时间戳（出生日 + n 个自然月，处理月末溢出） */
 function monthToTs(month: number): number {
-  const d = new Date(birthTs.value)
-  const m = d.getMonth() + Math.floor(month)
-  const y = d.getFullYear() + Math.floor(m / 12)
-  const mm = ((m % 12) + 12) % 12
-  const day = Math.min(d.getDate(), new Date(y, mm + 1, 0).getDate())
-  return new Date(y, mm, day).getTime()
+  return addMonths(birthTs.value, Math.floor(month))
 }
 
 const weightPoints = computed(() =>

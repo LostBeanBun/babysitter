@@ -17,12 +17,15 @@ import { useTemperatureStore } from '@/stores/temperature'
 import {
   buildDailySeries,
   aggregateRange,
+  sumDays,
   compareRanges,
   RANGE_PRESETS,
   type DayAggregate,
   type ComparisonResult,
+  type RecordDatasets,
 } from '@/services/stats'
 import { CHART_COLORS } from '@/constants'
+import { trendTooltip, trendAxes, areaLineSeries, type ChartThemeColors } from '@/services/chartOptions'
 import { formatDuration, formatPercentChange, formatAmount } from '@/utils/format'
 import { useChartTheme } from '@/composables/useChartTheme'
 
@@ -40,6 +43,11 @@ const { t } = useI18n()
 
 // 图表配色跟随主题
 const { axisColor, axisLineColor, splitLineColor } = useChartTheme()
+const chartTheme = computed<ChartThemeColors>(() => ({
+  axisColor: axisColor.value,
+  axisLineColor: axisLineColor.value,
+  splitLineColor: splitLineColor.value,
+}))
 
 const now = ref(Date.now())
 const nowTimer = window.setInterval(() => (now.value = Date.now()), 60_000)
@@ -54,49 +62,24 @@ const rangeEnd = computed(() => range.value.getRange(now.value)[1])
 // 概览 tab：对比 / 汇总
 const activeView = ref<'summary' | 'trend' | 'compare'>('summary')
 
+// 统计用记录数据集
+const datasets = computed<RecordDatasets>(() => ({
+  feedings: feedingStore.feedings,
+  diapers: diaperStore.diapers,
+  pumpings: pumpingStore.pumpings,
+  sleeps: sleepStore.sleeps,
+  solidFoods: solidFoodStore.solidFoods,
+  medications: medicationStore.medications,
+  temperatures: temperatureStore.temperatures,
+}))
+
 // 每日序列（趋势图数据）
-const days = computed<DayAggregate[]>(() =>
-  buildDailySeries(
-    feedingStore.feedings,
-    diaperStore.diapers,
-    pumpingStore.pumpings,
-    sleepStore.sleeps,
-    rangeStart.value,
-    rangeEnd.value,
-    solidFoodStore.solidFoods,
-    medicationStore.medications,
-    temperatureStore.temperatures,
-  ),
-)
+const days = computed<DayAggregate[]>(() => buildDailySeries(datasets.value, rangeStart.value, rangeEnd.value))
 
 // 当前区间 vs 上一等长区间（对比）
 const previousStart = computed(() => rangeStart.value - (rangeEnd.value - rangeStart.value))
-const currentAgg = computed(() =>
-  aggregateRange(
-    feedingStore.feedings,
-    diaperStore.diapers,
-    pumpingStore.pumpings,
-    sleepStore.sleeps,
-    rangeStart.value,
-    rangeEnd.value,
-    solidFoodStore.solidFoods,
-    medicationStore.medications,
-    temperatureStore.temperatures,
-  ),
-)
-const previousAgg = computed(() =>
-  aggregateRange(
-    feedingStore.feedings,
-    diaperStore.diapers,
-    pumpingStore.pumpings,
-    sleepStore.sleeps,
-    previousStart.value,
-    rangeStart.value,
-    solidFoodStore.solidFoods,
-    medicationStore.medications,
-    temperatureStore.temperatures,
-  ),
-)
+const currentAgg = computed(() => sumDays(days.value))
+const previousAgg = computed(() => aggregateRange(datasets.value, previousStart.value, rangeStart.value))
 const comparisons = computed<ComparisonResult[]>(() => compareRanges(currentAgg.value, previousAgg.value))
 
 // 格式化轴标签
@@ -106,59 +89,20 @@ const yFormatter = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Str
 // —— 趋势图配置 ——
 const milkOption = computed<EChartsOption>(() => ({
   tooltip: trendTooltip((v) => `${Math.round(v)} ml`),
-  grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: {
-    type: 'category',
-    data: xLabels.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
-    axisLine: { lineStyle: { color: axisLineColor.value } },
-  },
-  yAxis: {
-    type: 'value',
-    axisLabel: { color: axisColor.value, fontSize: 10, formatter: yFormatter, hideOverlap: true },
-    splitLine: { lineStyle: { color: splitLineColor.value } },
-  },
+  ...trendAxes({ theme: chartTheme.value, xLabels: xLabels.value, yFormatter }),
   series: [
-    {
+    areaLineSeries({
       name: t('stats.series.milk'),
-      type: 'line',
-      smooth: true,
-      symbol: 'circle',
-      symbolSize: 5,
       data: days.value.map((d) => d.totalMilkAmount),
-      lineStyle: { width: 2.5, color: CHART_COLORS.feedAmount },
-      itemStyle: { color: CHART_COLORS.feedAmount },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(232,144,108,0.25)' },
-            { offset: 1, color: 'rgba(232,144,108,0.02)' },
-          ],
-        },
-      },
-    },
+      color: CHART_COLORS.feedAmount,
+      area: ['rgba(232,144,108,0.25)', 'rgba(232,144,108,0.02)'],
+    }),
   ],
 }))
 
 const sleepOption = computed<EChartsOption>(() => ({
   tooltip: trendTooltip((v) => `${v} h`),
-  grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: {
-    type: 'category',
-    data: xLabels.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
-    axisLine: { lineStyle: { color: axisLineColor.value } },
-  },
-  yAxis: {
-    type: 'value',
-    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
-    splitLine: { lineStyle: { color: splitLineColor.value } },
-  },
+  ...trendAxes({ theme: chartTheme.value, xLabels: xLabels.value }),
   series: [
     {
       name: t('stats.series.sleep'),
@@ -172,18 +116,7 @@ const sleepOption = computed<EChartsOption>(() => ({
 
 const diaperOption = computed<EChartsOption>(() => ({
   tooltip: trendTooltip((v) => t('common.times', { n: Math.round(v) })),
-  grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: {
-    type: 'category',
-    data: xLabels.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
-    axisLine: { lineStyle: { color: axisLineColor.value } },
-  },
-  yAxis: {
-    type: 'value',
-    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
-    splitLine: { lineStyle: { color: splitLineColor.value } },
-  },
+  ...trendAxes({ theme: chartTheme.value, xLabels: xLabels.value }),
   series: [
     {
       name: t('stats.series.wet'),
@@ -206,61 +139,26 @@ const diaperOption = computed<EChartsOption>(() => ({
 
 const pumpOption = computed<EChartsOption>(() => ({
   tooltip: trendTooltip((v) => `${Math.round(v)} ml`),
-  grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: {
-    type: 'category',
-    data: xLabels.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
-    axisLine: { lineStyle: { color: axisLineColor.value } },
-  },
-  yAxis: {
-    type: 'value',
-    axisLabel: { color: axisColor.value, fontSize: 10, formatter: yFormatter, hideOverlap: true },
-    splitLine: { lineStyle: { color: splitLineColor.value } },
-  },
+  ...trendAxes({ theme: chartTheme.value, xLabels: xLabels.value, yFormatter }),
   series: [
-    {
+    areaLineSeries({
       name: t('stats.series.pump'),
-      type: 'line',
-      smooth: true,
-      symbol: 'circle',
-      symbolSize: 5,
       data: days.value.map((d) => d.pumpAmount),
-      lineStyle: { width: 2.5, color: CHART_COLORS.pump },
-      itemStyle: { color: CHART_COLORS.pump },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(216,168,200,0.25)' },
-            { offset: 1, color: 'rgba(216,168,200,0.02)' },
-          ],
-        },
-      },
-    },
+      color: CHART_COLORS.pump,
+      area: ['rgba(216,168,200,0.25)', 'rgba(216,168,200,0.02)'],
+    }),
   ],
 }))
 
 const temperatureOption = computed<EChartsOption>(() => ({
   tooltip: trendTooltip((v) => `${v} ℃`),
-  grid: { left: 44, right: 16, top: 12, bottom: 28 },
-  xAxis: {
-    type: 'category',
-    data: xLabels.value,
-    axisLabel: { color: axisColor.value, fontSize: 10, hideOverlap: true },
-    axisLine: { lineStyle: { color: axisLineColor.value } },
-  },
-  yAxis: {
-    type: 'value',
-    min: 35,
-    max: 40,
-    axisLabel: { color: axisColor.value, fontSize: 10, formatter: (v: number) => `${v}℃`, hideOverlap: true },
-    splitLine: { lineStyle: { color: splitLineColor.value } },
-  },
+  ...trendAxes({
+    theme: chartTheme.value,
+    xLabels: xLabels.value,
+    yMin: 35,
+    yMax: 40,
+    yFormatter: (v) => `${v}℃`,
+  }),
   series: [
     {
       name: t('stats.series.temperature'),
@@ -364,22 +262,6 @@ const summaryItems = computed(() => {
 
 // —— 成长曲线（已抽取至 GrowthCurveCharts 组件）——
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
-
-/** 趋势图 tooltip：显示日期 + 各系列数值（无数据日显示 -），触摸/悬停均可查看 */
-const trendTooltip = (fmt: (v: number) => string) => ({
-  trigger: 'axis' as const,
-  formatter: (params: unknown) => {
-    const list = params as Array<{ seriesName: string; marker: string; value?: number | null; axisValue?: string }>
-    const first = list.find((p) => typeof p.value === 'number' && !Number.isNaN(p.value))
-    if (!first) return ''
-    const dateStr = first.axisValue ?? ''
-    const lines = list.map((p) => {
-      const v = typeof p.value === 'number' ? p.value : null
-      return `${p.marker}${p.seriesName}: ${v != null ? fmt(v) : '-'}`
-    })
-    return `<b>${dateStr}</b><br/>${lines.join('<br/>')}`
-  },
-})
 </script>
 
 <template>

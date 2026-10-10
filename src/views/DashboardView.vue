@@ -1,121 +1,24 @@
 ﻿<script setup lang="ts">
-import { computed, ref, onUnmounted, watch } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { showToast } from '@/composables/useToast'
 import { useFormErrors } from '@/composables/useFormErrors'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
-import { useDiaperStore } from '@/stores/diaper'
-import { usePumpingStore } from '@/stores/pumping'
 import { useSleepStore } from '@/stores/sleep'
-import { useGrowthStore } from '@/stores/growth'
-import { useSolidFoodStore } from '@/stores/solidFood'
-import { useMedicationStore } from '@/stores/medication'
-import { useVaccinationStore } from '@/stores/vaccination'
-import { useTemperatureStore } from '@/stores/temperature'
-import { useMilestoneStore } from '@/stores/milestone'
 import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import OnboardingModal from '@/components/dashboard/OnboardingModal.vue'
 import TodayOverview from '@/components/dashboard/TodayOverview.vue'
-import FeedingForm from '@/components/forms/FeedingForm.vue'
-import DiaperForm from '@/components/forms/DiaperForm.vue'
-import PumpingForm from '@/components/forms/PumpingForm.vue'
-import SleepForm from '@/components/forms/SleepForm.vue'
-import GrowthForm from '@/components/forms/GrowthForm.vue'
-import SolidFoodForm from '@/components/forms/SolidFoodForm.vue'
-import MedicationForm from '@/components/forms/MedicationForm.vue'
-import VaccinationForm from '@/components/forms/VaccinationForm.vue'
-import TemperatureForm from '@/components/forms/TemperatureForm.vue'
-import MilestoneForm from '@/components/forms/MilestoneForm.vue'
-import { formatTime, toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
-import { FEED_TYPE_LABELS } from '@/constants'
-import { useDeleteUndo } from '@/composables/useDeleteUndo'
+import RecordFormModal from '@/components/common/RecordFormModal.vue'
+import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
+import { FEED_TYPE_LABELS, KIND_META } from '@/constants'
+import { useRecordModal } from '@/composables/useRecordModal'
 import { useActiveTimer } from '@/composables/useActiveTimer'
-import { useSleepModal } from '@/composables/useSleepModal'
-import type {
-  Feeding,
-  DiaperChange,
-  Pumping,
-  Sleep,
-  GrowthRecord,
-  SolidFood,
-  Medication,
-  Vaccination,
-  Temperature,
-  Milestone,
-  FeedType,
-  BreastSide,
-  DiaperType,
-  DiaperColor,
-  DiaperAmount,
-  PumpSide,
-  SleepType,
-  VaccinationStatus,
-  TemperatureMethod,
-  MilestoneType,
-} from '@/types'
-
-/** 各表单编辑 props 结构（与表单组件 props.editing 一致） */
-type FeedingFormProps = {
-  id: number
-  type: FeedType
-  side?: BreastSide
-  startTime: number
-  endTime?: number
-  duration?: number
-  amount?: number
-  notes?: string
-}
-type DiaperFormProps = {
-  id: number
-  type: DiaperType
-  time: number
-  color?: DiaperColor
-  amount?: DiaperAmount
-  notes?: string
-}
-type PumpingFormProps = {
-  id: number
-  side: PumpSide
-  startTime: number
-  endTime?: number
-  duration?: number
-  amount?: number
-  notes?: string
-}
-type SleepFormProps = { id: number; type: SleepType; startTime: number; endTime: number; notes?: string }
-type GrowthFormProps = { id: number; date: number; weight?: number; height?: number; notes?: string }
-type SolidFoodFormProps = { id: number; time: number; food: string; amount?: string; notes?: string }
-type MedicationFormProps = { id: number; time: number; name: string; dose?: string; notes?: string }
-type VaccinationFormProps = {
-  id: number
-  date: number
-  name: string
-  dose?: string
-  status: VaccinationStatus
-  notes?: string
-}
-type TemperatureFormProps = {
-  id: number
-  time: number
-  value: number
-  method?: TemperatureMethod
-  notes?: string
-}
-type MilestoneFormProps = { id: number; time: number; type: MilestoneType; notes?: string }
+import type { FeedType, SleepType, RecordKind } from '@/types'
 
 const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
-const diaperStore = useDiaperStore()
-const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
-const growthStore = useGrowthStore()
-const solidFoodStore = useSolidFoodStore()
-const medicationStore = useMedicationStore()
-const vaccinationStore = useVaccinationStore()
-const temperatureStore = useTemperatureStore()
-const milestoneStore = useMilestoneStore()
 
 const { t } = useI18n()
 
@@ -127,9 +30,8 @@ const hasBaby = computed(() => babyStore.babies.length > 0)
 
 const onboardingOpen = ref(false)
 
-const { scheduleDelete } = useDeleteUndo()
 const activeTimer = useActiveTimer()
-const { sleepModalOpen } = useSleepModal()
+const { modalState, openAdd, onStartRecord, onSaved, onCancelled } = useRecordModal()
 
 // —— 奶睡一键（组合记录喂养 + 睡眠）——
 const sleepFeedOpen = ref(false)
@@ -183,172 +85,26 @@ async function saveSleepFeed() {
   sfNotes.value = ''
 }
 
-// 弹窗状态
-const modalState = ref<{
-  kind:
-    | 'feeding'
-    | 'diaper'
-    | 'pumping'
-    | 'sleep'
-    | 'growth'
-    | 'solidFood'
-    | 'medication'
-    | 'vaccination'
-    | 'temperature'
-    | 'milestone'
-  editing?: {
-    kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone'
-    id: number
-    time: number
-    kindColor: string
-    icon: string
-    color: string
-    title: string
-    detail: string
-    timeLabel?: string
-    raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature | Milestone
-  } | null
-} | null>(null)
-const confirmDelete = ref<{
-  kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone'
-  id: number
-  time: number
-  kindColor: string
-  icon: string
-  color: string
-  title: string
-  detail: string
-  timeLabel?: string
-  raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature | Milestone
-} | null>(null)
+/** 快捷记录按钮（顺序与样式类一致于设计稿） */
+const QUICK_KINDS: RecordKind[] = [
+  'feeding',
+  'diaper',
+  'sleep',
+  'pumping',
+  'growth',
+  'solidFood',
+  'medication',
+  'vaccination',
+  'temperature',
+  'milestone',
+]
 
-function openAdd(
-  kind:
-    | 'feeding'
-    | 'diaper'
-    | 'pumping'
-    | 'sleep'
-    | 'growth'
-    | 'solidFood'
-    | 'medication'
-    | 'vaccination'
-    | 'temperature'
-    | 'milestone',
-) {
-  modalState.value = { kind }
+/** 样式类名与记录类型名有两处出入（feed/pump） */
+function quickCss(kind: RecordKind): string {
+  if (kind === 'feeding') return 'feed'
+  if (kind === 'pumping') return 'pump'
+  return kind
 }
-
-async function confirmDeleteAction() {
-  const e = confirmDelete.value
-  if (!e) return
-  scheduleDelete(e, () => removeEntry(e), t('common.deletedToast'), t('common.undo'))
-  confirmDelete.value = null
-}
-
-/** 真实删除（3 秒撤销窗口结束后执行） */
-async function removeEntry(e: {
-  kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone'
-  id: number
-  time: number
-  kindColor: string
-  icon: string
-  color: string
-  title: string
-  detail: string
-  timeLabel?: string
-  raw: Feeding | DiaperChange | Pumping | Sleep | GrowthRecord | SolidFood | Medication | Vaccination | Temperature | Milestone
-}) {
-  if (e.kind === 'feeding') await feedingStore.remove(e.id)
-  else if (e.kind === 'diaper') await diaperStore.remove(e.id)
-  else if (e.kind === 'pumping') await pumpingStore.remove(e.id)
-  else if (e.kind === 'sleep') await sleepStore.remove(e.id)
-  else if (e.kind === 'growth') await growthStore.remove(e.id)
-  else if (e.kind === 'solidFood') await solidFoodStore.remove(e.id)
-  else if (e.kind === 'medication') await medicationStore.remove(e.id)
-  else if (e.kind === 'vaccination') await vaccinationStore.remove(e.id)
-  else if (e.kind === 'temperature') await temperatureStore.remove(e.id)
-  else await milestoneStore.remove(e.id)
-}
-
-// 表单弹窗打开时隐藏悬浮球
-watch(modalState, (ms) => { sleepModalOpen.value = ms !== null })
-
-/** 开始记录：保存开始时间，关闭弹窗，悬浮球出现 */
-function onStartRecord() {
-  modalState.value = null
-  showToast(t('common.recordStarted'))
-}
-
-/** 结束记录 / 编辑保存：关闭弹窗 */
-function onSaved() {
-  modalState.value = null
-  showToast(t('common.recordSaved'))
-}
-
-function onCancelled() {
-  modalState.value = null
-}
-
-// 编辑模式回填（按 kind 类型收窄）
-const editPayload = computed(() => {
-  const e = modalState.value?.editing
-  if (!e) return undefined
-  if (e.kind === 'feeding') {
-    const f = e.raw as Feeding
-    return {
-      id: e.id,
-      type: f.type,
-      side: f.side,
-      startTime: f.startTime,
-      endTime: f.endTime,
-      duration: f.duration,
-      amount: f.amount,
-      notes: f.notes,
-    }
-  }
-  if (e.kind === 'diaper') {
-    const d = e.raw as DiaperChange
-    return { id: e.id, type: d.type, time: d.time, color: d.color, amount: d.amount, notes: d.notes }
-  }
-  if (e.kind === 'pumping') {
-    const p = e.raw as Pumping
-    return {
-      id: e.id,
-      side: p.side,
-      startTime: p.startTime,
-      endTime: p.endTime,
-      duration: p.duration,
-      amount: p.amount,
-      notes: p.notes,
-    }
-  }
-  if (e.kind === 'sleep') {
-    const s = e.raw as Sleep
-    return { id: e.id, type: s.type, startTime: s.startTime, endTime: s.endTime, notes: s.notes }
-  }
-  if (e.kind === 'growth') {
-    const g = e.raw as GrowthRecord
-    return { id: e.id, date: g.date, weight: g.weight, height: g.height, notes: g.notes }
-  }
-  if (e.kind === 'solidFood') {
-    const sf = e.raw as SolidFood
-    return { id: e.id, time: sf.time, food: sf.food, amount: sf.amount, notes: sf.notes }
-  }
-  if (e.kind === 'medication') {
-    const m = e.raw as Medication
-    return { id: e.id, time: m.time, name: m.name, dose: m.dose, notes: m.notes }
-  }
-  if (e.kind === 'vaccination') {
-    const v = e.raw as Vaccination
-    return { id: e.id, date: v.date, name: v.name, dose: v.dose, status: v.status, notes: v.notes }
-  }
-  if (e.kind === 'temperature') {
-    const tmp = e.raw as Temperature
-    return { id: e.id, time: tmp.time, value: tmp.value, method: tmp.method, notes: tmp.notes }
-  }
-  const ms = e.raw as Milestone
-  return { id: e.id, time: ms.time, type: ms.type, notes: ms.notes }
-})
 </script>
 
 <template>
@@ -373,45 +129,9 @@ const editPayload = computed(() => {
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>
       <div class="quick-actions">
-        <button class="quick-btn feed" @click="openAdd('feeding')">
-          <span class="quick-icon">🍼</span>
-          <span class="quick-label">{{ t('log.filters.feeding') }}</span>
-        </button>
-        <button class="quick-btn diaper" @click="openAdd('diaper')">
-          <span class="quick-icon">🧷</span>
-          <span class="quick-label">{{ t('log.filters.diaper') }}</span>
-        </button>
-        <button class="quick-btn sleep" @click="openAdd('sleep')">
-          <span class="quick-icon">😴</span>
-          <span class="quick-label">{{ t('log.filters.sleep') }}</span>
-        </button>
-        <button class="quick-btn pump" @click="openAdd('pumping')">
-          <span class="quick-icon">🎀</span>
-          <span class="quick-label">{{ t('log.filters.pumping') }}</span>
-        </button>
-        <button class="quick-btn growth" @click="openAdd('growth')">
-          <span class="quick-icon">📏</span>
-          <span class="quick-label">{{ t('log.filters.growth') }}</span>
-        </button>
-        <button class="quick-btn solidFood" @click="openAdd('solidFood')">
-          <span class="quick-icon">🍎</span>
-          <span class="quick-label">{{ t('log.filters.solidFood') }}</span>
-        </button>
-        <button class="quick-btn medication" @click="openAdd('medication')">
-          <span class="quick-icon">💊</span>
-          <span class="quick-label">{{ t('log.filters.medication') }}</span>
-        </button>
-        <button class="quick-btn vaccination" @click="openAdd('vaccination')">
-          <span class="quick-icon">💉</span>
-          <span class="quick-label">{{ t('log.filters.vaccination') }}</span>
-        </button>
-        <button class="quick-btn temperature" @click="openAdd('temperature')">
-          <span class="quick-icon">🌡️</span>
-          <span class="quick-label">{{ t('log.filters.temperature') }}</span>
-        </button>
-        <button class="quick-btn milestone" @click="openAdd('milestone')">
-          <span class="quick-icon">🌟</span>
-          <span class="quick-label">{{ t('log.filters.milestone') }}</span>
+        <button v-for="k in QUICK_KINDS" :key="k" class="quick-btn" :class="quickCss(k)" @click="openAdd(k)">
+          <span class="quick-icon">{{ KIND_META[k].icon }}</span>
+          <span class="quick-label">{{ t(KIND_META[k].labelKey) }}</span>
         </button>
       </div>
 
@@ -422,118 +142,13 @@ const editPayload = computed(() => {
       </button>
 
       <!-- 记录弹窗 -->
-      <BaseModal
-        :show="modalState !== null"
-        :title="modalState?.editing ? t('log.editTitle') : t('log.addTitle')"
+      <RecordFormModal
+        :state="modalState"
         @close="modalState = null"
-      >
-        <FeedingForm
-          v-if="modalState?.kind === 'feeding'"
-          :editing="modalState?.editing ? (editPayload as FeedingFormProps) : undefined"
-          @start-record="onStartRecord"
-          @saved="onSaved"
-          @cancelled="onCancelled"
-        />
-        <DiaperForm
-          v-else-if="modalState?.kind === 'diaper'"
-          :editing="modalState?.editing ? (editPayload as DiaperFormProps) : undefined"
-          @saved="onSaved"
-          @cancelled="onCancelled"
-        />
-        <PumpingForm
-          v-else-if="modalState?.kind === 'pumping'"
-          :editing="modalState?.editing ? (editPayload as PumpingFormProps) : undefined"
-          @start-record="onStartRecord"
-          @saved="onSaved"
-          @cancelled="onCancelled"
-        />
-        <SleepForm
-          v-else-if="modalState?.kind === 'sleep'"
-          :editing="modalState?.editing ? (editPayload as SleepFormProps) : undefined"
-          @start-record="onStartRecord"
-          @saved="onSaved"
-          @cancelled="onCancelled"
-        />
-        <GrowthForm
-          v-else-if="modalState?.kind === 'growth'"
-          :editing="modalState?.editing ? (editPayload as GrowthFormProps) : undefined"
-          @saved="onSaved"
-          @cancelled="onCancelled"
-        />
-        <SolidFoodForm
-          v-else-if="modalState?.kind === 'solidFood'"
-          :editing="modalState?.editing ? (editPayload as SolidFoodFormProps) : undefined"
-          @saved="onSaved"
-          @cancelled="onCancelled"
-        />
-        <MedicationForm
-          v-else-if="modalState?.kind === 'medication'"
-          :editing="modalState?.editing ? (editPayload as MedicationFormProps) : undefined"
-          @saved="onSaved"
-          @cancelled="onCancelled"
-        />
-        <VaccinationForm
-          v-else-if="modalState?.kind === 'vaccination'"
-          :editing="modalState?.editing ? (editPayload as VaccinationFormProps) : undefined"
-          @saved="onSaved"
-          @cancelled="onCancelled"
-        />
-        <TemperatureForm
-          v-else-if="modalState?.kind === 'temperature'"
-          :editing="modalState?.editing ? (editPayload as TemperatureFormProps) : undefined"
-          @saved="onSaved"
-          @cancelled="onCancelled"
-        />
-        <MilestoneForm
-          v-else-if="modalState?.kind === 'milestone'"
-          :editing="modalState?.editing ? (editPayload as MilestoneFormProps) : undefined"
-          @saved="onSaved"
-          @cancelled="onCancelled"
-        />
-      </BaseModal>
-
-      <!-- 删除确认 -->
-      <BaseModal :show="confirmDelete !== null" :title="t('common.deleteRecord')" @close="confirmDelete = null">
-        <p class="confirm-text">
-          {{
-            t('log.deleteConfirm', {
-              kind: t(
-                confirmDelete?.kind === 'feeding'
-                  ? 'log.filters.feeding'
-                  : confirmDelete?.kind === 'diaper'
-                    ? 'log.filters.diaper'
-                    : confirmDelete?.kind === 'pumping'
-                      ? 'log.filters.pumping'
-                      : confirmDelete?.kind === 'sleep'
-                        ? 'log.filters.sleep'
-                        : confirmDelete?.kind === 'growth'
-                          ? 'log.filters.growth'
-                          : confirmDelete?.kind === 'solidFood'
-                            ? 'log.filters.solidFood'
-                            : confirmDelete?.kind === 'medication'
-                              ? 'log.filters.medication'
-: confirmDelete?.kind === 'vaccination'
-                              ? 'log.filters.vaccination'
-                              : confirmDelete?.kind === 'temperature'
-                                ? 'log.filters.temperature'
-                                : 'log.filters.milestone',
-              ),
-            })
-          }}
-        </p>
-        <div v-if="confirmDelete" class="confirm-record">
-          <span class="confirm-record-icon" :style="{ background: confirmDelete.color + '22' }">{{ confirmDelete.icon }}</span>
-          <div class="confirm-record-body">
-            <p class="confirm-record-title">{{ confirmDelete.title }}</p>
-            <p class="confirm-record-detail">{{ confirmDelete.detail }}</p>
-            <p class="confirm-record-time">{{ confirmDelete.timeLabel ?? formatTime(confirmDelete.time) }}</p>
-          </div>
-        </div>
-        <div class="confirm-actions">
-          <button class="btn btn-outline" @click="confirmDelete = null">{{ t('common.cancel') }}</button>
-          <button class="btn btn-danger-soft" @click="confirmDeleteAction">{{ t('log.confirmDelete') }}</button>
-        </div>
-      </BaseModal>
+        @saved="onSaved"
+        @cancelled="onCancelled"
+        @start-record="onStartRecord"
+      />
     </template>
 
     <!-- 奶睡组合弹窗 -->
@@ -654,23 +269,6 @@ const editPayload = computed(() => {
 
 .sf-btn-icon {
   font-size: 18px;
-}
-
-.section-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 14px 2px 8px;
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-.section-row .section-title {
-  margin: 0;
 }
 
 .form-actions {
@@ -805,78 +403,5 @@ const editPayload = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.empty-inline {
-  text-align: center;
-  padding: 18px 12px;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.confirm-text {
-  font-size: 14px;
-  color: var(--text);
-  line-height: 1.6;
-  margin-bottom: 14px;
-}
-
-.confirm-record {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: var(--radius);
-  background: var(--surface-2);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: var(--glass-blur-light);
-  -webkit-backdrop-filter: var(--glass-blur-light);
-  margin-bottom: 18px;
-}
-
-.confirm-record-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.confirm-record-body {
-  min-width: 0;
-  flex: 1;
-}
-
-.confirm-record-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.confirm-record-detail {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-top: 2px;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.confirm-record-time {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 2px;
-  font-variant-numeric: tabular-nums;
-}
-
-.confirm-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.confirm-actions .btn {
-  flex: 1;
 }
 </style>

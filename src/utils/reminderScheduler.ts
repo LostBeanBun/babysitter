@@ -5,6 +5,8 @@
  */
 import type { Baby, Feeding, Medication, Vaccination, DiaperChange, Sleep } from '@/types'
 import { recommendedIntervalMs } from '@/utils/feedingGuide'
+import { startOfDay, durationParts } from '@/utils/format'
+import { MS_PER_HOUR, MS_PER_DAY } from '@/constants'
 import i18n from '@/i18n'
 
 const t = i18n.global.t
@@ -58,13 +60,7 @@ export function loadReminders(): ReminderConfig {
 }
 
 function cloneDefaults(): ReminderConfig {
-  return {
-    feed: { ...DEFAULT_REMINDERS.feed },
-    sleep: { ...DEFAULT_REMINDERS.sleep },
-    medication: { ...DEFAULT_REMINDERS.medication },
-    vaccination: { ...DEFAULT_REMINDERS.vaccination },
-    diaper: { ...DEFAULT_REMINDERS.diaper },
-  }
+  return structuredClone(DEFAULT_REMINDERS)
 }
 
 export function saveReminders(cfg: ReminderConfig) {
@@ -119,8 +115,7 @@ export function checkReminders(ctx: ReminderContext): ReminderHit[] {
   if (cfg.feed.enabled && ctx.feedings.length) {
     const last = [...ctx.feedings].sort((a, b) => b.startTime - a.startTime)[0]
     const since = now - last.startTime
-    const threshold =
-      cfg.feed.intervalHours > 0 ? cfg.feed.intervalHours * 3600_000 : recommendedIntervalMs(ctx.baby ?? undefined)
+    const threshold = cfg.feed.intervalHours > 0 ? cfg.feed.intervalHours * MS_PER_HOUR : recommendedIntervalMs(ctx.baby ?? undefined)
     if (since > threshold && now - lastNotified('feed') > THROTTLE_MS) {
       markNotified('feed', now)
       hits.push({
@@ -139,7 +134,7 @@ export function checkReminders(ctx: ReminderContext): ReminderHit[] {
       const [h, m] = cfg.sleep.time.split(':').map(Number)
       const target = new Date(now)
       target.setHours(h, m, 0, 0)
-      if (now >= target.getTime() && now - target.getTime() <= 3600_000 && lastNotified('sleep') < target.getTime()) {
+      if (now >= target.getTime() && now - target.getTime() <= MS_PER_HOUR && lastNotified('sleep') < target.getTime()) {
         markNotified('sleep', now)
         hits.push({
           type: 'sleep',
@@ -153,7 +148,7 @@ export function checkReminders(ctx: ReminderContext): ReminderHit[] {
     if (cfg.sleep.intervalHours > 0 && ctx.sleeps.length) {
       const last = [...ctx.sleeps].sort((a, b) => b.startTime - a.startTime)[0]
       const since = now - last.startTime
-      if (since > cfg.sleep.intervalHours * 3600_000 && now - lastNotified('sleep') > THROTTLE_MS) {
+      if (since > cfg.sleep.intervalHours * MS_PER_HOUR && now - lastNotified('sleep') > THROTTLE_MS) {
         markNotified('sleep', now)
         hits.push({
           type: 'sleep',
@@ -169,7 +164,7 @@ export function checkReminders(ctx: ReminderContext): ReminderHit[] {
   if (cfg.medication.enabled && ctx.medications.length) {
     const last = [...ctx.medications].sort((a, b) => b.time - a.time)[0]
     const since = now - last.time
-    if (since > cfg.medication.intervalHours * 3600_000 && now - lastNotified('medication') > MED_THROTTLE_MS) {
+    if (since > cfg.medication.intervalHours * MS_PER_HOUR && now - lastNotified('medication') > MED_THROTTLE_MS) {
       markNotified('medication', now)
       hits.push({
         type: 'medication',
@@ -182,12 +177,11 @@ export function checkReminders(ctx: ReminderContext): ReminderHit[] {
 
   // 疫苗：今天有待接种（planned）疫苗
   if (cfg.vaccination.enabled && ctx.vaccinations.length) {
-    const today = new Date(now)
-    today.setHours(0, 0, 0, 0)
+    const todayStart = startOfDay(now)
     const due = ctx.vaccinations.find(
-      (v) => v.status === 'planned' && v.date >= today.getTime() && v.date < today.getTime() + 86_400_000,
+      (v) => v.status === 'planned' && v.date >= todayStart && v.date < todayStart + MS_PER_DAY,
     )
-    if (due && lastNotified('vaccination') < today.getTime()) {
+    if (due && lastNotified('vaccination') < todayStart) {
       markNotified('vaccination', now)
       hits.push({
         type: 'vaccination',
@@ -202,7 +196,7 @@ export function checkReminders(ctx: ReminderContext): ReminderHit[] {
   if (cfg.diaper.enabled && ctx.diapers.length) {
     const last = [...ctx.diapers].sort((a, b) => b.time - a.time)[0]
     const since = now - last.time
-    if (since > cfg.diaper.intervalHours * 3600_000 && now - lastNotified('diaper') > THROTTLE_MS) {
+    if (since > cfg.diaper.intervalHours * MS_PER_HOUR && now - lastNotified('diaper') > THROTTLE_MS) {
       markNotified('diaper', now)
       hits.push({
         type: 'diaper',
@@ -217,8 +211,7 @@ export function checkReminders(ctx: ReminderContext): ReminderHit[] {
 }
 
 function formatMin(ms: number): string {
-  const h = Math.floor(ms / 3600_000)
-  const m = Math.round((ms % 3600_000) / 60_000)
+  const { hours: h, minutes: m } = durationParts(ms)
   if (h > 0) return m > 0 ? `${h} ${t('reminders.hour')} ${m} ${t('reminders.minute')}` : `${h} ${t('reminders.hour')}`
   return `${m} ${t('reminders.minute')}`
 }

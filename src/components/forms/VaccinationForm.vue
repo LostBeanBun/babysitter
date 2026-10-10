@@ -14,6 +14,11 @@ import {
 } from '@/constants/vaccinePlan'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { useRecordForm } from '@/composables/useRecordForm'
+import { showToast } from '@/composables/useToast'
+import ChoiceGrid, { type ChoiceOption } from '@/components/common/ChoiceGrid.vue'
+import FormField from '@/components/common/FormField.vue'
+import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 
@@ -39,6 +44,10 @@ const STATUS_OPTIONS: { value: VaccinationStatus; label: string; icon: string; c
   { value: 'done', label: 'vaccination.statusDone', icon: '✅', color: '#6AB86A' },
 ]
 
+const statusOptions = computed<ChoiceOption[]>(() =>
+  STATUS_OPTIONS.map((opt) => ({ value: opt.value, icon: opt.icon, label: t(opt.label), color: opt.color })),
+)
+
 // —— 计划库选择 ——
 const planOpen = ref(false)
 const planTab = ref<VaccinePlanCategory>('free')
@@ -54,7 +63,7 @@ const existingKeys = computed(() =>
 
 function pickFromPlan(item: VaccinePlanItem) {
   if (!activeBaby.value?.birthDate) {
-    alert(t('vaccination.needBirthDate'))
+    showToast(t('vaccination.needBirthDate'))
     return
   }
   name.value = item.name
@@ -63,42 +72,38 @@ function pickFromPlan(item: VaccinePlanItem) {
   planOpen.value = false
 }
 
-async function submit() {
-  err.clearAll()
+function validate() {
   if (!name.value.trim()) {
     err.set('name', t('vaccination.invalidName'))
-    return
+    return null
   }
   const d = fromDateTimeLocal(date.value + 'T00:00:00')
   if (d == null || isNaN(d)) {
     err.set('date', t('vaccination.invalidDate'))
-    return
+    return null
   }
-  if (props.editing) {
-    await vaccinationStore.update(props.editing.id, {
-      date: d,
-      name: name.value.trim(),
-      dose: dose.value || undefined,
-      status: status.value,
-      notes: notes.value || undefined,
-    })
-  } else {
-    await vaccinationStore.add({
-      date: d,
-      name: name.value.trim(),
-      dose: dose.value || undefined,
-      status: status.value,
-      notes: notes.value || undefined,
-    })
+  return {
+    date: d,
+    name: name.value.trim(),
+    dose: dose.value || undefined,
+    status: status.value,
+    notes: notes.value || undefined,
   }
-  emit('saved')
 }
+
+const { submit } = useRecordForm({
+  err,
+  editing: props.editing,
+  validate,
+  add: (payload) => vaccinationStore.add(payload),
+  update: (id, payload) => vaccinationStore.update(id, payload),
+  onSaved: () => emit('saved'),
+})
 </script>
 
 <template>
   <div class="vaccination-form">
-    <div class="form-field" :class="{ 'has-error': err.has('name') }">
-      <label class="form-label">{{ t('vaccination.nameLabel') }}</label>
+    <FormField :label="t('vaccination.nameLabel')" :errors="err" error-key="name">
       <div class="name-row">
         <input
           v-model="name"
@@ -111,41 +116,21 @@ async function submit() {
           📋 {{ t('vaccination.planPicker') }}
         </button>
       </div>
-      <p v-if="err.get('name')" class="field-error">{{ err.get('name') }}</p>
-    </div>
+    </FormField>
 
-    <div class="form-field">
-      <label class="form-label">{{ t('vaccination.doseLabel') }}</label>
-      <input v-model="dose" type="text" :placeholder="t('vaccination.dosePlaceholder')" class="form-input" />
-    </div>
+    <TextField v-model="dose" :label="t('vaccination.doseLabel')" :placeholder="t('vaccination.dosePlaceholder')" />
 
-    <div class="form-field" :class="{ 'has-error': err.has('date') }">
-      <label class="form-label">{{ t('vaccination.dateLabel') }}</label>
-      <input
-        v-model="date"
-        type="date"
-        :placeholder="t('common.selectDate')"
-        class="form-input"
-        @input="err.clear('date')"
-      />
-      <p v-if="err.get('date')" class="field-error">{{ err.get('date') }}</p>
-    </div>
+    <TextField
+      v-model="date"
+      type="date"
+      :label="t('vaccination.dateLabel')"
+      :errors="err"
+      error-key="date"
+      :placeholder="t('common.selectDate')"
+    />
 
     <p class="form-label">{{ t('vaccination.statusLabel') }}</p>
-    <div class="status-grid">
-      <button
-        v-for="opt in STATUS_OPTIONS"
-        :key="opt.value"
-        type="button"
-        class="status-btn"
-        :class="{ selected: status === opt.value }"
-        :style="status === opt.value ? { background: opt.color + '22', borderColor: opt.color, color: opt.color } : undefined"
-        @click="status = opt.value"
-      >
-        <span class="status-icon">{{ opt.icon }}</span>
-        <span class="status-label">{{ t(opt.label) }}</span>
-      </button>
-    </div>
+    <ChoiceGrid v-model="status" :options="statusOptions" :columns="2" />
 
     <FormNotes v-model="notes" :label="t('vaccination.notesLabel')" :placeholder="t('common.optional')" />
 
@@ -293,40 +278,5 @@ async function submit() {
 .plan-item-note {
   font-size: 11px;
   color: var(--text-muted);
-}
-
-.status-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.status-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-height: 44px;
-  padding: 12px 6px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
-  background: var(--surface);
-  transition: all 0.3s var(--spring);
-}
-
-.status-btn.selected {
-  border-width: 1.5px;
-}
-
-.status-icon {
-  font-size: 20px;
-}
-
-.status-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
 }
 </style>

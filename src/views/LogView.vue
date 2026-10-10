@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { showToast } from '@/composables/useToast'
 import { useFeedingStore } from '@/stores/feeding'
 import { useDiaperStore } from '@/stores/diaper'
 import { usePumpingStore } from '@/stores/pumping'
@@ -14,91 +13,15 @@ import { useVaccinationStore } from '@/stores/vaccination'
 import { useTemperatureStore } from '@/stores/temperature'
 import { useMilestoneStore } from '@/stores/milestone'
 import PageHeader from '@/components/common/PageHeader.vue'
-import TimelineList, { type TimelineEntry } from '@/components/timeline/TimelineList.vue'
+import TimelineList from '@/components/timeline/TimelineList.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import FeedingForm from '@/components/forms/FeedingForm.vue'
-import DiaperForm from '@/components/forms/DiaperForm.vue'
-import PumpingForm from '@/components/forms/PumpingForm.vue'
-import SleepForm from '@/components/forms/SleepForm.vue'
-import GrowthForm from '@/components/forms/GrowthForm.vue'
-import SolidFoodForm from '@/components/forms/SolidFoodForm.vue'
-import MedicationForm from '@/components/forms/MedicationForm.vue'
-import VaccinationForm from '@/components/forms/VaccinationForm.vue'
-import TemperatureForm from '@/components/forms/TemperatureForm.vue'
-import MilestoneForm from '@/components/forms/MilestoneForm.vue'
-import { formatTime, startOfDay } from '@/utils/format'
+import RecordFormModal from '@/components/common/RecordFormModal.vue'
+import { buildTimelineEntries } from '@/services/timeline'
+import { useRecordModal } from '@/composables/useRecordModal'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
-import { useSleepModal } from '@/composables/useSleepModal'
-import type {
-  Feeding,
-  DiaperChange,
-  Pumping,
-  Sleep,
-  GrowthRecord,
-  SolidFood,
-  Medication,
-  Vaccination,
-  Temperature,
-  Milestone,
-  FeedType,
-  BreastSide,
-  DiaperType,
-  DiaperColor,
-  DiaperAmount,
-  PumpSide,
-  SleepType,
-  VaccinationStatus,
-  TemperatureMethod,
-  MilestoneType,
-} from '@/types'
-
-type FeedingFormProps = {
-  id: number
-  type: FeedType
-  side?: BreastSide
-  startTime: number
-  endTime?: number
-  duration?: number
-  amount?: number
-  notes?: string
-}
-type DiaperFormProps = {
-  id: number
-  type: DiaperType
-  time: number
-  color?: DiaperColor
-  amount?: DiaperAmount
-  notes?: string
-}
-type PumpingFormProps = {
-  id: number
-  side: PumpSide
-  startTime: number
-  endTime?: number
-  duration?: number
-  amount?: number
-  notes?: string
-}
-type SleepFormProps = { id: number; type: SleepType; startTime: number; endTime: number; notes?: string }
-type GrowthFormProps = { id: number; date: number; weight?: number; height?: number; notes?: string }
-type SolidFoodFormProps = { id: number; time: number; food: string; amount?: string; notes?: string }
-type MedicationFormProps = { id: number; time: number; name: string; dose?: string; notes?: string }
-type VaccinationFormProps = {
-  id: number
-  date: number
-  name: string
-  dose?: string
-  status: VaccinationStatus
-  notes?: string
-}
-type TemperatureFormProps = {
-  id: number
-  time: number
-  value: number
-  method?: TemperatureMethod
-  notes?: string
-}
-type MilestoneFormProps = { id: number; time: number; type: MilestoneType; notes?: string }
+import { KIND_META, RECORD_KINDS } from '@/constants'
+import { formatTime, startOfDay } from '@/utils/format'
+import type { RecordKind } from '@/types'
 
 const feedingStore = useFeedingStore()
 const diaperStore = useDiaperStore()
@@ -114,19 +37,7 @@ const milestoneStore = useMilestoneStore()
 const { t } = useI18n()
 
 // 类型筛选
-const filter = ref<
-  | 'all'
-  | 'feeding'
-  | 'diaper'
-  | 'pumping'
-  | 'sleep'
-  | 'growth'
-  | 'solidFood'
-  | 'medication'
-  | 'vaccination'
-  | 'temperature'
-  | 'milestone'
->('all')
+const filter = ref<RecordKind | 'all'>('all')
 
 /** 按日期筛选：null=全部，否则为单日 0 点时间戳 */
 const dateFilter = ref<number | null>(null)
@@ -165,102 +76,54 @@ function clearDateFilter() {
 }
 
 /** 删除撤销：过滤待删除记录 */
-const { isPending, scheduleDelete } = useDeleteUndo()
-const { sleepModalOpen } = useSleepModal()
+const { isPending } = useDeleteUndo()
 const route = useRoute()
 const router = useRouter()
 
-function keep<T extends { id?: number }>(items: T[], kind: string): T[] {
+const {
+  modalState,
+  confirmDelete,
+  openAdd,
+  onEdit,
+  onDelete,
+  onStartRecord,
+  onSaved,
+  onCancelled,
+  confirmDeleteAction,
+} = useRecordModal()
+
+function keep<T extends { id?: number }>(items: T[], kind: RecordKind): T[] {
   return items.filter((x) => !isPending({ kind, id: x.id! }))
 }
 
-const filteredFeedings = computed(() => {
-  if (filter.value !== 'all' && filter.value !== 'feeding') return []
-  return keep(feedingStore.feedings.filter((f) => matchDate(f.startTime)), 'feeding')
-})
-const filteredDiapers = computed(() => {
-  if (filter.value !== 'all' && filter.value !== 'diaper') return []
-  return keep(diaperStore.diapers.filter((d) => matchDate(d.time)), 'diaper')
-})
-const filteredPumpings = computed(() => {
-  if (filter.value !== 'all' && filter.value !== 'pumping') return []
-  return keep(pumpingStore.pumpings.filter((p) => matchDate(p.startTime)), 'pumping')
-})
-const filteredSleeps = computed(() => {
-  if (filter.value !== 'all' && filter.value !== 'sleep') return []
-  return keep(sleepStore.sleeps.filter((s) => matchDate(s.startTime)), 'sleep')
-})
-const filteredGrowths = computed(() => {
-  if (filter.value !== 'all' && filter.value !== 'growth') return []
-  return keep(growthStore.growths.filter((g) => matchDate(g.date)), 'growth')
-})
-const filteredSolidFoods = computed(() => {
-  if (filter.value !== 'all' && filter.value !== 'solidFood') return []
-  return keep(solidFoodStore.solidFoods.filter((sf) => matchDate(sf.time)), 'solidFood')
-})
-const filteredMedications = computed(() => {
-  if (filter.value !== 'all' && filter.value !== 'medication') return []
-  return keep(medicationStore.medications.filter((m) => matchDate(m.time)), 'medication')
-})
-const filteredVaccinations = computed(() => {
-  if (filter.value !== 'all' && filter.value !== 'vaccination') return []
-  // 记录页只展示实际接种记录（done），planned 待接种计划/提醒不混入时间线
+/** 类型筛选 + 日期筛选 + 待删除过滤 */
+function filtered<T extends { id?: number }>(kind: RecordKind, items: T[], timeOf: (x: T) => number): T[] {
+  if (filter.value !== 'all' && filter.value !== kind) return []
   return keep(
-    vaccinationStore.vaccinations.filter((v) => v.status === 'done' && matchDate(v.date)),
-    'vaccination',
+    items.filter((x) => matchDate(timeOf(x))),
+    kind,
   )
-})
-const filteredTemperatures = computed(() => {
-  if (filter.value !== 'all' && filter.value !== 'temperature') return []
-  return keep(temperatureStore.temperatures.filter((tmp) => matchDate(tmp.time)), 'temperature')
-})
-const filteredMilestones = computed(() => {
-  if (filter.value !== 'all' && filter.value !== 'milestone') return []
-  return keep(
-    milestoneStore.milestones.filter((ms) => matchDate(ms.time)),
-    'milestone',
-  )
-})
+}
 
-const hasAny = computed(
-  () =>
-    filteredFeedings.value.length +
-      filteredDiapers.value.length +
-      filteredPumpings.value.length +
-      filteredSleeps.value.length +
-      filteredGrowths.value.length +
-      filteredSolidFoods.value.length +
-      filteredMedications.value.length +
-      filteredVaccinations.value.length +
-      filteredTemperatures.value.length +
-      filteredMilestones.value.length >
-    0,
+const entries = computed(() =>
+  buildTimelineEntries({
+    feedings: filtered('feeding', feedingStore.feedings, (f) => f.startTime),
+    diapers: filtered('diaper', diaperStore.diapers, (d) => d.time),
+    pumpings: filtered('pumping', pumpingStore.pumpings, (p) => p.startTime),
+    sleeps: filtered('sleep', sleepStore.sleeps, (s) => s.startTime),
+    growths: filtered('growth', growthStore.growths, (g) => g.date),
+    solidFoods: filtered('solidFood', solidFoodStore.solidFoods, (sf) => sf.time),
+    medications: filtered('medication', medicationStore.medications, (m) => m.time),
+    // 记录页只展示实际接种记录（done），planned 待接种计划/提醒不混入时间线
+    vaccinations: filtered(
+      'vaccination',
+      vaccinationStore.vaccinations.filter((v) => v.status === 'done'),
+      (v) => v.date,
+    ),
+    temperatures: filtered('temperature', temperatureStore.temperatures, (tmp) => tmp.time),
+    milestones: filtered('milestone', milestoneStore.milestones, (ms) => ms.time),
+  }),
 )
-
-// 弹窗
-const modalState = ref<{
-  kind:
-    | 'feeding'
-    | 'diaper'
-    | 'pumping'
-    | 'sleep'
-    | 'growth'
-    | 'solidFood'
-    | 'medication'
-    | 'vaccination'
-    | 'temperature'
-    | 'milestone'
-  editing?: TimelineEntry
-} | null>(null)
-const confirmDelete = ref<TimelineEntry | null>(null)
-
-function onEdit(entry: TimelineEntry) {
-  modalState.value = { kind: entry.kind, editing: entry }
-}
-
-function openAdd(kind: 'feeding' | 'diaper' | 'pumping' | 'sleep' | 'growth' | 'solidFood' | 'medication' | 'vaccination' | 'temperature' | 'milestone') {
-  modalState.value = { kind }
-}
 
 // 悬浮球导航过来时自动打开对应表单
 let lastTimerKind = ''
@@ -269,127 +132,16 @@ watch(
   (timerKind) => {
     if (timerKind && typeof timerKind === 'string' && timerKind !== lastTimerKind) {
       lastTimerKind = timerKind
-      openAdd(timerKind as Parameters<typeof openAdd>[0])
+      openAdd(timerKind as RecordKind)
       router.replace({ path: '/log' })
     }
   },
   { immediate: true },
 )
 
-function onDelete(entry: TimelineEntry) {
-  confirmDelete.value = entry
-}
-
-async function confirmDeleteAction() {
-  const e = confirmDelete.value
-  if (!e) return
-  scheduleDelete(e, () => removeEntry(e), t('common.deletedToast'), t('common.undo'))
-  confirmDelete.value = null
-}
-
-/** 真实删除（3 秒撤销窗口结束后执行） */
-async function removeEntry(e: TimelineEntry) {
-  if (e.kind === 'feeding') await feedingStore.remove(e.id)
-  else if (e.kind === 'diaper') await diaperStore.remove(e.id)
-  else if (e.kind === 'pumping') await pumpingStore.remove(e.id)
-  else if (e.kind === 'sleep') await sleepStore.remove(e.id)
-  else if (e.kind === 'growth') await growthStore.remove(e.id)
-  else if (e.kind === 'solidFood') await solidFoodStore.remove(e.id)
-  else if (e.kind === 'medication') await medicationStore.remove(e.id)
-  else if (e.kind === 'vaccination') await vaccinationStore.remove(e.id)
-  else if (e.kind === 'temperature') await temperatureStore.remove(e.id)
-  else await milestoneStore.remove(e.id)
-}
-
-// 表单弹窗打开时隐藏悬浮球
-watch(modalState, (ms) => { sleepModalOpen.value = ms !== null })
-
-function onStartRecord() {
-  modalState.value = null
-  showToast(t('common.recordStarted'))
-}
-
-function onSaved() {
-  modalState.value = null
-  showToast(t('common.recordSaved'))
-}
-
-function onCancelled() {
-  modalState.value = null
-}
-
-const editPayload = computed(() => {
-  const e = modalState.value?.editing
-  if (!e) return undefined
-  if (e.kind === 'feeding') {
-    const f = e.raw as Feeding
-    return {
-      id: e.id,
-      type: f.type,
-      side: f.side,
-      startTime: f.startTime,
-      endTime: f.endTime,
-      duration: f.duration,
-      amount: f.amount,
-      notes: f.notes,
-    }
-  }
-  if (e.kind === 'diaper') {
-    const d = e.raw as DiaperChange
-    return { id: e.id, type: d.type, time: d.time, color: d.color, amount: d.amount, notes: d.notes }
-  }
-  if (e.kind === 'pumping') {
-    const p = e.raw as Pumping
-    return {
-      id: e.id,
-      side: p.side,
-      startTime: p.startTime,
-      endTime: p.endTime,
-      duration: p.duration,
-      amount: p.amount,
-      notes: p.notes,
-    }
-  }
-  if (e.kind === 'sleep') {
-    const s = e.raw as Sleep
-    return { id: e.id, type: s.type, startTime: s.startTime, endTime: s.endTime, notes: s.notes }
-  }
-  if (e.kind === 'growth') {
-    const g = e.raw as GrowthRecord
-    return { id: e.id, date: g.date, weight: g.weight, height: g.height, notes: g.notes }
-  }
-  if (e.kind === 'solidFood') {
-    const sf = e.raw as SolidFood
-    return { id: e.id, time: sf.time, food: sf.food, amount: sf.amount, notes: sf.notes }
-  }
-  if (e.kind === 'medication') {
-    const m = e.raw as Medication
-    return { id: e.id, time: m.time, name: m.name, dose: m.dose, notes: m.notes }
-  }
-  if (e.kind === 'vaccination') {
-    const v = e.raw as Vaccination
-    return { id: e.id, date: v.date, name: v.name, dose: v.dose, status: v.status, notes: v.notes }
-  }
-  if (e.kind === 'temperature') {
-    const tmp = e.raw as Temperature
-    return { id: e.id, time: tmp.time, value: tmp.value, method: tmp.method, notes: tmp.notes }
-  }
-  const ms = e.raw as Milestone
-  return { id: e.id, time: ms.time, type: ms.type, notes: ms.notes }
-})
-
 const filters = [
   { key: 'all' as const, labelKey: 'log.filters.all' },
-  { key: 'feeding' as const, labelKey: 'log.filters.feeding' },
-  { key: 'diaper' as const, labelKey: 'log.filters.diaper' },
-  { key: 'pumping' as const, labelKey: 'log.filters.pumping' },
-  { key: 'sleep' as const, labelKey: 'log.filters.sleep' },
-  { key: 'growth' as const, labelKey: 'log.filters.growth' },
-  { key: 'solidFood' as const, labelKey: 'log.filters.solidFood' },
-  { key: 'medication' as const, labelKey: 'log.filters.medication' },
-  { key: 'vaccination' as const, labelKey: 'log.filters.vaccination' },
-  { key: 'temperature' as const, labelKey: 'log.filters.temperature' },
-  { key: 'milestone' as const, labelKey: 'log.filters.milestone' },
+  ...RECORD_KINDS.map((k) => ({ key: k, labelKey: KIND_META[k].labelKey })),
 ]
 
 const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter.value)?.labelKey ?? 'log.filters.all'))
@@ -446,17 +198,8 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 
     <div class="card">
       <TimelineList
-        v-if="hasAny"
-        :feedings="filteredFeedings"
-        :diapers="filteredDiapers"
-        :pumpings="filteredPumpings"
-        :sleeps="filteredSleeps"
-        :growths="filteredGrowths"
-        :solid-foods="filteredSolidFoods"
-        :medications="filteredMedications"
-        :vaccinations="filteredVaccinations"
-        :temperatures="filteredTemperatures"
-        :milestones="filteredMilestones"
+        v-if="entries.length"
+        :entries="entries"
         :deleting-key="confirmDelete ? confirmDelete.kind + '-' + confirmDelete.id : null"
         grouped
         @edit="onEdit"
@@ -468,75 +211,13 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
       </div>
     </div>
 
-    <BaseModal
-      :show="modalState !== null"
-      :title="modalState?.editing ? t('log.editTitle') : t('log.addTitle')"
+    <RecordFormModal
+      :state="modalState"
       @close="modalState = null"
-    >
-      <FeedingForm
-        v-if="modalState?.kind === 'feeding'"
-        :editing="modalState?.editing ? (editPayload as FeedingFormProps) : undefined"
-        @start-record="onStartRecord"
-        @saved="onSaved"
-          @cancelled="onCancelled"
-      />
-      <DiaperForm
-        v-else-if="modalState?.kind === 'diaper'"
-        :editing="modalState?.editing ? (editPayload as DiaperFormProps) : undefined"
-        @saved="onSaved"
-          @cancelled="onCancelled"
-      />
-      <PumpingForm
-        v-else-if="modalState?.kind === 'pumping'"
-        :editing="modalState?.editing ? (editPayload as PumpingFormProps) : undefined"
-        @start-record="onStartRecord"
-        @saved="onSaved"
-          @cancelled="onCancelled"
-      />
-      <SleepForm
-        v-else-if="modalState?.kind === 'sleep'"
-        :editing="modalState?.editing ? (editPayload as SleepFormProps) : undefined"
-        @start-record="onStartRecord"
-        @saved="onSaved"
-          @cancelled="onCancelled"
-      />
-      <GrowthForm
-        v-else-if="modalState?.kind === 'growth'"
-        :editing="modalState?.editing ? (editPayload as GrowthFormProps) : undefined"
-        @saved="onSaved"
-          @cancelled="onCancelled"
-      />
-      <SolidFoodForm
-        v-else-if="modalState?.kind === 'solidFood'"
-        :editing="modalState?.editing ? (editPayload as SolidFoodFormProps) : undefined"
-        @saved="onSaved"
-          @cancelled="onCancelled"
-      />
-      <MedicationForm
-        v-else-if="modalState?.kind === 'medication'"
-        :editing="modalState?.editing ? (editPayload as MedicationFormProps) : undefined"
-        @saved="onSaved"
-          @cancelled="onCancelled"
-      />
-      <VaccinationForm
-        v-else-if="modalState?.kind === 'vaccination'"
-        :editing="modalState?.editing ? (editPayload as VaccinationFormProps) : undefined"
-        @saved="onSaved"
-          @cancelled="onCancelled"
-      />
-      <TemperatureForm
-        v-else-if="modalState?.kind === 'temperature'"
-        :editing="modalState?.editing ? (editPayload as TemperatureFormProps) : undefined"
-        @saved="onSaved"
-          @cancelled="onCancelled"
-      />
-      <MilestoneForm
-        v-else-if="modalState?.kind === 'milestone'"
-        :editing="modalState?.editing ? (editPayload as MilestoneFormProps) : undefined"
-        @saved="onSaved"
-          @cancelled="onCancelled"
-      />
-    </BaseModal>
+      @saved="onSaved"
+      @cancelled="onCancelled"
+      @start-record="onStartRecord"
+    />
 
     <BaseModal :show="confirmDelete !== null" :title="t('common.deleteRecord')" @close="confirmDelete = null">
       <p class="confirm-text">{{ t('log.deleteSimple') }}</p>
