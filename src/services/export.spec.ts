@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { csvEscape, toCsv, buildBabyCsvRows, exportBabyCsvs, exportAllBabiesCsv, parseCsv, importAllCsv, type BabyCsvData } from '@/services/export'
+import { csvEscape, toCsv, buildBabyCsvRows, buildBabyInfoRow, exportBabyCsvs, exportAllBabiesCsv, parseCsv, importAllCsv, type BabyCsvData } from '@/services/export'
 import type { Feeding, Baby } from '@/types'
 import i18n from '@/i18n'
 
@@ -122,12 +122,15 @@ describe('buildBabyCsvRows', () => {
     const rows = buildBabyCsvRows(data)
     expect(rows).toHaveLength(1)
     const row = rows[0]
-    expect(row).toHaveLength(10)
+    expect(row).toHaveLength(12)
     // 数据行使用当前语言标签
     expect(row[0]).toBe('喂养')
     expect(row[1]).toBe('2026-01-01')
     expect(row[2]).toBe('08:00:00')
     expect(row[6]).toBe('120 ml')
+    // 末尾为宝宝信息专用列占位
+    expect(row[10]).toBe('')
+    expect(row[11]).toBe('')
   })
 
   it('备注含逗号/引号时经 toCsv 正确转义', () => {
@@ -138,9 +141,14 @@ describe('buildBabyCsvRows', () => {
   it('提供 babyName 时首列插入宝宝名', () => {
     const rows = buildBabyCsvRows(data, '小糯米')
     expect(rows[0][0]).toBe('小糯米')
-    expect(rows[0]).toHaveLength(11)
+    expect(rows[0]).toHaveLength(13)
     const anonymous = buildBabyCsvRows(data)
-    expect(anonymous[0]).toHaveLength(10)
+    expect(anonymous[0]).toHaveLength(12)
+  })
+
+  it('amount 为 0 时也导出（不视为缺失）', () => {
+    const rows = buildBabyCsvRows({ ...data, feedings: [makeFeeding({ amount: 0 })] })
+    expect(rows[0][6]).toBe('0 ml')
   })
 })
 
@@ -165,6 +173,47 @@ describe('exportBabyCsvs', () => {
     expect(text).toContain('exportCsv.recordType')
     // 数据行使用当前语言标签
     expect(text).toContain('喂养')
+    // 宝宝信息行随文件导出（含完整资料）
+    expect(text).toContain('宝宝')
+    expect(text).toContain('小糯米')
+    expect(text).toContain('2026-01-01')
+  })
+})
+
+describe('buildBabyInfoRow', () => {
+  it('完整还原姓名/出生日期/性别/出生身高体重/头像', () => {
+    const baby = makeBaby({
+      name: '小糯米',
+      gender: 'girl',
+      birthDate: '2026-01-01',
+      birthWeight: 3.2,
+      birthHeight: 50,
+      avatar: '👶',
+      avatarColor: '#F2A28C',
+    })
+    const row = buildBabyInfoRow(baby)
+    expect(row).toHaveLength(12)
+    expect(row[0]).toBe('宝宝')
+    expect(row[1]).toBe('2026-01-01')
+    expect(row[5]).toBe('小糯米')
+    expect(row[6]).toBe('3.2 kg · 50 cm')
+    expect(row[8]).toBe('女孩')
+    expect(row[10]).toBe('👶')
+    expect(row[11]).toBe('#F2A28C')
+  })
+
+  it('多宝宝合并导出时首列插入宝宝名', () => {
+    const row = buildBabyInfoRow(makeBaby({ name: '大宝' }), true)
+    expect(row[0]).toBe('大宝')
+    expect(row).toHaveLength(13)
+  })
+
+  it('资料缺失时对应列为空', () => {
+    const row = buildBabyInfoRow({ name: '匿名', avatarColor: '#FFF', createdAt: 0 })
+    expect(row[1]).toBe('')
+    expect(row[6]).toBe('')
+    expect(row[8]).toBe('')
+    expect(row[10]).toBe('')
   })
 })
 
@@ -205,8 +254,8 @@ describe('exportAllBabiesCsv', () => {
     expect(text).toContain('大宝')
     expect(text).toContain('二宝')
     const lines = text.split('\r\n')
-    // 表头 + 2 个宝宝 × 2 条喂养
-    expect(lines.length).toBe(5)
+    // 表头 + 2 个宝宝 × (1 条宝宝信息行 + 2 条喂养)
+    expect(lines.length).toBe(7)
   })
 
   it('无宝宝时仅输出表头', async () => {
@@ -464,4 +513,107 @@ describe('importAllCsv', () => {
     expect(mockDb.feedings.clear).not.toHaveBeenCalled()
     expect(mockDb.babies.add).not.toHaveBeenCalled()
   })
+
+  const HEADER_13 =
+    'exportCsv.babyName,exportCsv.recordType,exportCsv.date,exportCsv.time,exportCsv.endDate,exportCsv.endTime,exportCsv.item,exportCsv.value,exportCsv.duration,exportCsv.status,exportCsv.notes,exportCsv.avatar,exportCsv.avatarColor'
+  const HEADER_12 =
+    'exportCsv.recordType,exportCsv.date,exportCsv.time,exportCsv.endDate,exportCsv.endTime,exportCsv.item,exportCsv.value,exportCsv.duration,exportCsv.status,exportCsv.notes,exportCsv.avatar,exportCsv.avatarColor'
+
+  it('宝宝信息行完整还原：姓名/性别/出生日期/出生身高体重/头像/头像色', async () => {
+    const baby = makeBaby({
+      name: '小糯米',
+      gender: 'girl',
+      birthDate: '2026-01-01',
+      birthWeight: 3.2,
+      birthHeight: 50,
+      avatar: '👶',
+      avatarColor: '#F2A28C',
+    })
+    const csv =
+      `${HEADER_13}\r\n` +
+      `${toCsv([buildBabyInfoRow(baby, true)])}\r\n` +
+      toCsv([buildBabyCsvRows({ ...emptyData(), feedings: [makeFeeding({})] }, '小糯米')[0]])
+    const result = await importAllCsv(new File([csv], 'baby-meta.csv', { type: 'text/csv' }))
+    expect(result).toMatchObject({ babies: 1, feedings: 1 })
+    const [added] = mockDb.babies.add.mock.calls as Array<[Record<string, unknown>]>
+    expect(added[0]).toMatchObject({
+      name: '小糯米',
+      gender: 'girl',
+      birthDate: '2026-01-01',
+      birthWeight: 3.2,
+      birthHeight: 50,
+      avatar: '👶',
+      avatarColor: '#F2A28C',
+    })
+    // 记录挂到还原出的真实宝宝 id
+    const [feedItems] = mockDb.feedings.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(feedItems[0].babyId).toBe(1)
+  })
+
+  it('单宝宝文件（无宝宝名列）也能还原宝宝资料，不再落为默认宝宝', async () => {
+    const baby = makeBaby({ name: '小糯米', gender: 'boy', birthDate: '2026-02-02', avatarColor: '#8FB9D8' })
+    const csv =
+      `${HEADER_12}\r\n` +
+      `${toCsv([buildBabyInfoRow(baby)])}\r\n` +
+      toCsv([buildBabyCsvRows({ ...emptyData(), feedings: [makeFeeding({})] })[0]])
+    const result = await importAllCsv(new File([csv], 'single.csv', { type: 'text/csv' }))
+    expect(result).toMatchObject({ babies: 1, feedings: 1 })
+    const [added] = mockDb.babies.add.mock.calls as Array<[Record<string, unknown>]>
+    expect(added[0]).toMatchObject({ name: '小糯米', gender: 'boy', birthDate: '2026-02-02' })
+  })
+
+  it('无任何记录的宝宝仅凭信息行也能导入', async () => {
+    const baby = makeBaby({ name: '独苗', avatarColor: '#8FBF9F' })
+    const csv = `${HEADER_12}\r\n${toCsv([buildBabyInfoRow(baby)])}`
+    const result = await importAllCsv(new File([csv], 'lonely.csv', { type: 'text/csv' }))
+    expect(result).toMatchObject({ babies: 1, feedings: 0 })
+    const [added] = mockDb.babies.add.mock.calls as Array<[Record<string, unknown>]>
+    expect(added[0].name).toBe('独苗')
+  })
+
+  it('旧版文件（无宝宝信息行/新增列）仍可导入', async () => {
+    const csv =
+      'exportCsv.recordType,exportCsv.date,exportCsv.time,exportCsv.endDate,exportCsv.endTime,exportCsv.item,exportCsv.value,exportCsv.duration,exportCsv.status,exportCsv.notes\n' +
+      'feeding,2026-01-01,08:30,,,breast,120 ml,,,,'
+    const result = await importAllCsv(new File([csv], 'legacy.csv', { type: 'text/csv' }))
+    expect(result).toMatchObject({ babies: 1, feedings: 1 })
+    const [added] = mockDb.babies.add.mock.calls as Array<[Record<string, unknown>]>
+    expect(added[0].name).toBe('exportCsv.defaultBaby')
+  })
+
+  it('睡眠仅有时长无有效结束时间时按时长还原结束时间', async () => {
+    const csv =
+      `${HEADER_12}\n` +
+      'sleep,2026-01-01,08:00:00,2026-01-01,08:00:00,小睡,,90,,,,,'
+    const result = await importAllCsv(new File([csv], 'sleep.csv', { type: 'text/csv' }))
+    expect(result).toMatchObject({ sleeps: 1 })
+    const [items] = mockDb.sleeps.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    const start = items[0].startTime as number
+    const end = items[0].endTime as number
+    expect(end - start).toBe(90 * 60000)
+  })
+
+  it('喂养 amount 为 0 往返后仍为 0', async () => {
+    const csv =
+      `${HEADER_12}\r\n` +
+      toCsv([buildBabyCsvRows({ ...emptyData(), feedings: [makeFeeding({ amount: 0 })] })[0]])
+    await importAllCsv(new File([csv], 'zero.csv', { type: 'text/csv' }))
+    const [items] = mockDb.feedings.bulkAdd.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(items[0].amount).toBe(0)
+  })
 })
+
+function emptyData(): BabyCsvData {
+  return {
+    feedings: [],
+    diapers: [],
+    pumpings: [],
+    sleeps: [],
+    growths: [],
+    solidFoods: [],
+    medications: [],
+    vaccinations: [],
+    temperatures: [],
+    milestones: [],
+  }
+}

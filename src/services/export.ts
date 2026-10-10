@@ -16,6 +16,7 @@ import type {
   Milestone,
 } from '@/types'
 import { downloadBlob, formatDate, formatTime, parseDate, startOfDay } from '@/utils/format'
+import { AVATAR_COLORS } from '@/constants'
 
 const t = i18n.global.t
 
@@ -32,6 +33,8 @@ const HEADER_ALIASES: Record<string, string[]> = {
   duration: [zhCN.exportCsv.duration, enUS.exportCsv.duration, 'duration'],
   status: [zhCN.exportCsv.status, enUS.exportCsv.status, 'status'],
   notes: [zhCN.exportCsv.notes, enUS.exportCsv.notes, 'notes'],
+  avatar: [zhCN.exportCsv.avatar, enUS.exportCsv.avatar, 'avatar'],
+  avatarColor: [zhCN.exportCsv.avatarColor, enUS.exportCsv.avatarColor, 'avatarColor'],
 }
 
 /** 按表头取单元格：当前 locale 列名 -> zh -> en -> 内部键值，未命中返回 '' */
@@ -89,6 +92,10 @@ const LABELS_ZH: Record<string, string> = {
   ear: '耳温',
   forehead: '额头',
   rectal: '肛温',
+  // 宝宝信息行
+  baby: '宝宝',
+  boy: '男孩',
+  girl: '女孩',
 }
 
 const LABELS_EN: Record<string, string> = {
@@ -136,6 +143,10 @@ const LABELS_EN: Record<string, string> = {
   ear: 'Ear',
   forehead: 'Forehead',
   rectal: 'Rectal',
+  // 宝宝信息行
+  baby: 'Baby',
+  boy: 'Boy',
+  girl: 'Girl',
 }
 
 /** 获取当前语言标签，未找到返回原键值 */
@@ -197,8 +208,32 @@ function csvHeader(withBaby: boolean): Row {
     t('exportCsv.duration'),
     t('exportCsv.status'),
     t('exportCsv.notes'),
+    t('exportCsv.avatar'),
+    t('exportCsv.avatarColor'),
   ]
   return withBaby ? [t('exportCsv.babyName'), ...cols] : cols
+}
+
+/** 宝宝信息行（每份导出文件头部写入一条，保留姓名/性别/出生信息/头像等资料） */
+export function buildBabyInfoRow(baby: Baby, withBabyName = false): Row {
+  const parts: string[] = []
+  if (baby.birthWeight != null) parts.push(`${baby.birthWeight} kg`)
+  if (baby.birthHeight != null) parts.push(`${baby.birthHeight} cm`)
+  return [
+    ...(withBabyName ? [baby.name] : []),
+    bl('baby'),
+    baby.birthDate ?? '',
+    '',
+    '',
+    '',
+    baby.name,
+    parts.join(' · '),
+    '',
+    baby.gender ? bl(baby.gender) : '',
+    '',
+    baby.avatar ?? '',
+    baby.avatarColor ?? '',
+  ]
 }
 
 /**
@@ -222,7 +257,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
       f.endTime ? formatDate(f.endTime) : '',
       f.endTime ? formatTime(f.endTime) : '',
       typeLabel,
-      f.amount ? `${f.amount} ml` : '',
+      f.amount != null ? `${f.amount} ml` : '',
       f.duration ? Math.round(f.duration / 60000) : '',
       '',
       f.notes ?? '',
@@ -256,7 +291,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
       p.endTime ? formatDate(p.endTime) : '',
       p.endTime ? formatTime(p.endTime) : '',
       breastSideLabel(p.side),
-      p.amount ? `${p.amount} ml` : '',
+      p.amount != null ? `${p.amount} ml` : '',
       p.duration ? Math.round(p.duration / 60000) : '',
       '',
       p.notes ?? '',
@@ -386,7 +421,8 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
     ])
   }
 
-  return rows
+  // 记录行统一补齐宝宝信息专用列（头像/头像色），与表头对齐
+  return rows.map((r) => [...r, '', ''])
 }
 
 /** 读取单个宝宝的全部记录（按时间排序） */
@@ -417,7 +453,7 @@ export async function exportBabyCsvs(baby: Baby): Promise<void> {
     throw new Error('Invalid baby id for export')
   }
   const data = await fetchBabyData(baby.id)
-  const rows: Row[] = [csvHeader(false), ...buildBabyCsvRows(data)]
+  const rows: Row[] = [csvHeader(false), buildBabyInfoRow(baby), ...buildBabyCsvRows(data)]
   const stamp = formatDate(Date.now())
   downloadBlob(
     '\ufeff' + toCsv(rows),
@@ -431,6 +467,8 @@ export async function exportAllBabiesCsv(): Promise<void> {
   const babies = await db.babies.toArray()
   const rows: Row[] = [csvHeader(true)]
   for (const baby of babies) {
+    // 宝宝信息行始终写入（即使该宝宝没有任何记录，导入后也不丢失资料）
+    rows.push(buildBabyInfoRow(baby, true))
     const data = await fetchBabyData(baby.id!)
     rows.push(...buildBabyCsvRows(data, baby.name))
   }
@@ -633,13 +671,19 @@ function mapCsvRowToRecord(
       }
     }
     case 'sleeps': {
+      // 结束时间缺失或不晚于开始时间时，优先用时长列还原真实结束时间（旧文件回退 1 小时）
+      const durMin = duration ? parseInt(duration, 10) : 0
+      let sleepEnd = endTime
+      if (!sleepEnd || sleepEnd <= startTime) {
+        sleepEnd = durMin > 0 ? startTime + durMin * 60000 : startTime + 60 * 60000
+      }
       return {
         kind,
         data: {
           ...base,
           type: toInternal(item),
           startTime,
-          endTime: endTime || startTime + 60 * 60000,
+          endTime: sleepEnd,
           notes: notes || undefined,
         },
       }
@@ -725,6 +769,37 @@ function mapCsvRowToRecord(
   return null
 }
 
+/** 宝宝信息行解析结果（导入用） */
+interface BabyInfoMeta {
+  name: string
+  birthDate?: string
+  gender?: 'boy' | 'girl'
+  birthWeight?: number
+  birthHeight?: number
+  avatar?: string
+  avatarColor?: string
+}
+
+/** 解析宝宝信息行（date=出生日期，item=姓名，value="x kg · y cm"，status=性别，头像两列） */
+function parseBabyInfoRow(obj: Record<string, string>): BabyInfoMeta | null {
+  const name = (headerCell(obj, 'item') || headerCell(obj, 'babyName')).trim()
+  if (!name) return null
+  const value = headerCell(obj, 'value')
+  const weightMatch = value.match(/([\d.]+)\s*kg/)
+  const heightMatch = value.match(/([\d.]+)\s*cm/)
+  const genderRaw = toInternal(headerCell(obj, 'status'))
+  const dateStr = headerCell(obj, 'date')
+  return {
+    name,
+    birthDate: /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : undefined,
+    gender: genderRaw === 'boy' || genderRaw === 'girl' ? genderRaw : undefined,
+    birthWeight: weightMatch ? parseFloat(weightMatch[1]) : undefined,
+    birthHeight: heightMatch ? parseFloat(heightMatch[1]) : undefined,
+    avatar: headerCell(obj, 'avatar') || undefined,
+    avatarColor: headerCell(obj, 'avatarColor') || undefined,
+  }
+}
+
 /** 导入 CSV 备份（覆盖当前数据） */
 export async function importAllCsv(
   file: File,
@@ -748,7 +823,7 @@ export async function importAllCsv(
   const headers = rows[0]
   const hasBabyNameCol = [t('exportCsv.babyName'), ...HEADER_ALIASES.babyName].includes(headers[0])
 
-  const babiesMap = new Map<string, { name: string; id: number }>()
+  const babiesMap = new Map<string, BabyInfoMeta & { id: number }>()
   const recordBuckets: Record<string, unknown[]> = {
     feedings: [],
     diapers: [],
@@ -768,6 +843,30 @@ export async function importAllCsv(
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i]
     if (row.every((c) => c === '')) continue
+
+    // 宝宝信息行：合并进 babiesMap（先于记录行出现时即为目标宝宝）
+    const obj: Record<string, string> = {}
+    headers.forEach((h, idx) => {
+      obj[h] = row[idx] ?? ''
+    })
+    if (toInternal(headerCell(obj, 'recordType')) === 'baby') {
+      const meta = parseBabyInfoRow(obj)
+      if (meta) {
+        let entry = babiesMap.get(meta.name)
+        if (!entry) {
+          entry = { name: meta.name, id: -(babiesMap.size + 1) }
+          babiesMap.set(meta.name, entry)
+        }
+        if (meta.birthDate) entry.birthDate = meta.birthDate
+        if (meta.gender) entry.gender = meta.gender
+        if (meta.birthWeight != null) entry.birthWeight = meta.birthWeight
+        if (meta.birthHeight != null) entry.birthHeight = meta.birthHeight
+        if (meta.avatar) entry.avatar = meta.avatar
+        if (meta.avatarColor) entry.avatarColor = meta.avatarColor
+        mappedCount++
+      }
+      continue
+    }
 
     const babyName = hasBabyNameCol ? row[0] : ''
     let babyId: number
@@ -830,9 +929,18 @@ export async function importAllCsv(
         db.milestones.clear(),
       ])
 
-      for (const [, { name, id: tempId }] of babyNames) {
-        const realId = (await db.babies.add({ name, avatarColor: '#FF6B6B', createdAt: now }))!
-        babyIdMap.set(tempId, realId)
+      for (const [, entry] of babyNames) {
+        const realId = (await db.babies.add({
+          name: entry.name,
+          gender: entry.gender,
+          birthDate: entry.birthDate,
+          birthWeight: entry.birthWeight,
+          birthHeight: entry.birthHeight,
+          avatar: entry.avatar,
+          avatarColor: entry.avatarColor ?? AVATAR_COLORS[0],
+          createdAt: now,
+        }))!
+        babyIdMap.set(entry.id, realId)
       }
 
       for (const [kind, records] of Object.entries(recordBuckets)) {
