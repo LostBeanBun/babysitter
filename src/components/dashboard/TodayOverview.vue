@@ -12,10 +12,11 @@ import { startOfDay, formatDuration, formatAmount, formatTime } from '@/utils/fo
 import { MS_PER_DAY } from '@/constants'
 import { recommendedIntervalMs, recommendedIntervalLabel } from '@/utils/feedingGuide'
 import { dailyGuide } from '@/utils/dailyGuides'
+import type { Vaccination } from '@/types'
 
 /** 今日概览：喂奶/疫苗提醒条 + 统计卡 + 每日小结（数据按 now 实时重算） */
 const props = defineProps<{ now: number }>()
-const emit = defineEmits<{ add: [kind: 'vaccination'] }>()
+const emit = defineEmits<{ edit: [v: Vaccination] }>()
 
 /**
  * 提醒条关闭状态（会话级，仅内存）：关闭后当前会话不再显示，刷新页面即重新提醒。
@@ -152,17 +153,23 @@ const guide = computed(() => dailyGuide(activeBaby.value))
       </button>
     </div>
 
-    <!-- 疫苗提醒条 -->
+    <!-- 疫苗提醒条：点击打开最近一条待种记录进行编辑；点具体疫苗可直接编辑该条 -->
     <div
       v-if="upcomingVaccinations.length > 0 && !dismissed.vaccine"
       class="vaccine-banner"
-      @click="emit('add', 'vaccination')"
+      @click="emit('edit', upcomingVaccinations[0])"
     >
       <span class="vb-icon">💉</span>
       <div class="vb-text">
         <p class="vb-title">{{ t('dashboard.vaccineReminderTitle') }}</p>
         <p class="vb-sub">
-          <span v-for="v in upcomingVaccinations" :key="v.id" class="vb-item">
+          <button
+            v-for="v in upcomingVaccinations"
+            :key="v.id"
+            type="button"
+            class="vb-item"
+            @click.stop="emit('edit', v)"
+          >
             {{ v.name }}<template v-if="v.dose"> · {{ v.dose }}</template>
             <span class="vb-days">
               {{
@@ -173,7 +180,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
                     : t('dashboard.vaccineOverdue', { n: -vaccineDaysLeft(v.date) })
               }}
             </span>
-          </span>
+          </button>
         </p>
       </div>
       <button
@@ -593,5 +600,28 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   color: var(--accent-blue);
   font-weight: 700;
   margin-left: 3px;
+}
+
+/* 提醒条内单个疫苗项（点击直接编辑该条计划） */
+.vaccine-banner .vb-item {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.vaccine-banner .vb-item:hover {
+  color: var(--accent-blue);
+}
+
+.vaccine-banner .vb-item:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
 }
 </style>

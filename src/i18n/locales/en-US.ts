@@ -190,6 +190,7 @@ planPicker: 'Library',
   planTabFree: 'Free',
   planTabSelf: 'Self-paid',
   planMonth: 'Suggested at {n} months',
+    planAdded: 'Added',
     needBirthDate: 'Please set the birth date in baby info first',
   },
   temperature: {

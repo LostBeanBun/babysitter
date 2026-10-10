@@ -238,6 +238,29 @@ function openAdd(
   modalState.value = { kind }
 }
 
+/** 点击疫苗提醒：打开对应计划记录编辑；记录已被删除时回退为新增 */
+function onEditVaccination(v: Vaccination) {
+  const current = vaccinationStore.vaccinations.find((x) => x.id === v.id)
+  if (!current) {
+    openAdd('vaccination')
+    return
+  }
+  modalState.value = {
+    kind: 'vaccination',
+    editing: {
+      kind: 'vaccination',
+      id: current.id!,
+      time: current.date,
+      kindColor: current.status === 'done' ? '#6AB0D8' : '#D8A45A',
+      icon: '💉',
+      color: current.status === 'done' ? '#6AB0D8' : '#D8A45A',
+      title: current.name,
+      detail: '',
+      raw: current,
+    },
+  }
+}
+
 async function confirmDeleteAction() {
   const e = confirmDelete.value
   if (!e) return
@@ -368,7 +391,7 @@ const editPayload = computed(() => {
 
     <template v-else>
       <!-- 今日概览（提醒条 + 统计卡 + 小结按钮） -->
-      <TodayOverview :now="now" @add="openAdd('vaccination')" />
+      <TodayOverview :now="now" @edit="onEditVaccination" />
 
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>

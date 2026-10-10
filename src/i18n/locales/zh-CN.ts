@@ -190,6 +190,7 @@ planPicker: '计划库',
   planTabFree: '免费疫苗',
   planTabSelf: '自费疫苗',
   planMonth: '建议 {n} 月龄',
+    planAdded: '已添加',
     needBirthDate: '请先在宝宝信息中设置出生日期',
   },
   temperature: {

@@ -47,9 +47,13 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
 /** 当前 Tab 展示的疫苗列表 */
 const planItems = computed(() => (planTab.value === 'free' ? VACCINE_PLAN : SELF_PAID_VACCINE_PLAN))
 
-/** 已添加过的疫苗（同名+同剂次），避免重复添加 */
+/** 已添加过的疫苗（同名+同剂次），避免重复添加；编辑中的记录自身不算占用，允许重选以刷新名称/日期 */
 const existingKeys = computed(() =>
-  new Set(vaccinationStore.vaccinations.map((v) => `${v.name}|${v.dose ?? ''}`)),
+  new Set(
+    vaccinationStore.vaccinations
+      .filter((v) => v.id !== props.editing?.id)
+      .map((v) => `${v.name}|${v.dose ?? ''}`),
+  ),
 )
 
 function pickFromPlan(item: VaccinePlanItem) {
@@ -188,6 +192,9 @@ async function submit() {
           <span class="plan-item-name">{{ item.name }}</span>
           <span class="plan-item-meta">
             {{ item.dose }} · {{ t('vaccination.planMonth', { n: item.months }) }}
+            <span v-if="existingKeys.has(`${item.name}|${item.dose}`)" class="plan-item-added">
+              ✓ {{ t('vaccination.planAdded') }}
+            </span>
             <span v-if="item.note" class="plan-item-note">{{ item.note }}</span>
           </span>
         </button>
@@ -293,6 +300,16 @@ async function submit() {
 .plan-item-note {
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.plan-item-added {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6ab86a;
+  background: rgba(106, 184, 106, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
 .status-grid {
