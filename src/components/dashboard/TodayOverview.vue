@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
@@ -8,9 +8,12 @@ import { usePumpingStore } from '@/stores/pumping'
 import { useSleepStore } from '@/stores/sleep'
 import { useVaccinationStore } from '@/stores/vaccination'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
+import { useDismissedReminders } from '@/composables/useDismissedReminders'
+import ReminderBanner from '@/components/common/ReminderBanner.vue'
 import { startOfDay, formatDuration, formatAmount, formatTime } from '@/utils/format'
 import { MS_PER_DAY } from '@/constants'
 import { computeTodayStats } from '@/services/todayStats'
+import { upcomingVaccinations, vaccineDaysLeft } from '@/services/reminders'
 import { recommendedIntervalMs, recommendedIntervalLabel } from '@/utils/feedingGuide'
 import { dailyGuide } from '@/utils/dailyGuides'
 import type { Vaccination } from '@/types'
@@ -18,17 +21,6 @@ import type { Vaccination } from '@/types'
 /** 今日概览：喂奶/疫苗提醒条 + 统计卡 + 每日小结（数据按 now 实时重算） */
 const props = defineProps<{ now: number }>()
 const emit = defineEmits<{ edit: [v: Vaccination] }>()
-
-/**
- * 提醒条关闭状态（会话级，仅内存）：关闭后当前会话不再显示，刷新页面即重新提醒。
- * 提醒基于实时数据（如喂奶间隔），跨天重新提醒没有意义，故不持久化。
- */
-const dismissed = ref<{ feed: boolean; vaccine: boolean }>({ feed: false, vaccine: false })
-
-/** 关闭某提醒条（当前会话生效） */
-function dismissReminder(kind: 'feed' | 'vaccine') {
-  dismissed.value = { ...dismissed.value, [kind]: true }
-}
 
 const { t } = useI18n()
 const babyStore = useBabyStore()
@@ -38,6 +30,7 @@ const pumpingStore = usePumpingStore()
 const sleepStore = useSleepStore()
 const vaccinationStore = useVaccinationStore()
 const { isPending } = useDeleteUndo()
+const { dismissed, dismiss } = useDismissedReminders()
 
 const todayStart = computed(() => startOfDay(props.now))
 const todayEnd = computed(() => todayStart.value + MS_PER_DAY - 1)
@@ -67,16 +60,28 @@ const todaySleeps = computed(() =>
     'sleep',
   ),
 )
-  const upcomingVaccinations = computed(() => {
-  const cutoff = todayStart.value - 14 * MS_PER_DAY
-  return vaccinationStore.vaccinations
-    .filter((v) => v.status === 'planned' && v.date >= cutoff)
-    .sort((a, b) => a.date - b.date)
-    .slice(0, 3)
-})
+  const upcomingVaccinationsList = computed(() =>
+  upcomingVaccinations(vaccinationStore.vaccinations, todayStart.value),
+)
 
-function vaccineDaysLeft(date: number): number {
-  return Math.round((date - todayStart.value) / MS_PER_DAY)
+/** 疫苗提醒条内容芯片：名称 · 剂次 + 距接种日文案 */
+const vaccineChips = computed(() =>
+  upcomingVaccinationsList.value.map((v) => {
+    const n = vaccineDaysLeft(v.date, todayStart.value)
+    const badge =
+      n === 0
+        ? t('dashboard.vaccineToday')
+        : n > 0
+          ? t('dashboard.vaccineDaysLeft', { n })
+          : t('dashboard.vaccineOverdue', { n: -n })
+    return { key: v.id!, label: v.dose ? `${v.name} · ${v.dose}` : v.name, badge }
+  }),
+)
+
+/** 点击提醒条/单个芯片：编辑对应计划记录 */
+function onSelectVaccination(key: number | string) {
+  const v = vaccinationStore.vaccinations.find((x) => x.id === key)
+  if (v) emit('edit', v)
 }
 
 // 今日汇总
@@ -129,63 +134,28 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 <template>
   <div class="today-overview">
     <!-- 喂奶提醒条 -->
-    <div v-if="overdue && !dismissed.feed" class="feed-reminder-banner">
-      <span class="fr-icon">🍼</span>
-      <div class="fr-text">
-        <p class="fr-title">{{ t('feed.sinceLast', { duration: formatDuration(sinceMs ?? 0) }) }}</p>
-        <p class="fr-sub">{{ t('feed.reminderSub', { label: recommendedIntervalLabel(activeBaby) }) }}</p>
-      </div>
-      <button
-        type="button"
-        class="banner-close"
-        :aria-label="t('common.close')"
-        :title="t('common.close')"
-        @click="dismissReminder('feed')"
-      >
-        ✕
-      </button>
-    </div>
+    <ReminderBanner
+      v-if="overdue && !dismissed.feed"
+      icon="🍼"
+      variant="feed"
+      :title="t('feed.sinceLast', { duration: formatDuration(sinceMs ?? 0) })"
+      :sub="t('feed.reminderSub', { label: recommendedIntervalLabel(activeBaby) })"
+      :dismiss-label="t('common.close')"
+      @dismiss="dismiss('feed')"
+    />
 
-    <!-- 疫苗提醒条：点击打开最近一条待种记录进行编辑；点具体疫苗可直接编辑该条 -->
-    <div
-      v-if="upcomingVaccinations.length > 0 && !dismissed.vaccine"
-      class="vaccine-banner"
-      @click="emit('edit', upcomingVaccinations[0])"
-    >
-      <span class="vb-icon">💉</span>
-      <div class="vb-text">
-        <p class="vb-title">{{ t('dashboard.vaccineReminderTitle') }}</p>
-        <p class="vb-sub">
-          <button
-            v-for="v in upcomingVaccinations"
-            :key="v.id"
-            type="button"
-            class="vb-item"
-            @click.stop="emit('edit', v)"
-          >
-            {{ v.name }}<template v-if="v.dose"> · {{ v.dose }}</template>
-            <span class="vb-days">
-              {{
-                vaccineDaysLeft(v.date) === 0
-                  ? t('dashboard.vaccineToday')
-                  : vaccineDaysLeft(v.date) > 0
-                    ? t('dashboard.vaccineDaysLeft', { n: vaccineDaysLeft(v.date) })
-                    : t('dashboard.vaccineOverdue', { n: -vaccineDaysLeft(v.date) })
-              }}
-            </span>
-          </button>
-        </p>
-      </div>
-      <button
-        type="button"
-        class="banner-close"
-        :aria-label="t('common.close')"
-        :title="t('common.close')"
-        @click.stop="dismissReminder('vaccine')"
-      >
-        ✕
-      </button>
-    </div>
+    <!-- 疫苗提醒条：点击打开最近一条待种记录进行编辑，点具体芯片可直接编辑该条 -->
+    <ReminderBanner
+      v-if="upcomingVaccinationsList.length > 0 && !dismissed.vaccine"
+      icon="💉"
+      variant="vaccine"
+      :title="t('dashboard.vaccineReminderTitle')"
+      :chips="vaccineChips"
+      :dismiss-label="t('common.close')"
+      @click="emit('edit', upcomingVaccinationsList[0])"
+      @select="onSelectVaccination"
+      @dismiss="dismiss('vaccine')"
+    />
 
 <!-- 统计卡 -->
       <div class="overview-grid">
@@ -475,146 +445,5 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   .ov-card--milk {
     grid-column: 1 / -1;
   }
-}
-
-.feed-reminder-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, var(--primary-soft), var(--accent-yellow-soft));
-  backdrop-filter: var(--glass-blur-light);
-  -webkit-backdrop-filter: var(--glass-blur-light);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: 9px 12px;
-  margin-bottom: 8px;
-  box-shadow: var(--shadow-glass);
-}
-
-.feed-reminder-banner .fr-icon {
-  font-size: 24px;
-  flex-shrink: 0;
-}
-
-.feed-reminder-banner .fr-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.feed-reminder-banner .fr-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.feed-reminder-banner .fr-sub {
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-top: 1px;
-}
-
-.banner-close {
-  width: 44px;
-  height: 44px;
-  min-height: 0;
-  margin-left: auto;
-  margin-right: -10px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  color: var(--text-muted);
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  transition:
-    color 0.15s ease,
-    background 0.15s ease;
-}
-
-.banner-close:hover {
-  color: var(--text);
-  background: var(--surface-2);
-}
-
-.banner-close:active {
-  transform: scale(0.9);
-}
-
-.vaccine-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, var(--accent-blue-soft), var(--surface));
-  backdrop-filter: var(--glass-blur-light);
-  -webkit-backdrop-filter: var(--glass-blur-light);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: 9px 12px;
-  margin-bottom: 8px;
-  cursor: pointer;
-  box-shadow: var(--shadow-glass);
-  transition:
-    transform 0.3s var(--spring),
-    box-shadow 0.3s var(--ease-out);
-}
-
-.vaccine-banner:active {
-  transform: scale(0.98);
-  box-shadow: var(--shadow-md);
-}
-
-.vaccine-banner .vb-icon {
-  font-size: 24px;
-  flex-shrink: 0;
-}
-
-.vaccine-banner .vb-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.vaccine-banner .vb-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.vaccine-banner .vb-sub {
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-top: 2px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px 12px;
-}
-
-.vb-days {
-  color: var(--accent-blue);
-  font-weight: 700;
-  margin-left: 3px;
-}
-
-/* 提醒条内单个疫苗项（点击直接编辑该条计划） */
-.vaccine-banner .vb-item {
-  background: none;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: color 0.15s ease;
-}
-
-.vaccine-banner .vb-item:hover {
-  color: var(--accent-blue);
-}
-
-.vaccine-banner .vb-item:focus-visible {
-  outline: 2px solid var(--accent-blue);
-  outline-offset: 2px;
 }
 </style>
