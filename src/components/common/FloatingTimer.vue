@@ -111,6 +111,10 @@ onMounted(() => {
 })
 
 // —— 统一拖拽逻辑 ——
+let moveRaf: number | null = null
+let pendingX = 0
+let pendingY = 0
+
 function dragStart(id: string, clientX: number, clientY: number) {
   draggingId.value = id
   const s = getBallState(id)
@@ -121,7 +125,7 @@ function dragStart(id: string, clientX: number, clientY: number) {
   s.startDragY = s.posY
 }
 
-function dragMove(clientX: number, clientY: number) {
+function applyDragMove(clientX: number, clientY: number) {
   const id = draggingId.value
   if (!id) return
   const s = getBallState(id)
@@ -135,9 +139,29 @@ function dragMove(clientX: number, clientY: number) {
   }
 }
 
+/** 拖拽移动按帧合并：一次 rAF 至多一次响应式更新，避免 touchmove/mousemove 高频触发重渲染 */
+function dragMove(clientX: number, clientY: number) {
+  if (!draggingId.value) return
+  pendingX = clientX
+  pendingY = clientY
+  if (moveRaf != null) return
+  moveRaf = requestAnimationFrame(() => {
+    moveRaf = null
+    applyDragMove(pendingX, pendingY)
+  })
+}
+
+function flushDragMove() {
+  if (moveRaf == null) return
+  cancelAnimationFrame(moveRaf)
+  moveRaf = null
+  applyDragMove(pendingX, pendingY)
+}
+
 function dragEnd() {
   const id = draggingId.value
   if (id) {
+    flushDragMove()
     saveBallPos(id, getBallState(id))
     draggingId.value = null
   }
@@ -166,6 +190,7 @@ function onTouchEnd() { dragEnd() }
 onUnmounted(() => {
   document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onMouseUp)
+  if (moveRaf != null) cancelAnimationFrame(moveRaf)
 })
 
 function onOpen(id: string) {
@@ -179,6 +204,7 @@ function onOpen(id: string) {
       <div
         v-if="active && !sleepModalOpen"
         class="floating-ball"
+        :class="{ dragging: draggingId === rec.id }"
         :style="{
           top: getBallState(rec.id).posY + 'px',
           left: getBallState(rec.id).posX + 'px',
@@ -188,6 +214,7 @@ function onOpen(id: string) {
         @touchstart.passive="onTouchStart(rec.id, $event)"
         @touchmove.passive="onTouchMove"
         @touchend="onTouchEnd"
+        @touchcancel="onTouchEnd"
         @mousedown="onMouseDown(rec.id, $event)"
         @click="onOpen(rec.id)"
       >
@@ -225,6 +252,12 @@ function onOpen(id: string) {
 
 .floating-ball:active {
   transform: scale(0.94);
+}
+
+/* 拖拽中关闭毛玻璃：移动的 backdrop-filter 每帧都要重算模糊，代价高且视觉上被位移掩盖 */
+.floating-ball.dragging {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .fb-icon {

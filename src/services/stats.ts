@@ -298,6 +298,7 @@ export const RANGE_PRESETS: RangePreset[] = [
   {
     key: 'all',
     label: 'stats.periods.all',
-    getRange: () => [0, Number.MAX_SAFE_INTEGER],
+    // 用有限上界：MAX_SAFE_INTEGER 会使 startOfDay 得到 NaN，日序列直接变空
+    getRange: (now) => [0, startOfDay(now) + MS_PER_DAY],
   },
 ]

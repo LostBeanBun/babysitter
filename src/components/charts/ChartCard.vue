@@ -102,7 +102,7 @@ const mergedOption = computed<EChartsOption>(() => {
       <p class="chart-empty-text">{{ t('stats.noData') }}</p>
     </div>
     <div v-else class="chart-wrap" @touchend="onTouchEnd">
-      <VChart ref="chartRef" :option="mergedOption" :style="style" autoresize />
+      <VChart ref="chartRef" :option="mergedOption" :style="style" :autoresize="{ throttle: 100 }" />
     </div>
   </div>
 </template>

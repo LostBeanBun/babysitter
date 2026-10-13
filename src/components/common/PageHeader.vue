@@ -181,6 +181,17 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   transform: scale(var(--tap-scale));
 }
 
+/* 视觉 36px，触摸热区扩展到 44px */
+.lang-toggle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
 .lang-badge {
   font-size: 10px;
   font-weight: 700;
@@ -245,6 +256,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .theme-toggle {
+  position: relative;
   width: 36px;
   height: 36px;
   min-height: 0;
@@ -272,6 +284,17 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
 .theme-toggle:active {
   transform: scale(var(--tap-scale));
+}
+
+/* 视觉 36px，触摸热区扩展到 44px */
+.theme-toggle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
 
 @media (min-width: 700px) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUpdated, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { TimelineEntry } from '@/services/timeline'
 import { formatTime } from '@/utils/format'
@@ -29,10 +29,57 @@ const groupedEntries = computed(() => {
   }
   return Array.from(groups.entries())
 })
+
+// —— 渐进挂载：首屏只渲染前 N 天分组，其余在滚动接近时再渲染（挂载后不卸载）。 ——
+// 长列表（一年可达数千条）一次性渲染 DOM/协调开销大，按天分组天然适合增量渲染：
+// 新分组只会在视口下方出现，挂载时机在视口外，不会引起视口内容位移。
+const INITIAL_GROUPS = 10
+const GROUP_MOUNT_MARGIN = '200px 0px'
+
+const mountedGroups = ref<Set<string>>(new Set())
+const rootRef = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
+
+/** 分组数据变化时：前 N 天直接挂载（首屏与筛选切换后无需等待观察器） */
+watch(
+  groupedEntries,
+  (groups) => {
+    if (!groups) return
+    for (const [day] of groups.slice(0, INITIAL_GROUPS)) mountedGroups.value.add(day)
+  },
+  { immediate: true },
+)
+
+/** 观察所有尚未观察的分组容器（渲染更新后补充新节点） */
+function observeGroups() {
+  if (!observer || !rootRef.value) return
+  for (const el of rootRef.value.querySelectorAll<HTMLElement>('[data-tl-group]')) {
+    if (el.dataset.observed === '1') continue
+    el.dataset.observed = '1'
+    observer.observe(el)
+  }
+}
+
+onMounted(() => {
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        const day = (entry.target as HTMLElement).dataset.day
+        if (day) mountedGroups.value.add(day)
+        observer?.unobserve(entry.target)
+      }
+    },
+    { rootMargin: GROUP_MOUNT_MARGIN },
+  )
+  observeGroups()
+})
+onUpdated(() => observeGroups())
+onUnmounted(() => observer?.disconnect())
 </script>
 
 <template>
-  <div class="timeline">
+  <div class="timeline" ref="rootRef">
     <template v-if="!grouped">
       <div v-for="e in entries" :key="e.kind + '-' + e.id" class="tl-item" :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id }" @click="emit('edit', e)">
         <div class="tl-icon" :style="{ background: e.color + '22' }">
@@ -50,30 +97,38 @@ const groupedEntries = computed(() => {
     </template>
 
     <template v-else>
-      <div v-for="[day, items] in groupedEntries!" :key="day" class="tl-group">
+      <div
+        v-for="[day, items] in groupedEntries!"
+        :key="day"
+        class="tl-group"
+        data-tl-group="1"
+        :data-day="day"
+      >
         <p class="tl-day">{{ day }}</p>
-        <div
-          v-for="e in items"
-          :key="e.kind + '-' + e.id"
-          class="tl-item tl-timeline-item"
-          :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id }"
-          @click="emit('edit', e)"
-        >
+        <template v-if="mountedGroups.has(day)">
           <div
-            class="tl-icon tl-timeline-node"
-            :style="{ color: e.kindColor, borderColor: e.kindColor }"
+            v-for="e in items"
+            :key="e.kind + '-' + e.id"
+            class="tl-item tl-timeline-item"
+            :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id }"
+            @click="emit('edit', e)"
           >
-            <span>{{ e.icon }}</span>
-          </div>
-          <div class="tl-body">
-            <div class="tl-title-row">
-              <span class="tl-title">{{ e.title }}</span>
-              <span class="tl-time">{{ e.timeLabel ?? formatTime(e.time) }}</span>
+            <div
+              class="tl-icon tl-timeline-node"
+              :style="{ color: e.kindColor, borderColor: e.kindColor }"
+            >
+              <span>{{ e.icon }}</span>
             </div>
-            <p class="tl-detail">{{ e.detail }}</p>
+            <div class="tl-body">
+              <div class="tl-title-row">
+                <span class="tl-title">{{ e.title }}</span>
+                <span class="tl-time">{{ e.timeLabel ?? formatTime(e.time) }}</span>
+              </div>
+              <p class="tl-detail">{{ e.detail }}</p>
+            </div>
+            <button class="tl-delete" :aria-label="t('timeline.deleted')" @click.stop="emit('delete', e)">✕</button>
           </div>
-          <button class="tl-delete" :aria-label="t('timeline.deleted')" @click.stop="emit('delete', e)">✕</button>
-        </div>
+        </template>
       </div>
     </template>
   </div>

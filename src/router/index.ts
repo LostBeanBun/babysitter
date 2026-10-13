@@ -22,6 +22,10 @@ const router = createRouter({
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
+  // 切换路由回到顶部；浏览器前进/后退恢复历史滚动位置
+  scrollBehavior(_to, _from, savedPosition) {
+    return savedPosition ?? { top: 0 }
+  },
 })
 
 function applyDocumentTitle() {

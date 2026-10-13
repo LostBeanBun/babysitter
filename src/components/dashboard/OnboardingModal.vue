@@ -141,7 +141,8 @@ async function onOnboarded() {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s var(--spring);
+  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
+    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
 }
 
 .avatar-option.selected {
@@ -171,7 +172,8 @@ async function onOnboarded() {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.3s var(--spring);
+  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
+    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
 }
 
 .gender-option.selected {

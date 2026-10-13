@@ -11,23 +11,83 @@ const { t } = useI18n()
 
 const panelRef = ref<HTMLElement | null>(null)
 
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('close')
+// —— body 滚动锁（计数器：确认框叠在表单上时只在全部关闭后恢复） ——
+let scrollLockCount = 0
+let prevBodyOverflow = ''
+let locked = false
+
+function lockBodyScroll() {
+  if (locked) return
+  if (scrollLockCount++ === 0) {
+    prevBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+  }
+  locked = true
 }
+
+function unlockBodyScroll() {
+  if (!locked) return
+  locked = false
+  if (--scrollLockCount === 0) document.body.style.overflow = prevBodyOverflow
+}
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+/** Escape 关闭 + Tab 焦点陷阱（焦点限制在弹窗面板内循环） */
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    emit('close')
+    return
+  }
+  if (e.key !== 'Tab') return
+  const panel = panelRef.value
+  if (!panel) return
+  const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE))
+  if (focusables.length === 0) {
+    e.preventDefault()
+    panel.focus()
+    return
+  }
+  const first = focusables[0]
+  const last = focusables[focusables.length - 1]
+  const active = document.activeElement
+  if (e.shiftKey) {
+    if (active === first || active === panel || !panel.contains(active)) {
+      e.preventDefault()
+      last.focus()
+    }
+  } else if (active === last || !panel.contains(active)) {
+    e.preventDefault()
+    first.focus()
+  }
+}
+
+// 打开时记录触发元素，关闭后归还焦点
+let restoreFocusTo: HTMLElement | null = null
 
 watch(
   () => props.show,
   (v) => {
     if (v) {
+      restoreFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      lockBodyScroll()
       document.addEventListener('keydown', onKeydown)
       requestAnimationFrame(() => panelRef.value?.focus())
     } else {
+      unlockBodyScroll()
       document.removeEventListener('keydown', onKeydown)
+      restoreFocusTo?.focus()
+      restoreFocusTo = null
     }
   },
+  { immediate: true },
 )
 
-onUnmounted(() => document.removeEventListener('keydown', onKeydown))
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
+  unlockBodyScroll()
+})
 </script>
 
 <template>

@@ -227,7 +227,8 @@ const { submit } = useRecordForm({
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  transition: all 0.3s var(--spring);
+  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
+    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
 }
 
 .plan-tab.active {
@@ -253,7 +254,8 @@ const { submit } = useRecordForm({
   border: 1px solid var(--glass-border);
   background: var(--surface-2);
   text-align: left;
-  transition: all 0.3s var(--spring);
+  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
+    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
 }
 
 .plan-item:not(.disabled):active {

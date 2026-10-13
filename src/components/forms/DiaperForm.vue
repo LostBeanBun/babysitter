@@ -127,7 +127,8 @@ const { submit } = useRecordForm({
   background: var(--surface);
   font-size: 12px;
   color: var(--text-secondary);
-  transition: all 0.3s var(--spring);
+  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
+    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
 }
 
 .color-dot-btn.selected {
@@ -155,7 +156,8 @@ const { submit } = useRecordForm({
   background: var(--surface);
   font-size: 13px;
   color: var(--text-secondary);
-  transition: all 0.3s var(--spring);
+  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
+    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
 }
 
 .amount-btn.selected {

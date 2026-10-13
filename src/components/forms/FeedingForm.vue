@@ -236,7 +236,8 @@ const submitLabel = computed(() => {
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s var(--spring);
+  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
+    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
 }
 
 .side-btn.selected {

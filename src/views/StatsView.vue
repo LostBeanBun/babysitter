@@ -24,9 +24,9 @@ import {
   type ComparisonResult,
   type RecordDatasets,
 } from '@/services/stats'
-import { CHART_COLORS } from '@/constants'
+import { CHART_COLORS, MS_PER_DAY } from '@/constants'
 import { trendTooltip, trendAxes, areaLineSeries, type ChartThemeColors } from '@/services/chartOptions'
-import { formatDuration, formatPercentChange, formatAmount } from '@/utils/format'
+import { formatDuration, formatPercentChange, formatAmount, startOfDay } from '@/utils/format'
 import { useChartTheme } from '@/composables/useChartTheme'
 
 const babyStore = useBabyStore()
@@ -56,8 +56,6 @@ onUnmounted(() => window.clearInterval(nowTimer))
 // 时间范围选择
 const rangeKey = ref('today')
 const range = computed(() => RANGE_PRESETS.find((p) => p.key === rangeKey.value)!)
-const rangeStart = computed(() => range.value.getRange(now.value)[0])
-const rangeEnd = computed(() => range.value.getRange(now.value)[1])
 
 // 概览 tab：对比 / 汇总
 const activeView = ref<'summary' | 'trend' | 'compare'>('summary')
@@ -72,6 +70,32 @@ const datasets = computed<RecordDatasets>(() => ({
   medications: medicationStore.medications,
   temperatures: temperatureStore.temperatures,
 }))
+
+// “全部”按实际最早记录收窄，避免从 1970 起逐日建桶导致日均失真
+const allDataStart = computed<number | null>(() => {
+  if (rangeKey.value !== 'all') return null
+  const stamps = [
+    ...datasets.value.feedings.map((f) => f.startTime),
+    ...datasets.value.diapers.map((d) => d.time),
+    ...datasets.value.pumpings.map((p) => p.startTime),
+    ...datasets.value.sleeps.map((s) => s.startTime),
+    ...growthStore.growths.map((g) => g.date),
+    ...(datasets.value.solidFoods ?? []).map((sf) => sf.time),
+    ...(datasets.value.medications ?? []).map((m) => m.time),
+    ...(datasets.value.temperatures ?? []).map((tp) => tp.time),
+  ].filter((ts) => Number.isFinite(ts) && ts > 0)
+  if (stamps.length === 0) return startOfDay(now.value) - 30 * MS_PER_DAY
+  return startOfDay(Math.min(...stamps))
+})
+
+const rangeStart = computed(() => {
+  if (rangeKey.value === 'all') return allDataStart.value ?? startOfDay(now.value) - 30 * MS_PER_DAY
+  return range.value.getRange(now.value)[0]
+})
+const rangeEnd = computed(() => {
+  if (rangeKey.value === 'all') return startOfDay(now.value) + MS_PER_DAY
+  return range.value.getRange(now.value)[1]
+})
 
 // 每日序列（趋势图数据）
 const days = computed<DayAggregate[]>(() => buildDailySeries(datasets.value, rangeStart.value, rangeEnd.value))
@@ -195,12 +219,17 @@ function formatComparisonValue(c: ComparisonResult, value: number): string {
   return t('common.times', { n: Math.round(value) })
 }
 
+/** 对比行文案：上一周期 → 当前周期（睡眠时长等长文本换行展示，title 挂完整文案） */
+function compareChangeText(c: ComparisonResult): string {
+  return `${formatComparisonValue(c, c.previous)} → ${formatComparisonValue(c, c.current)}`
+}
+
 const rangeLabel = computed(() => t(range.value.label))
 
 // —— 区间汇总（周报/月报）——
 const summaryDays = computed(() => Math.max(1, currentAgg.value.dayCount))
 const rangeGrowthCount = computed(
-  () => growthStore.growths.filter((g) => g.date >= rangeStart.value && g.date <= rangeEnd.value).length,
+  () => growthStore.growths.filter((g) => g.date >= rangeStart.value && g.date < rangeEnd.value).length,
 )
 
 const summaryItems = computed(() => {
@@ -364,9 +393,7 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
             <span class="compare-change" :class="c.change === null ? 'none' : c.change >= 0 ? 'up' : 'down'">
               {{ c.change === null ? '—' : formatPercentChange(c.change) }}
             </span>
-            <span class="compare-prev"
-              >{{ formatComparisonValue(c, c.previous) }} → {{ formatComparisonValue(c, c.current) }}</span
-            >
+            <span class="compare-prev" :title="compareChangeText(c)">{{ compareChangeText(c) }}</span>
           </div>
         </div>
       </div>
@@ -440,7 +467,8 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  transition: all 0.3s var(--spring);
+  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
+    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -534,18 +562,20 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
 
 .compare-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* minmax(0,1fr) 防止长文案（如睡眠时长）把所在列撑宽导致三列不齐 */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
 @media (max-width: 400px) {
   .compare-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 }
 
 .compare-item {
+  min-width: 0;
   background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
@@ -585,6 +615,7 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
   align-items: center;
   gap: 1px;
   margin-top: 4px;
+  min-width: 0;
 }
 
 .compare-change {
@@ -608,10 +639,9 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
   font-size: 10px;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
+  /* 长文本（睡眠时长 前 → 后）自然换行，避免撑破网格列宽 */
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 400px) {

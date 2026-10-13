@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildDailySeries, aggregateRange, compareRanges } from '@/services/stats'
+import { buildDailySeries, aggregateRange, compareRanges, RANGE_PRESETS } from '@/services/stats'
 import type { RecordDatasets } from '@/services/stats'
 import type { Feeding, Sleep, DiaperChange, Pumping } from '@/types'
 import { startOfDay } from '@/utils/format'
@@ -156,5 +156,35 @@ describe('stats aggregation', () => {
     const previous = aggregateRange(ds({}), day0 - DAY, day0)
     const result = compareRanges(current, previous)
     expect(result.find((r) => r.key === 'totalMilkAmount')!.change).toBeNull()
+  })
+})
+
+describe('RANGE_PRESETS', () => {
+  const now = new Date(2026, 7, 20, 12, 0).getTime()
+
+  it('各预设 [start,end) 合法且 start < end', () => {
+    for (const p of RANGE_PRESETS) {
+      const [s, e] = p.getRange(now)
+      expect(Number.isFinite(s), p.key).toBe(true)
+      expect(Number.isFinite(e), p.key).toBe(true)
+      expect(e, p.key).toBeGreaterThan(s)
+    }
+  })
+
+  it('today 从当天 0 点到次日 0 点', () => {
+    const p = RANGE_PRESETS.find((x) => x.key === 'today')!
+    const [s, e] = p.getRange(now)
+    expect(s).toBe(startOfDay(now))
+    expect(e).toBe(s + DAY)
+  })
+
+  it('all 上下界均为有限值且 start < end', () => {
+    const p = RANGE_PRESETS.find((x) => x.key === 'all')!
+    const [s, e] = p.getRange(now)
+    expect(Number.isFinite(s)).toBe(true)
+    expect(Number.isFinite(e)).toBe(true)
+    expect(e).toBeGreaterThan(s)
+    // 不应再返回 MAX_SAFE_INTEGER（startOfDay 会得到 NaN，日序列变空）
+    expect(e).toBeLessThan(Number.MAX_SAFE_INTEGER)
   })
 })
