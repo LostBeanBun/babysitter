@@ -11,6 +11,7 @@ import type { MilestoneType } from '@/types'
 import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 
 const { t } = useI18n()
 
@@ -44,10 +45,11 @@ const { submit } = useRecordForm({
   update: (id, payload) => milestoneStore.update(id, payload),
   onSaved: () => emit('saved'),
 })
+const { onSubmit } = useFormSubmit(submit)
 </script>
 
 <template>
-  <div class="milestone-form">
+  <form ref="root" class="milestone-form" @submit.prevent="onSubmit">
     <div class="form-field">
       <label class="form-label">{{ t('milestone.typeLabel') }}</label>
       <div class="milestone-types">
@@ -94,8 +96,8 @@ const { submit } = useRecordForm({
 
     <FormNotes v-model="notes" :label="t('milestone.notesLabel')" :placeholder="t('common.optional')" />
 
-    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
-  </div>
+    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" />
+  </form>
 </template>
 
 <style scoped>

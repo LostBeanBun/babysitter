@@ -10,6 +10,7 @@ import ChoiceGrid, { type ChoiceOption } from '@/components/common/ChoiceGrid.vu
 import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 
 const { t } = useI18n()
 
@@ -100,10 +101,11 @@ const submitLabel = computed(() => {
   if (isRecording.value) return t('pump.endRecord')
   return t('pump.startRecord')
 })
+const { onSubmit } = useFormSubmit(submit)
 </script>
 
 <template>
-  <div class="pump-form">
+  <form ref="root" class="pump-form" @submit.prevent="onSubmit">
     <p class="form-label">{{ t('pump.sideLabel') }}</p>
     <ChoiceGrid v-model="side" :options="sideOptions" :disabled="isRecording" />
 
@@ -149,9 +151,8 @@ const submitLabel = computed(() => {
       :editing="isEditing"
       :submit-label="submitLabel"
       @cancelled="emit('cancelled')"
-      @save="submit"
     />
-  </div>
+  </form>
 </template>
 
 <style scoped>

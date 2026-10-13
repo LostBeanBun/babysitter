@@ -11,6 +11,7 @@ import ChoiceGrid, { type ChoiceOption } from '@/components/common/ChoiceGrid.vu
 import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 
 const { t } = useI18n()
 
@@ -58,10 +59,11 @@ const { submit } = useRecordForm({
   update: (id, payload) => temperatureStore.update(id, payload),
   onSaved: () => emit('saved'),
 })
+const { onSubmit } = useFormSubmit(submit)
 </script>
 
 <template>
-  <div class="temperature-form">
+  <form ref="root" class="temperature-form" @submit.prevent="onSubmit">
     <TextField
       v-model="value"
       type="number"
@@ -91,6 +93,6 @@ const { submit } = useRecordForm({
 
     <FormNotes v-model="notes" :label="t('temperature.notesLabel')" :placeholder="t('common.optional')" />
 
-    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
-  </div>
+    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" />
+  </form>
 </template>

@@ -10,6 +10,7 @@ import ChoiceGrid, { type ChoiceOption } from '@/components/common/ChoiceGrid.vu
 import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 
 const { t } = useI18n()
 
@@ -131,10 +132,11 @@ const submitLabel = computed(() => {
   if (!isBreast.value) return t('common.save')
   return t('feed.startRecord')
 })
+const { onSubmit } = useFormSubmit(submit)
 </script>
 
 <template>
-  <div class="feeding-form">
+  <form ref="root" class="feeding-form" @submit.prevent="onSubmit">
     <p class="form-label">{{ t('feed.typeLabel') }}</p>
     <ChoiceGrid v-model="type" :options="typeOptions" :disabled="isRecording" />
 
@@ -209,9 +211,8 @@ const submitLabel = computed(() => {
       :editing="isEditing"
       :submit-label="submitLabel"
       @cancelled="emit('cancelled')"
-      @save="submit"
     />
-  </div>
+  </form>
 </template>
 
 <style scoped>

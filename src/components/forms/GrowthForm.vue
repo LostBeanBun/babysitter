@@ -8,6 +8,7 @@ import { useRecordForm } from '@/composables/useRecordForm'
 import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 
 const { t } = useI18n()
 
@@ -70,10 +71,11 @@ const { submit } = useRecordForm({
   update: (id, payload) => growthStore.update(id, payload),
   onSaved: () => emit('saved'),
 })
+const { onSubmit } = useFormSubmit(submit)
 </script>
 
 <template>
-  <div class="growth-form">
+  <form ref="root" class="growth-form" @submit.prevent="onSubmit">
     <TextField
       v-model="date"
       type="date"
@@ -123,6 +125,6 @@ const { submit } = useRecordForm({
 
     <FormNotes v-model="notes" :label="t('growth.notesLabel')" :placeholder="t('common.optional')" />
 
-    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
-  </div>
+    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" />
+  </form>
 </template>

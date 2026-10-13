@@ -8,6 +8,7 @@ import { useRecordForm } from '@/composables/useRecordForm'
 import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 
 const { t } = useI18n()
 
@@ -50,10 +51,11 @@ const { submit } = useRecordForm({
   update: (id, payload) => solidFoodStore.update(id, payload),
   onSaved: () => emit('saved'),
 })
+const { onSubmit } = useFormSubmit(submit)
 </script>
 
 <template>
-  <div class="solid-food-form">
+  <form ref="root" class="solid-food-form" @submit.prevent="onSubmit">
     <TextField v-model="food" :label="t('solidFood.foodLabel')" :errors="err" error-key="food" :placeholder="t('solidFood.foodPlaceholder')" />
 
     <TextField v-model="amount" :label="t('solidFood.amountLabel')" :placeholder="t('solidFood.amountPlaceholder')" />
@@ -70,6 +72,6 @@ const { submit } = useRecordForm({
 
     <FormNotes v-model="notes" :label="t('solidFood.notesLabel')" :placeholder="t('common.optional')" />
 
-    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
-  </div>
+    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" />
+  </form>
 </template>

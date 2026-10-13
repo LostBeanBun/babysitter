@@ -21,6 +21,7 @@ import FormField from '@/components/common/FormField.vue'
 import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 
 const { t } = useI18n()
 
@@ -103,10 +104,11 @@ const { submit } = useRecordForm({
   update: (id, payload) => vaccinationStore.update(id, payload),
   onSaved: () => emit('saved'),
 })
+const { onSubmit } = useFormSubmit(submit)
 </script>
 
 <template>
-  <div class="vaccination-form">
+  <form ref="root" class="vaccination-form" @submit.prevent="onSubmit">
     <FormField :label="t('vaccination.nameLabel')" :errors="err" error-key="name">
       <div class="name-row">
         <input
@@ -138,7 +140,7 @@ const { submit } = useRecordForm({
 
     <FormNotes v-model="notes" :label="t('vaccination.notesLabel')" :placeholder="t('common.optional')" />
 
-    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
+    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" />
 
     <BaseModal :show="planOpen" :title="t('vaccination.planTitle')" @close="planOpen = false">
       <p class="plan-tip">{{ t('vaccination.planTip', { name: activeBaby?.name ?? '' }) }}</p>
@@ -185,7 +187,7 @@ const { submit } = useRecordForm({
         </button>
       </div>
     </BaseModal>
-  </div>
+  </form>
 </template>
 
 <style scoped>

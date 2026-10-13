@@ -2,6 +2,7 @@
 import { computed, ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
 import { useSleepStore } from '@/stores/sleep'
@@ -89,6 +90,8 @@ async function saveSleepFeed() {
   sfSleepEnd.value = toDateTimeLocal(Date.now() + 2 * 3600_000)
   sfNotes.value = ''
 }
+
+const { onSubmit: onSleepFeedSubmit } = useFormSubmit(saveSleepFeed)
 
 /** 快捷记录按钮（顺序与样式类一致于设计稿） */
 const QUICK_KINDS: RecordKind[] = [
@@ -180,6 +183,7 @@ function onEditVaccination(v: Vaccination) {
 
     <!-- 奶睡组合弹窗 -->
     <BaseModal :show="sleepFeedOpen" :title="t('dashboard.sleepFeedTitle')" @close="activeTimer.reset(); sleepFeedOpen = false">
+      <form ref="root" @submit.prevent="onSleepFeedSubmit">
       <div class="form-field">
         <label class="form-label">{{ t('feed.typeLabel') }}</label>
         <select v-model="sfType" class="form-input">
@@ -238,9 +242,10 @@ function onEditVaccination(v: Vaccination) {
         <input v-model="sfNotes" type="text" :placeholder="t('dashboard.sleepFeedNotesPh')" class="form-input" />
       </div>
       <div class="form-actions">
-        <button class="btn btn-outline" @click="activeTimer.reset(); sleepFeedOpen = false">{{ t('common.cancel') }}</button>
-        <button class="btn btn-primary" @click="saveSleepFeed">{{ t('dashboard.oneTapRecord') }}</button>
+        <button type="button" class="btn btn-outline" @click="activeTimer.reset(); sleepFeedOpen = false">{{ t('common.cancel') }}</button>
+        <button type="submit" class="btn btn-primary">{{ t('dashboard.oneTapRecord') }}</button>
       </div>
+      </form>
     </BaseModal>
 
     <!-- 首次引导添加宝宝弹窗 -->

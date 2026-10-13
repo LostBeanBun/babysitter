@@ -12,6 +12,7 @@ import FormField from '@/components/common/FormField.vue'
 import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 
 const { t } = useI18n()
 
@@ -56,10 +57,11 @@ const { submit } = useRecordForm({
   update: (id, payload) => diaperStore.update(id, payload),
   onSaved: () => emit('saved'),
 })
+const { onSubmit } = useFormSubmit(submit)
 </script>
 
 <template>
-  <div class="diaper-form">
+  <form ref="root" class="diaper-form" @submit.prevent="onSubmit">
     <p class="form-label">{{ t('diaper.typeLabel') }}</p>
     <ChoiceGrid v-model="type" :options="typeOptions" />
 
@@ -106,8 +108,8 @@ const { submit } = useRecordForm({
 
     <FormNotes v-model="notes" :label="t('diaper.notesLabel')" :placeholder="t('common.optional')" />
 
-    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" @save="submit" />
-  </div>
+    <FormActions :editing="props.editing != null" @cancelled="emit('cancelled')" />
+  </form>
 </template>
 
 <style scoped>

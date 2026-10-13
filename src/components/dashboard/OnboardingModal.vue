@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useBabyStore } from '@/stores/baby'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 import { BABY_AVATARS } from '@/constants'
 import type { BabyGender } from '@/types'
 
@@ -49,10 +50,13 @@ async function onOnboarded() {
   onboardAvatar.value = ''
   emit('close')
 }
+
+const { onSubmit } = useFormSubmit(onOnboarded)
 </script>
 
 <template>
   <BaseModal :show="show" :title="t('settings.addBaby')" @close="emit('close')">
+    <form ref="root" @submit.prevent="onSubmit">
     <div class="form-field" :class="{ 'has-error': err.has('name') }">
       <label class="form-label">{{ t('settings.babyName') }} *</label>
       <input
@@ -116,9 +120,10 @@ async function onOnboarded() {
         </button>
       </div>
     </div>
-    <button class="btn btn-primary btn-block btn-lg" @click="onOnboarded">
+    <button type="submit" class="btn btn-primary btn-block btn-lg">
       {{ t('common.start') }}
     </button>
+    </form>
   </BaseModal>
 </template>
 

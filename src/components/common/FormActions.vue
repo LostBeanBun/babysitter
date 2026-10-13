@@ -8,7 +8,7 @@ defineProps<{
   editing?: boolean
   submitLabel?: string
 }>()
-defineEmits<{ cancelled: []; save: [] }>()
+defineEmits<{ cancelled: [] }>()
 
 const { t } = useI18n()
 </script>
@@ -16,7 +16,7 @@ const { t } = useI18n()
 <template>
   <div class="form-actions">
     <button type="button" class="btn btn-outline" @click="$emit('cancelled')">{{ t('common.cancel') }}</button>
-    <button type="button" class="btn btn-primary" @click="$emit('save')">
+    <button type="submit" class="btn btn-primary">
       {{ submitLabel ?? (editing ? t('common.saveEdit') : t('common.save')) }}
     </button>
   </div>

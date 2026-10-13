@@ -34,6 +34,22 @@ const vaccinationStore = useVaccinationStore()
 const temperatureStore = useTemperatureStore()
 const milestoneStore = useMilestoneStore()
 
+/** 任一记录表首次查询未返回 → 展示骨架，避免首帧"暂无记录"闪烁（对齐 React 侧） */
+const logLoading = computed(() =>
+  [
+    feedingStore.loading,
+    diaperStore.loading,
+    pumpingStore.loading,
+    sleepStore.loading,
+    growthStore.loading,
+    solidFoodStore.loading,
+    medicationStore.loading,
+    vaccinationStore.loading,
+    temperatureStore.loading,
+    milestoneStore.loading,
+  ].some(Boolean),
+)
+
 const { t } = useI18n()
 
 // 类型筛选
@@ -197,8 +213,14 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
     </div>
 
     <div class="card">
+      <div v-if="logLoading" class="log-skeleton" aria-hidden="true">
+        <div class="sk-group" />
+        <div class="sk-row" />
+        <div class="sk-row" />
+        <div class="sk-row" />
+      </div>
       <TimelineList
-        v-if="entries.length"
+        v-else-if="entries.length"
         :entries="entries"
         :deleting-key="confirmDelete ? confirmDelete.kind + '-' + confirmDelete.id : null"
         grouped
@@ -383,6 +405,45 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   color: var(--text-muted);
   font-size: 12px;
   margin-top: 6px;
+}
+
+/* 查询加载骨架：避免首帧"暂无记录"闪烁（与 React LogView 样式一致） */
+.log-skeleton {
+  padding: 4px;
+}
+
+.sk-group,
+.sk-row {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--fill-hover) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.2s ease-in-out infinite;
+}
+
+.sk-group {
+  width: 96px;
+  height: 24px;
+  border-radius: 999px;
+  margin: 0 4px 8px;
+}
+
+.sk-row {
+  height: 56px;
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+}
+
+@keyframes sk-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .confirm-text {

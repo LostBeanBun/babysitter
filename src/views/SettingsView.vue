@@ -11,6 +11,7 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ReminderParam from '@/components/settings/ReminderParam.vue'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { useFormSubmit } from '@/composables/useFormSubmit'
 import { showToast } from '@/composables/useToast'
 import type { Baby, BabyGender } from '@/types'
 
@@ -193,6 +194,8 @@ async function saveBaby() {
   }
   babyModal.value = null
 }
+
+const { onSubmit: onBabySubmit } = useFormSubmit(saveBaby)
 
 async function confirmDeleteBaby() {
   const id = deleteBabyConfirm.value?.id
@@ -446,6 +449,7 @@ async function confirmClearAll() {
       :title="babyModal?.mode === 'edit' ? t('settings.editBaby') : t('settings.addBaby')"
       @close="babyModal = null"
     >
+      <form ref="root" @submit.prevent="onBabySubmit">
       <div class="form-field" :class="{ 'has-error': err.has('name') }">
         <label class="form-label">{{ t('settings.babyName') }} *</label>
         <input
@@ -510,11 +514,12 @@ async function confirmClearAll() {
         </div>
       </div>
       <div class="form-actions">
-        <button class="btn btn-outline" @click="babyModal = null">{{ t('common.cancel') }}</button>
-        <button class="btn btn-primary" @click="saveBaby">
+        <button type="button" class="btn btn-outline" @click="babyModal = null">{{ t('common.cancel') }}</button>
+        <button type="submit" class="btn btn-primary">
           {{ t('settings.saveBaby') }}
         </button>
       </div>
+      </form>
     </BaseModal>
 
     <!-- 删除宝宝确认 -->
