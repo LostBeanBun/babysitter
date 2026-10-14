@@ -734,6 +734,20 @@ select.form-input:focus {
   animation: springIn 0.4s var(--spring);
 }
 
+/* 校验失败：错误字段轻晃提示 */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-5px); }
+  30% { transform: translateX(4px); }
+  45% { transform: translateX(-3px); }
+  60% { transform: translateX(2px); }
+  75% { transform: translateX(-1px); }
+}
+
+.shake {
+  animation: shake 0.4s var(--ease-out);
+}
+
 /* 滚动条 */
 ::-webkit-scrollbar {
   width: 5px;

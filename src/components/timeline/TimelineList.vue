@@ -74,6 +74,16 @@ onMounted(() => {
   )
   observeGroups()
 })
+/** 刚保存：createdAt 在 3s 内的最新一条（保存后回列表轻闪提示；同一时刻批量导入只闪最新一条） */
+const savedKey = computed(() => {
+  const cutoff = Date.now() - 3000
+  let best: TimelineEntry | null = null
+  for (const e of props.entries) {
+    const at = e.raw.createdAt
+    if (at >= cutoff && (best === null || at > best.raw.createdAt)) best = e
+  }
+  return best ? best.kind + '-' + best.id : null
+})
 onUpdated(() => observeGroups())
 onUnmounted(() => observer?.disconnect())
 </script>
@@ -81,7 +91,7 @@ onUnmounted(() => observer?.disconnect())
 <template>
   <div class="timeline" ref="rootRef">
     <template v-if="!grouped">
-      <div v-for="e in entries" :key="e.kind + '-' + e.id" class="tl-item" :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id }" @click="emit('edit', e)">
+      <div v-for="e in entries" :key="e.kind + '-' + e.id" class="tl-item" :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id, 'tl-saved': savedKey === e.kind + '-' + e.id }" @click="emit('edit', e)">
         <div class="tl-icon" :style="{ background: e.color + '22' }">
           <span>{{ e.icon }}</span>
         </div>
@@ -110,7 +120,7 @@ onUnmounted(() => observer?.disconnect())
             v-for="e in items"
             :key="e.kind + '-' + e.id"
             class="tl-item tl-timeline-item"
-            :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id }"
+            :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id, 'tl-saved': savedKey === e.kind + '-' + e.id }"
             @click="emit('edit', e)"
           >
             <div
@@ -283,6 +293,20 @@ onUnmounted(() => observer?.disconnect())
   background: var(--danger-soft);
   color: var(--danger);
   opacity: 1;
+}
+
+/* 刚保存的新条目：轻闪提示后淡出 */
+@keyframes tl-saved-flash {
+  from {
+    background-color: var(--primary-glow);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.tl-item.tl-saved {
+  animation: tl-saved-flash 1.8s var(--ease-out);
 }
 
 /* 删除待确认态：高亮被选中的条目 */

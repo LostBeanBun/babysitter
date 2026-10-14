@@ -3,6 +3,7 @@ import { computed, ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { EChartsOption } from 'echarts'
 import PageHeader from '@/components/common/PageHeader.vue'
+import CountUp from '@/components/common/CountUp.vue'
 import ChartCard from '@/components/charts/ChartCard.vue'
 import GrowthCurveCharts from '@/components/charts/GrowthCurveCharts.vue'
 import { useBabyStore } from '@/stores/baby'
@@ -232,58 +233,73 @@ const rangeGrowthCount = computed(
   () => growthStore.growths.filter((g) => g.date >= rangeStart.value && g.date < rangeEnd.value).length,
 )
 
+/** 对比值格式化工厂：供 CountUp 滚动时逐帧格式化 */
+function compareFormat(c: ComparisonResult): (n: number) => string {
+  return (n: number) => formatComparisonValue(c, n)
+}
+
 const summaryItems = computed(() => {
   const agg = currentAgg.value
   const days = summaryDays.value
   return [
     {
       label: t('stats.summary.feedCount'),
-      value: t('common.times', { n: agg.feedCount }),
+      num: agg.feedCount,
+      format: (n: number) => t('common.times', { n: Math.round(n) }),
       sub: t('common.daily', { value: t('common.times', { n: (agg.feedCount / days).toFixed(1) }) }),
     },
     {
       label: t('stats.summary.totalMilk'),
-      value: formatAmount(agg.totalMilkAmount),
+      num: agg.totalMilkAmount,
+      format: (n: number) => formatAmount(n),
       sub: t('common.daily', { value: formatAmount(agg.totalMilkAmount / days) }),
     },
     {
       label: t('stats.summary.breastCount'),
-      value: t('common.times', { n: agg.breastCount }),
+      num: agg.breastCount,
+      format: (n: number) => t('common.times', { n: Math.round(n) }),
       sub: t('common.daily', { value: t('common.times', { n: (agg.breastCount / days).toFixed(1) }) }),
     },
     {
       label: t('stats.summary.sleepMs'),
-      value: formatDuration(agg.sleepMs),
+      num: agg.sleepMs,
+      format: (n: number) => formatDuration(n),
       sub: t('common.daily', { value: formatDuration(agg.sleepMs / days) }),
     },
     {
       label: t('stats.summary.diaper'),
-      value: t('common.times', { n: agg.diaperCount }),
+      num: agg.diaperCount,
+      format: (n: number) => t('common.times', { n: Math.round(n) }),
       sub: t('common.daily', { value: t('common.times', { n: (agg.diaperCount / days).toFixed(1) }) }),
     },
     {
       label: t('stats.summary.pumpAmount'),
-      value: formatAmount(agg.pumpAmount),
+      num: agg.pumpAmount,
+      format: (n: number) => formatAmount(n),
       sub: t('common.daily', { value: formatAmount(agg.pumpAmount / days) }),
     },
     {
       label: t('stats.summary.growthRecords'),
-      value: t('common.records', { n: rangeGrowthCount.value }),
+      num: rangeGrowthCount.value,
+      format: (n: number) => t('common.records', { n: Math.round(n) }),
       sub: rangeLabel.value,
     },
     {
       label: t('stats.summary.solidFood'),
-      value: t('common.times', { n: agg.solidFoodCount }),
+      num: agg.solidFoodCount,
+      format: (n: number) => t('common.times', { n: Math.round(n) }),
       sub: t('common.daily', { value: t('common.times', { n: (agg.solidFoodCount / days).toFixed(1) }) }),
     },
     {
       label: t('stats.summary.medication'),
-      value: t('common.times', { n: agg.medicationCount }),
+      num: agg.medicationCount,
+      format: (n: number) => t('common.times', { n: Math.round(n) }),
       sub: t('common.daily', { value: t('common.times', { n: (agg.medicationCount / days).toFixed(1) }) }),
     },
     {
       label: t('stats.summary.temperature'),
-      value: t('common.times', { n: agg.temperatureCount }),
+      num: agg.temperatureCount,
+      format: (n: number) => t('common.times', { n: Math.round(n) }),
       sub: t('common.daily', { value: t('common.times', { n: (agg.temperatureCount / days).toFixed(1) }) }),
     },
   ]
@@ -342,7 +358,7 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
       <div class="summary-grid">
         <div v-for="s in summaryItems" :key="s.label" class="summary-item">
           <p class="summary-label">{{ s.label }}</p>
-          <p class="summary-value">{{ s.value }}</p>
+          <p class="summary-value"><CountUp :value="s.num" :format="s.format" /></p>
           <p class="summary-sub">{{ s.sub }}</p>
         </div>
       </div>
@@ -388,7 +404,7 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
       <div class="compare-grid">
         <div v-for="c in comparisons" :key="c.key" class="compare-item">
           <p class="compare-label">{{ t(c.label) }}</p>
-          <p class="compare-value">{{ formatComparisonValue(c, c.current) }}</p>
+          <p class="compare-value"><CountUp :value="c.current" :format="compareFormat(c)" /></p>
           <div class="compare-change-row">
             <span class="compare-change" :class="c.change === null ? 'none' : c.change >= 0 ? 'up' : 'down'">
               {{ c.change === null ? '—' : formatPercentChange(c.change) }}
