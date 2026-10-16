@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { VaccinationStatus } from '@/types'
-import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
+import { toDateTimeLocal, fromDateTimeLocal, formatDate, startOfDay } from '@/utils/format'
 import { useVaccinationStore } from '@/stores/vaccination'
 import { useBabyStore } from '@/stores/baby'
 import {
@@ -22,6 +22,7 @@ import TextField from '@/components/common/TextField.vue'
 import FormNotes from '@/components/common/FormNotes.vue'
 import FormActions from '@/components/common/FormActions.vue'
 import { useFormSubmit } from '@/composables/useFormSubmit'
+import { buildIcs, deliverIcs, googleCalendarUrl, type CalendarEvent } from '@/services/calendar'
 
 const { t } = useI18n()
 
@@ -77,7 +78,25 @@ function pickFromPlan(item: VaccinePlanItem) {
   planOpen.value = false
 }
 
-function validate() {
+/** 校验后的疫苗记录数据 */
+interface VaccinationPayload {
+  date: number
+  name: string
+  dose?: string
+  status: VaccinationStatus
+  notes?: string
+}
+
+/** 计划接种（新增或编辑）保存后保留弹窗，提供「添加到系统日历」 */
+const savedPlan = ref<{ id: number; name: string; dose?: string; date: number; editing: boolean } | null>(null)
+const calBusy = ref(false)
+const calFeedback = ref<string | null>(null)
+/** 最近一次校验通过的数据（保存成功后用于生成日历事件） */
+let pendingPayload: VaccinationPayload | null = null
+/** 新增记录 id（日历事件 UID 用，保证同一条记录稳定） */
+let savedId: number | null = null
+
+function validate(): VaccinationPayload | null {
   if (!name.value.trim()) {
     err.set('name', t('vaccination.invalidName'))
     return null
@@ -87,28 +106,141 @@ function validate() {
     err.set('date', t('vaccination.invalidDate'))
     return null
   }
-  return {
+  pendingPayload = {
     date: d,
     name: name.value.trim(),
     dose: dose.value || undefined,
     status: status.value,
     notes: notes.value || undefined,
   }
+  return pendingPayload
 }
 
 const { submit } = useRecordForm({
   err,
   editing: props.editing,
   validate,
-  add: (payload) => vaccinationStore.add(payload),
+  add: async (payload) => {
+    savedId = await vaccinationStore.add(payload)
+  },
   update: (id, payload) => vaccinationStore.update(id, payload),
-  onSaved: () => emit('saved'),
+  onSaved: () => {
+    // 计划接种（新增或编辑）保留弹窗提供添加到日历；已接种直接关闭
+    const p = pendingPayload
+    if (p?.status === 'planned') {
+      savedPlan.value = {
+        id: props.editing?.id ?? savedId ?? 0,
+        name: p.name,
+        dose: p.dose,
+        date: p.date,
+        editing: props.editing != null,
+      }
+      return
+    }
+    emit('saved')
+  },
 })
 const { onSubmit } = useFormSubmit(submit)
+
+/** 记录 → 日历事件（同一条记录 UID 稳定：再次添加视为更新同一条事件） */
+function calEventOf(record: { id?: number; name: string; dose?: string; date: number }): CalendarEvent {
+  const label = record.dose ? `${record.name} · ${record.dose}` : record.name
+  return {
+    uid: `vaccination-${record.id}@babysitter`,
+    title: t('vaccination.calEventTitle', { label }),
+    date: record.date,
+    description: t('vaccination.calEventDesc', { app: t('app.name') }),
+  }
+}
+
+/** 同一天的其它计划接种（批量为这一天的全部记录各建一条独立事件，可单独修改） */
+const sameDateOthers = computed(() => {
+  const plan = savedPlan.value
+  if (!plan) return []
+  const day = startOfDay(plan.date)
+  return vaccinationStore.vaccinations.filter(
+    (v) => v.status === 'planned' && v.id !== plan.id && startOfDay(v.date) === day,
+  )
+})
+
+/** Google 日历网页链接（单条，无需下载文件） */
+const googleUrl = computed(() => (savedPlan.value ? googleCalendarUrl(calEventOf(savedPlan.value)) : ''))
+
+/** 交付 .ics 并给出结果反馈 */
+async function deliver(events: CalendarEvent[], filename: string, title: string) {
+  calFeedback.value = null
+  const result = await deliverIcs(buildIcs(events), filename, title)
+  calFeedback.value =
+    result === 'shared'
+      ? t('vaccination.calShared')
+      : result === 'downloaded'
+        ? t('vaccination.calDownloaded')
+        : result === 'failed'
+          ? t('vaccination.calFailed')
+          : null
+}
+
+/** 添加本条到系统日历（含「提前 1 天」与「当天」两条提醒） */
+async function addToCalendar() {
+  const plan = savedPlan.value
+  if (!plan || calBusy.value) return
+  calBusy.value = true
+  const event = calEventOf(plan)
+  await deliver([event], `vaccine-${plan.id}.ics`, event.title)
+  calBusy.value = false
+}
+
+/** 一次添加这一天的全部计划接种（含本条），逐条独立事件 */
+async function addSameDateToCalendar() {
+  const plan = savedPlan.value
+  if (!plan || calBusy.value) return
+  calBusy.value = true
+  const day = formatDate(plan.date)
+  await deliver([plan, ...sameDateOthers.value].map(calEventOf), `vaccines-${day}.ics`, day)
+  calBusy.value = false
+}
+
+/** 完成：关闭弹窗（由父级收尾） */
+function finishSavedPlan() {
+  savedPlan.value = null
+  emit('saved')
+}
 </script>
 
 <template>
   <form ref="root" class="vaccination-form" @submit.prevent="onSubmit">
+    <!-- 计划接种保存后：保持弹窗，提供「添加到系统日历」 -->
+    <div v-if="savedPlan" class="cal-saved">
+      <p class="cal-saved-title">
+        ✅ {{ t(savedPlan.editing ? 'vaccination.calUpdatedTitle' : 'vaccination.calSavedTitle') }}
+      </p>
+      <p class="cal-saved-meta">
+        {{ savedPlan.dose ? `${savedPlan.name} · ${savedPlan.dose}` : savedPlan.name }} ·
+        {{ formatDate(savedPlan.date) }}
+      </p>
+      <p class="cal-hint">{{ t(savedPlan.editing ? 'vaccination.calUpdateHint' : 'vaccination.calHint') }}</p>
+      <button type="button" class="btn btn-primary btn-block" :disabled="calBusy" @click="addToCalendar">
+        📅 {{ t('vaccination.calAdd') }}
+      </button>
+      <button
+        v-if="sameDateOthers.length"
+        type="button"
+        class="btn btn-outline btn-block"
+        :disabled="calBusy"
+        @click="addSameDateToCalendar"
+      >
+        💉 {{ t('vaccination.calBatchAdd', { n: sameDateOthers.length + 1 }) }}
+      </button>
+      <a class="cal-google" :href="googleUrl" target="_blank" rel="noopener noreferrer">
+        🔗 {{ t('vaccination.calGoogle') }}
+      </a>
+      <p v-if="calFeedback" class="cal-feedback">{{ calFeedback }}</p>
+      <button type="button" class="btn btn-outline btn-block" @click="finishSavedPlan">
+        {{ t('vaccination.calDone') }}
+      </button>
+    </div>
+
+    <template v-else>
     <FormField :label="t('vaccination.nameLabel')" :errors="err" error-key="name">
       <div class="name-row">
         <input
@@ -187,6 +319,7 @@ const { onSubmit } = useFormSubmit(submit)
         </button>
       </div>
     </BaseModal>
+    </template>
   </form>
 </template>
 
@@ -299,5 +432,44 @@ const { onSubmit } = useFormSubmit(submit)
   padding: 1px 6px;
   border-radius: 4px;
   white-space: nowrap;
+}
+
+.cal-saved {
+  display: grid;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.cal-saved-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cal-saved-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.cal-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.cal-feedback {
+  font-size: 12px;
+  color: var(--primary-dark);
+  line-height: 1.6;
+}
+
+.cal-google {
+  font-size: 12px;
+  color: var(--accent-blue);
+  text-align: center;
+  text-decoration: underline;
+  padding: 2px 0;
+  min-height: 0;
 }
 </style>
