@@ -1,10 +1,19 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
+// 版本号唯一来源：package.json#version（注入 __APP_VERSION__，供「设置 → 关于」展示）
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+  version: string
+}
+
 // GitHub Pages / Cloudflare Pages 部署时需通过 --base 指定子路径
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   plugins: [
     vue(),
     VitePWA({

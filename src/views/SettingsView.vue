@@ -5,6 +5,7 @@ import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
 import { exportBabyCsvs, exportAllBabiesCsv, importAllCsv } from '@/services/export'
 import { BABY_AVATARS, MS_PER_DAY } from '@/constants'
+import { APP_VERSION } from '@/constants/version'
 import { ageInMonths } from '@/utils/age'
 import { loadReminders, saveReminders, type ReminderConfig, type ReminderType } from '@/utils/reminderScheduler'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -440,7 +441,7 @@ async function confirmClearAll() {
       <p class="about-text">{{ t('settings.aboutText1') }}</p>
       <p class="about-text">{{ t('settings.aboutText2') }}</p>
       <p class="about-text">{{ t('settings.aboutText3') }}</p>
-      <p class="about-text muted">{{ t('settings.aboutMuted') }}</p>
+      <p class="about-text muted">{{ t('settings.aboutMuted', { version: APP_VERSION }) }}</p>
       <a
         class="about-github"
         href="https://github.com/LostBeanBun/babysitter"
