@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
@@ -23,6 +24,7 @@ const props = defineProps<{ now: number }>()
 const emit = defineEmits<{ edit: [v: Vaccination] }>()
 
 const { t } = useI18n()
+const router = useRouter()
 const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
 const diaperStore = useDiaperStore()
@@ -82,6 +84,14 @@ const vaccineChips = computed(() =>
 function onSelectVaccination(key: number | string) {
   const v = vaccinationStore.vaccinations.find((x) => x.id === key)
   if (v) emit('edit', v)
+}
+
+/** 全部待种计划数（提醒条只展示最近 3 条，其余仅在记录页疫苗筛选中可见/可改） */
+const plannedVaccineCount = computed(() => vaccinationStore.vaccinations.filter((v) => v.status === 'planned').length)
+
+/** 「全部 N 条」→ 记录页疫苗筛选（可逐条选择修改保存） */
+function openAllVaccinations() {
+  router.push('/log?filter=vaccination')
 }
 
 // 今日汇总
@@ -144,16 +154,18 @@ const guide = computed(() => dailyGuide(activeBaby.value))
       @dismiss="dismiss('feed')"
     />
 
-    <!-- 疫苗提醒条：点击打开最近一条待种记录进行编辑，点具体芯片可直接编辑该条 -->
+    <!-- 疫苗提醒条：点击打开最近一条待种记录进行编辑，点具体芯片可直接编辑该条，「全部」进记录页 -->
     <ReminderBanner
       v-if="upcomingVaccinationsList.length > 0 && !dismissed.vaccine"
       icon="💉"
       variant="vaccine"
       :title="t('dashboard.vaccineReminderTitle')"
       :chips="vaccineChips"
+      :all-label="plannedVaccineCount > 1 ? t('dashboard.vaccineAll', { n: plannedVaccineCount }) : ''"
       :dismiss-label="t('common.close')"
       @click="emit('edit', upcomingVaccinationsList[0])"
       @select="onSelectVaccination"
+      @all="openAllVaccinations"
       @dismiss="dismiss('vaccine')"
     />
 

@@ -130,10 +130,12 @@ const entries = computed(() =>
     growths: filtered('growth', growthStore.growths, (g) => g.date),
     solidFoods: filtered('solidFood', solidFoodStore.solidFoods, (sf) => sf.time),
     medications: filtered('medication', medicationStore.medications, (m) => m.time),
-    // 记录页只展示实际接种记录（done），planned 待接种计划/提醒不混入时间线
+    // 「全部」只展示实际接种记录（done）；疫苗筛选中额外列出「待接种」计划，可逐条修改
     vaccinations: filtered(
       'vaccination',
-      vaccinationStore.vaccinations.filter((v) => v.status === 'done'),
+      filter.value === 'vaccination'
+        ? vaccinationStore.vaccinations
+        : vaccinationStore.vaccinations.filter((v) => v.status === 'done'),
       (v) => v.date,
     ),
     temperatures: filtered('temperature', temperatureStore.temperatures, (tmp) => tmp.time),
@@ -149,6 +151,18 @@ watch(
     if (timerKind && typeof timerKind === 'string' && timerKind !== lastTimerKind) {
       lastTimerKind = timerKind
       openAdd(timerKind as RecordKind)
+      router.replace({ path: '/log' })
+    }
+  },
+  { immediate: true },
+)
+
+// 从疫苗提醒条「全部」入口进入时预设筛选（=疫苗列表，可逐条修改计划）
+watch(
+  () => route.query.filter,
+  (kind) => {
+    if (typeof kind === 'string' && RECORD_KINDS.includes(kind as RecordKind)) {
+      filter.value = kind as RecordKind
       router.replace({ path: '/log' })
     }
   },

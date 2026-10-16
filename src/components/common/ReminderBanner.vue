@@ -14,16 +14,19 @@ withDefaults(
     sub?: string
     /** 内容芯片列表（如待种疫苗项），点击芯片触发 select */
     chips?: ReminderChip[]
+    /** 「全部 N 条」入口文案（疫苗计划数多于提醒条可容纳时展示），点击触发 all */
+    allLabel?: string
     variant?: 'feed' | 'vaccine'
     dismissLabel: string
   }>(),
-  { variant: 'feed', sub: undefined, chips: undefined },
+  { variant: 'feed', sub: undefined, chips: undefined, allLabel: undefined },
 )
 
 const emit = defineEmits<{
   dismiss: []
   click: []
   select: [key: number | string]
+  all: []
 }>()
 </script>
 
@@ -37,7 +40,7 @@ const emit = defineEmits<{
     <div class="rb-text">
       <p class="rb-title">{{ title }}</p>
       <p v-if="sub" class="rb-sub">{{ sub }}</p>
-      <p v-if="chips?.length" class="rb-sub">
+      <p v-if="chips?.length || allLabel" class="rb-sub">
         <button
           v-for="c in chips"
           :key="c.key"
@@ -47,6 +50,9 @@ const emit = defineEmits<{
         >
           {{ c.label }}
           <span v-if="c.badge" class="rb-badge">{{ c.badge }}</span>
+        </button>
+        <button v-if="allLabel" type="button" class="rb-chip rb-chip-all" @click.stop="emit('all')">
+          {{ allLabel }} ›
         </button>
       </p>
     </div>
@@ -146,6 +152,13 @@ const emit = defineEmits<{
   color: var(--accent-blue);
   font-weight: 700;
   margin-left: 3px;
+}
+
+/* 「全部 N 条」入口：与芯片同款，但加粗并高亮，区别于具体疫苗项 */
+.rb-chip-all {
+  font-weight: 600;
+  color: var(--accent-blue);
+  white-space: nowrap;
 }
 
 .rb-close {
