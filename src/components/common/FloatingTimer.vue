@@ -200,7 +200,8 @@ function onOpen(id: string) {
 
 <template>
   <template v-for="rec in activeTimer.records.value" :key="rec.id">
-    <Transition name="float">
+    <!-- appear：每条计划各自挂载一个 Transition，属于「首次渲染」，不加 appear 则入场动画会被 Vue 跳过 -->
+    <Transition name="float" appear>
       <div
         v-if="active && !sleepModalOpen"
         class="floating-ball"
