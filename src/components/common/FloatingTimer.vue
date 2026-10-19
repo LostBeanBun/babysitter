@@ -303,10 +303,36 @@ function onOpen(id: string) {
   100% { opacity: 0; transform: scale(1.15); }
 }
 
+/* 纯透明度版本：无位移无缩放，供「减少动态效果」环境使用 */
+@keyframes pulse-ring-soft {
+  0% { opacity: 0.45; }
+  100% { opacity: 0; }
+}
+
 .float-enter-active { transition: opacity 0.35s var(--spring), transform 0.35s var(--spring); }
 .float-leave-active { transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out); }
 .float-enter-from { opacity: 0; transform: scale(0.7); }
 .float-leave-to { opacity: 0; transform: scale(0.7); }
+
+/* 系统开了「减少动态效果」（如 Windows 关闭动画效果）时，main.css 的全局
+   兜底会把动画压成 0.01ms，波纹会直接不可见、球出现也是瞬移。这里为悬浮球
+   保留纯透明度的淡入淡出与呼吸波纹：不含位移/缩放，契合减少动态偏好，
+   同时继续提示「计时进行中」。 */
+@media (prefers-reduced-motion: reduce) {
+  .fb-pulse {
+    animation: pulse-ring-soft 2.4s ease-out infinite !important;
+  }
+  .float-enter-active {
+    transition: opacity 0.28s linear !important;
+  }
+  .float-leave-active {
+    transition: opacity 0.2s linear !important;
+  }
+  .float-enter-from,
+  .float-leave-to {
+    transform: none !important;
+  }
+}
 
 @media (max-width: 375px) {
   .floating-ball { padding: 6px 10px; gap: 6px; }
