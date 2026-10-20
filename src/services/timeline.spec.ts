@@ -215,14 +215,15 @@ describe('buildTimelineEntries', () => {
     )
   })
 
-  it('sleep：夜间图标、时间区间、无时长时不带时长段', () => {
+  it('sleep：统一图标与标题（历史 night 记录同样按「睡眠」展示）、时间区间、无时长时不带时长段', () => {
     const start = T0
     const end = T0 + 2 * 3600_000
     const [entry] = buildTimelineEntries({
       ...empty,
       sleeps: [sleep({ type: 'night', startTime: start, endTime: end })],
     })
-    expect(entry.icon).toBe('🌙')
+    expect(entry.title).toBe(t('timeline.sleepTitle'))
+    expect(entry.icon).toBe('😴')
     expect(entry.detail).toBe(
       `${formatTime(start)} - ${formatTime(end)} · ${formatDuration(2 * 3600_000)}`,
     )

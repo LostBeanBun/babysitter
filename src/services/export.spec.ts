@@ -593,6 +593,19 @@ describe('importAllCsv', () => {
     expect(end - start).toBe(90 * 60000)
   })
 
+  it('旧文件里的「夜间睡眠」/night 导入后统一为小睡', async () => {
+    const csv =
+      `${HEADER_12}\n` +
+      'sleep,2026-01-01,20:00:00,2026-01-01,22:00:00,夜间睡眠,,120,,,,,\n' +
+      'sleep,2026-01-01,23:00:00,2026-01-02,01:00:00,night,,120,,,,,'
+    const result = await importAllCsv(new File([csv], 'sleep-night.csv', { type: 'text/csv' }))
+    expect(result).toMatchObject({ sleeps: 2 })
+    const rows = (mockDb.sleeps.bulkAdd.mock.calls as Array<[Array<Record<string, unknown>>]>).flatMap(
+      ([r]) => r,
+    )
+    expect(rows.map((r) => r.type)).toEqual(['nap', 'nap'])
+  })
+
   it('喂养 amount 为 0 往返后仍为 0', async () => {
     const csv =
       `${HEADER_12}\r\n` +

@@ -20,7 +20,6 @@ import type {
   DiaperColor,
   DiaperAmount,
   PumpSide,
-  SleepType,
   VaccinationStatus,
   TemperatureMethod,
   MilestoneType,
@@ -55,7 +54,7 @@ type PumpingFormProps = {
   amount?: number
   notes?: string
 }
-type SleepFormProps = { id: number; type: SleepType; startTime: number; endTime: number; notes?: string }
+type SleepFormProps = { id: number; startTime: number; endTime: number; notes?: string }
 type GrowthFormProps = {
   id: number
   date: number

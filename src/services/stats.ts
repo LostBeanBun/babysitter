@@ -31,10 +31,6 @@ export interface DayAggregate {
   feedCount: number
   /** 睡眠时长 ms */
   sleepMs: number
-  /** 小睡次数 */
-  napCount: number
-  /** 夜间睡眠次数 */
-  nightCount: number
   /** 尿布更换总数 */
   diaperCount: number
   wetCount: number
@@ -65,8 +61,6 @@ export interface RangeAggregate {
   breastCount: number
   bottleCount: number
   sleepMs: number
-  napCount: number
-  nightCount: number
   diaperCount: number
   wetCount: number
   dirtyCount: number
@@ -87,8 +81,6 @@ const RANGE_METRIC_KEYS = [
   'breastCount',
   'bottleCount',
   'sleepMs',
-  'napCount',
-  'nightCount',
   'diaperCount',
   'wetCount',
   'dirtyCount',
@@ -146,8 +138,6 @@ export function buildDailySeries(ds: RecordDatasets, start: number, end: number)
   // 睡眠可能跨天，按开始时间归到当天
   forEachDay(ds.sleeps, dayMap, (s) => s.startTime, (d, s) => {
     d.sleepMs += Math.max(0, (s.endTime ?? s.startTime) - s.startTime)
-    if (s.type === 'nap') d.napCount++
-    else d.nightCount++
   })
 
   forEachDay(ds.feedings, dayMap, (f) => f.startTime, (d, f) => {

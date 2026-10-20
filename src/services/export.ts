@@ -289,7 +289,7 @@ export function buildBabyCsvRows(data: BabyCsvData, babyName?: string): Row[] {
     const durMs = s.duration ?? endTs - s.startTime
     const [d, tm] = startCells(s.startTime)
     const [ed, et] = startCells(endTs)
-    rows.push(makeRow(nameCol, 'sleep', [d, tm, ed, et, bl(s.type), '', minCell(durMs), '', s.notes ?? '']))
+    rows.push(makeRow(nameCol, 'sleep', [d, tm, ed, et, bl('nap'), '', minCell(durMs), '', s.notes ?? '']))
   }
 
   // 成长记录
@@ -611,7 +611,8 @@ function mapCsvRowToRecord(
         kind,
         data: {
           ...base,
-          type: toInternal(item),
+          // 睡眠类型已统一为「小睡」：旧文件里的「夜间睡眠」也按小睡导入
+          type: 'nap',
           startTime,
           endTime: sleepEnd,
           notes: notes || undefined,

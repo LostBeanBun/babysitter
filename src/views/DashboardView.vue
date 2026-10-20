@@ -17,7 +17,7 @@ import { useRecordModal } from '@/composables/useRecordModal'
 import { useActiveTimer } from '@/composables/useActiveTimer'
 import { KIND_COLORS } from '@/services/timeline'
 import type { TimelineEntry } from '@/services/timeline'
-import type { FeedType, SleepType, RecordKind, Vaccination } from '@/types'
+import type { FeedType, RecordKind, Vaccination } from '@/types'
 import { useVaccinationStore } from '@/stores/vaccination'
 import { formatDate } from '@/utils/format'
 
@@ -44,7 +44,6 @@ const sleepFeedOpen = ref(false)
 const sfType = ref<FeedType>('breast')
 const sfAmount = ref('')
 const sfStart = ref(toDateTimeLocal(Date.now()))
-const sfSleepType = ref<SleepType>('nap')
 const sfSleepEnd = ref(toDateTimeLocal(Date.now() + 2 * 3600_000))
 const sfNotes = ref('')
 const sfErr = useFormErrors()
@@ -80,13 +79,12 @@ async function saveSleepFeed() {
     }
   }
   await feedingStore.add({ type: sfType.value, side: sfType.value === 'breast' ? 'both' : undefined, startTime: start, amount })
-  await sleepStore.add({ type: sfSleepType.value, startTime: start, endTime: end, notes: sfNotes.value || undefined })
+  await sleepStore.add({ type: 'nap', startTime: start, endTime: end, notes: sfNotes.value || undefined })
   activeTimer.reset()
   sleepFeedOpen.value = false
   sfType.value = 'breast'
   sfAmount.value = ''
   sfStart.value = toDateTimeLocal(Date.now())
-  sfSleepType.value = 'nap'
   sfSleepEnd.value = toDateTimeLocal(Date.now() + 2 * 3600_000)
   sfNotes.value = ''
 }
@@ -218,13 +216,6 @@ function onEditVaccination(v: Vaccination) {
           @input="sfErr.clear('start')"
         />
         <p v-if="sfErr.get('start')" class="field-error">{{ sfErr.get('start') }}</p>
-      </div>
-      <div class="form-field">
-        <label class="form-label">{{ t('sleep.typeLabel') }}</label>
-        <select v-model="sfSleepType" class="form-input">
-          <option value="nap">{{ t('sleep.types.nap') }}</option>
-          <option value="night">{{ t('sleep.types.night') }}</option>
-        </select>
       </div>
       <div class="form-field" :class="{ 'has-error': sfErr.has('sleepEnd') }">
         <label class="form-label">{{ t('sleep.endLabel') }}</label>
