@@ -13,9 +13,16 @@ const props = defineProps<{
   grouped?: boolean
   /** 正在等待删除确认的条目 key（`kind-id`，与列表 key 一致，用于高亮选中的删除目标） */
   deletingKey?: string | null
+  /** 当前选中/交互中的条目 key（`kind-id`，点击后持续高亮，直到选中另一条） */
+  selectedKey?: string | null
 }>()
 
 const emit = defineEmits<{ edit: [entry: TimelineEntry]; delete: [entry: TimelineEntry] }>()
+
+/** 条目唯一 key（`kind-id`，与列表 key、删除/选中状态共用） */
+function entryKey(e: TimelineEntry): string {
+  return e.kind + '-' + e.id
+}
 
 /** 按天分组 */
 const groupedEntries = computed(() => {
@@ -87,7 +94,7 @@ watch(
       const at = e.raw.createdAt
       if (at >= cutoff && (best === null || at > best.raw.createdAt)) best = e
     }
-    const key = best ? best.kind + '-' + best.id : null
+    const key = best ? entryKey(best) : null
     if (!key || savedKey.value === key) return
     savedKey.value = key
     // 高亮只保持 1.8s：reduce 下用的是静态底色，必须靠计时移除，否则会一直亮着
@@ -108,7 +115,18 @@ onUnmounted(() => {
 <template>
   <div class="timeline" ref="rootRef">
     <template v-if="!grouped">
-      <div v-for="e in entries" :key="e.kind + '-' + e.id" class="tl-item" :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id, 'tl-saved': savedKey === e.kind + '-' + e.id }" @click="emit('edit', e)">
+      <div
+        v-for="e in entries"
+        :key="entryKey(e)"
+        class="tl-item"
+        :class="{
+          'tl-deleting': deletingKey != null && deletingKey === entryKey(e),
+          'tl-saved': savedKey === entryKey(e),
+          'tl-selected': selectedKey != null && selectedKey === entryKey(e),
+        }"
+        :aria-current="selectedKey != null && selectedKey === entryKey(e) ? 'true' : undefined"
+        @click="emit('edit', e)"
+      >
         <div class="tl-icon" :style="{ background: e.color + '22' }">
           <span>{{ e.icon }}</span>
         </div>
@@ -137,7 +155,12 @@ onUnmounted(() => {
             v-for="e in items"
             :key="e.kind + '-' + e.id"
             class="tl-item tl-timeline-item"
-            :class="{ 'tl-deleting': deletingKey != null && deletingKey === e.kind + '-' + e.id, 'tl-saved': savedKey === e.kind + '-' + e.id }"
+            :class="{
+              'tl-deleting': deletingKey != null && deletingKey === entryKey(e),
+              'tl-saved': savedKey === entryKey(e),
+              'tl-selected': selectedKey != null && selectedKey === entryKey(e),
+            }"
+            :aria-current="selectedKey != null && selectedKey === entryKey(e) ? 'true' : undefined"
             @click="emit('edit', e)"
           >
             <div
@@ -226,6 +249,12 @@ onUnmounted(() => {
   box-shadow: inset 0 0 0 1px var(--glass-inset);
   transform: scale(0.985);
   transition-duration: 0.06s;
+}
+
+/* 选中态：点击后在列表中持续标识当前记录（类似 focus 环），直到选中另一条 */
+.tl-item.tl-selected {
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 1.5px var(--primary);
 }
 
 .tl-icon {

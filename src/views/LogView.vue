@@ -22,6 +22,7 @@ import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import { KIND_META, RECORD_KINDS } from '@/constants'
 import { formatTime, startOfDay } from '@/utils/format'
 import type { RecordKind } from '@/types'
+import type { TimelineEntry } from '@/services/timeline'
 
 const feedingStore = useFeedingStore()
 const diaperStore = useDiaperStore()
@@ -107,6 +108,14 @@ const {
   onCancelled,
   confirmDeleteAction,
 } = useRecordModal()
+
+/** 当前选中/交互中的记录（点击后持续高亮，直到点另一条），与列表 key 一致 */
+const selectedKey = ref<string | null>(null)
+
+function handleEdit(entry: TimelineEntry) {
+  selectedKey.value = entry.kind + '-' + entry.id
+  onEdit(entry)
+}
 
 function keep<T extends { id?: number }>(items: T[], kind: RecordKind): T[] {
   return items.filter((x) => !isPending({ kind, id: x.id! }))
@@ -237,8 +246,9 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
         v-else-if="entries.length"
         :entries="entries"
         :deleting-key="confirmDelete ? confirmDelete.kind + '-' + confirmDelete.id : null"
+        :selected-key="selectedKey"
         grouped
-        @edit="onEdit"
+        @edit="handleEdit"
         @delete="onDelete"
       />
       <div v-else class="empty-inline">
