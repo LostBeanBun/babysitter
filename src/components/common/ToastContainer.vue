@@ -37,7 +37,7 @@ function handleAction(id: number, onAction?: () => void) {
 <style scoped>
 .toast-container {
   position: fixed;
-  bottom: calc(var(--tabbar-height) + var(--tabbar-float-gap) + var(--safe-bottom) + 16px);
+  bottom: calc(var(--tabbar-height) + var(--tabbar-bottom) + 16px);
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 32px);

@@ -13,37 +13,55 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
 </script>
 
 <template>
-  <nav v-if="showTabbar" class="tabbar" :aria-label="t('nav.dashboard')">
-    <div class="tabbar-glass">
-      <span class="tabbar-shine" aria-hidden="true" />
-      <RouterLink
-        v-for="tab in APP_TABS"
-        :key="tab.name"
-        :to="tab.path"
-        class="tabbar-item"
-        :class="{ active: route.name === tab.name }"
-        :aria-current="route.name === tab.name ? 'page' : undefined"
-      >
-        <span class="tabbar-pill">
-          <svg viewBox="0 0 24 24" fill="currentColor" class="tabbar-icon" aria-hidden="true">
-            <path :d="tab.icon" />
-          </svg>
-        </span>
-        <span class="tabbar-label">{{ t(tab.label) }}</span>
-      </RouterLink>
-    </div>
-  </nav>
+  <template v-if="showTabbar">
+    <div class="tabbar-scrim" aria-hidden="true" />
+    <nav class="tabbar" :aria-label="t('nav.dashboard')">
+      <div class="tabbar-glass">
+        <span class="tabbar-shine" aria-hidden="true" />
+        <RouterLink
+          v-for="tab in APP_TABS"
+          :key="tab.name"
+          :to="tab.path"
+          class="tabbar-item"
+          :class="{ active: route.name === tab.name }"
+          :aria-current="route.name === tab.name ? 'page' : undefined"
+        >
+          <span class="tabbar-pill">
+            <svg viewBox="0 0 24 24" fill="currentColor" class="tabbar-icon" aria-hidden="true">
+              <path :d="tab.icon" />
+            </svg>
+          </span>
+          <span class="tabbar-label">{{ t(tab.label) }}</span>
+        </RouterLink>
+      </div>
+    </nav>
+  </template>
 </template>
 
 <style scoped>
 /* App Store / iOS Liquid Glass — 悬浮胶囊底栏 */
+
+/* 底部滚动边缘效果：内容滚到胶囊栏附近时逐渐模糊淡出，避免在胶囊两侧露出内容轮廓 */
+.tabbar-scrim {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--tabbar-height) + var(--tabbar-bottom) + 26px);
+  z-index: 49;
+  pointer-events: none;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  mask-image: linear-gradient(to top, #000 0%, #000 58%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 58%, transparent 100%);
+}
+
 .tabbar {
   position: fixed;
-  bottom: calc(var(--safe-bottom) + var(--tabbar-float-gap, 14px));
+  bottom: var(--tabbar-bottom);
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 24px);
-  max-width: 420px;
+  width: min(calc(100% - var(--tabbar-gutter) * 2), var(--tabbar-max-width));
   z-index: 50;
   pointer-events: none;
 }
@@ -124,8 +142,8 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
 }
 
 .tabbar-icon {
-  width: 23px;
-  height: 23px;
+  width: 24px;
+  height: 24px;
   transition: transform 0.35s var(--spring);
 }
 
@@ -147,11 +165,5 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
 
 .tabbar-item.active .tabbar-label {
   font-weight: 600;
-}
-
-@media (min-width: 700px) {
-  .tabbar {
-    max-width: 480px;
-  }
 }
 </style>
