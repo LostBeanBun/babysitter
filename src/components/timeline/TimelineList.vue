@@ -75,17 +75,34 @@ onMounted(() => {
   observeGroups()
 })
 /** 刚保存：createdAt 在 3s 内的最新一条（保存后回列表轻闪提示；同一时刻批量导入只闪最新一条） */
-const savedKey = computed(() => {
-  const cutoff = Date.now() - 3000
-  let best: TimelineEntry | null = null
-  for (const e of props.entries) {
-    const at = e.raw.createdAt
-    if (at >= cutoff && (best === null || at > best.raw.createdAt)) best = e
-  }
-  return best ? best.kind + '-' + best.id : null
-})
+const savedKey = ref<string | null>(null)
+let savedTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(
+  () => props.entries,
+  (list) => {
+    const cutoff = Date.now() - 3000
+    let best: TimelineEntry | null = null
+    for (const e of list) {
+      const at = e.raw.createdAt
+      if (at >= cutoff && (best === null || at > best.raw.createdAt)) best = e
+    }
+    const key = best ? best.kind + '-' + best.id : null
+    if (!key || savedKey.value === key) return
+    savedKey.value = key
+    // 高亮只保持 1.8s：reduce 下用的是静态底色，必须靠计时移除，否则会一直亮着
+    clearTimeout(savedTimer)
+    savedTimer = setTimeout(() => {
+      savedKey.value = null
+    }, 1800)
+  },
+  { immediate: true },
+)
 onUpdated(() => observeGroups())
-onUnmounted(() => observer?.disconnect())
+onUnmounted(() => {
+  observer?.disconnect()
+  clearTimeout(savedTimer)
+})
 </script>
 
 <template>
@@ -312,6 +329,15 @@ onUnmounted(() => observer?.disconnect())
 
 .tl-item.tl-saved {
   animation: tl-saved-flash 1.8s var(--ease-out);
+}
+
+/* reduce 下全局把动画压到 0.01ms，用静态底色兜底；1.8s 后由组件移除类 */
+@media (prefers-reduced-motion: reduce) {
+  .tl-item.tl-saved {
+    animation: none;
+    background-color: var(--primary-glow);
+    box-shadow: inset 0 0 0 1px var(--primary-soft);
+  }
 }
 
 /* 删除待确认态：高亮被选中的条目 */
