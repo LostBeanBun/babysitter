@@ -124,13 +124,13 @@ const { onSubmit } = useFormSubmit(submit)
   align-items: center;
   gap: 5px;
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--glass-border);
   background: var(--surface);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
-  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
-    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
+  transition: background-color var(--dur-slow) var(--spring), border-color var(--dur-slow) var(--spring), color var(--dur-slow) var(--spring),
+    box-shadow var(--dur-slow) var(--spring), transform var(--dur-slow) var(--spring), opacity var(--dur-slow) var(--spring);
 }
 
 .color-dot-btn.selected {
@@ -152,14 +152,14 @@ const { onSubmit } = useFormSubmit(submit)
 
 .amount-btn {
   flex: 1;
-  padding: 8px;
+  padding: var(--space-2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
   background: var(--surface);
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--text-secondary);
-  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
-    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
+  transition: background-color var(--dur-slow) var(--spring), border-color var(--dur-slow) var(--spring), color var(--dur-slow) var(--spring),
+    box-shadow var(--dur-slow) var(--spring), transform var(--dur-slow) var(--spring), opacity var(--dur-slow) var(--spring);
 }
 
 .amount-btn.selected {

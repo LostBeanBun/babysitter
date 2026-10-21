@@ -109,7 +109,7 @@ const mergedOption = computed<EChartsOption>(() => {
 
 <style scoped>
 .chart-card {
-  padding: 12px;
+  padding: var(--space-3);
   min-width: 0;
 }
 
@@ -125,7 +125,7 @@ const mergedOption = computed<EChartsOption>(() => {
 }
 
 .chart-title {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   color: var(--text);
   overflow-wrap: anywhere;
@@ -133,7 +133,7 @@ const mergedOption = computed<EChartsOption>(() => {
 }
 
 .chart-sub {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-top: 3px;
   overflow-wrap: anywhere;
@@ -150,7 +150,7 @@ const mergedOption = computed<EChartsOption>(() => {
 }
 
 .chart-empty-text {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--text-muted);
 }
 </style>

@@ -67,7 +67,7 @@ function selectedStyle(opt: ChoiceOption) {
 .choice-grid {
   display: grid;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .choice-btn {
@@ -76,12 +76,12 @@ function selectedStyle(opt: ChoiceOption) {
   align-items: center;
   gap: 4px;
   min-height: 44px;
-  padding: 12px 6px;
+  padding: var(--space-3) 6px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
   background: var(--surface);
-  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
-    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
+  transition: background-color var(--dur-slow) var(--spring), border-color var(--dur-slow) var(--spring), color var(--dur-slow) var(--spring),
+    box-shadow var(--dur-slow) var(--spring), transform var(--dur-slow) var(--spring), opacity var(--dur-slow) var(--spring);
 }
 
 .choice-btn.selected {
@@ -97,11 +97,11 @@ function selectedStyle(opt: ChoiceOption) {
 }
 
 .choice-icon {
-  font-size: 20px;
+  font-size: var(--fs-lg);
 }
 
 .choice-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-secondary);
   overflow: hidden;

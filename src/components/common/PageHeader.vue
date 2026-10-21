@@ -81,7 +81,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   width: 100%;
   max-width: 640px;
   height: calc(var(--header-height) + var(--safe-top));
-  padding: var(--safe-top) 20px 0;
+  padding: var(--safe-top) var(--page-gutter) 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -89,7 +89,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--glass-border);
-  z-index: 40;
+  z-index: var(--z-header);
 }
 
 .header-left {
@@ -123,7 +123,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: var(--fs-md);
   border-radius: var(--radius);
   background: linear-gradient(135deg, var(--primary-soft), var(--surface-2));
   border: 1px solid var(--glass-border);
@@ -142,7 +142,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-  margin-left: 12px;
+  margin-left: var(--space-3);
 }
 
 .lang-wrap {
@@ -166,10 +166,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-glass);
   transition:
-    color 0.2s ease,
-    background 0.2s ease,
-    transform 0.35s var(--spring),
-    border-color 0.2s ease;
+    color var(--dur-base) ease,
+    background var(--dur-base) ease,
+    transform var(--dur-enter) var(--spring),
+    border-color var(--dur-base) ease;
 }
 
 .lang-toggle:hover {
@@ -193,7 +193,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .lang-badge {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   line-height: 1;
 }
@@ -213,8 +213,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg), var(--shadow-glass);
-  z-index: 50;
-  animation: lang-pop 0.2s var(--spring);
+  z-index: var(--z-modal);
+  animation: lang-pop var(--dur-base) var(--spring);
 }
 
 .lang-menu button {
@@ -241,7 +241,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
 .lang-menu button.active::after {
   content: '✓';
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 
 @keyframes lang-pop {
@@ -271,10 +271,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-glass);
   transition:
-    color 0.2s ease,
-    background 0.2s ease,
-    transform 0.35s var(--spring),
-    border-color 0.2s ease;
+    color var(--dur-base) ease,
+    background var(--dur-base) ease,
+    transform var(--dur-enter) var(--spring),
+    border-color var(--dur-base) ease;
 }
 
 .theme-toggle:hover {

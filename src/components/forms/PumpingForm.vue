@@ -157,10 +157,10 @@ const { onSubmit } = useFormSubmit(submit)
 
 <style scoped>
 .duration-hint {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--text-secondary);
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .time-row {

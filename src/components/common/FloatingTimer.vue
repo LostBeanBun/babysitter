@@ -233,11 +233,11 @@ function onOpen(id: string) {
 <style scoped>
 .floating-ball {
   position: fixed;
-  z-index: 100;
+  z-index: var(--z-float);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-xl);
   background: var(--surface);
   backdrop-filter: var(--glass-blur);
@@ -248,11 +248,11 @@ function onOpen(id: string) {
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
-  transition: transform 0.3s var(--spring), box-shadow 0.3s var(--ease-out);
+  transition: transform var(--dur-slow) var(--spring), box-shadow var(--dur-slow) var(--ease-out);
 }
 
 .floating-ball:active {
-  transform: scale(0.94);
+  transform: scale(var(--tap-scale));
 }
 
 /* 拖拽中关闭毛玻璃：移动的 backdrop-filter 每帧都要重算模糊，代价高且视觉上被位移掩盖 */
@@ -262,7 +262,7 @@ function onOpen(id: string) {
 }
 
 .fb-icon {
-  font-size: 22px;
+  font-size: var(--fs-xl);
   flex-shrink: 0;
   line-height: 1;
 }
@@ -274,14 +274,14 @@ function onOpen(id: string) {
 }
 
 .fb-label {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--text-muted);
   line-height: 1;
 }
 
 .fb-time {
-  font-size: 16px;
+  font-size: var(--fs-16);
   font-weight: 700;
   color: var(--ball-color);
   font-variant-numeric: tabular-nums;
@@ -309,8 +309,8 @@ function onOpen(id: string) {
   100% { opacity: 0; }
 }
 
-.float-enter-active { transition: opacity 0.35s var(--spring), transform 0.35s var(--spring); }
-.float-leave-active { transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out); }
+.float-enter-active { transition: opacity var(--dur-enter) var(--spring), transform var(--dur-enter) var(--spring); }
+.float-leave-active { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
 .float-enter-from { opacity: 0; transform: scale(0.7); }
 .float-leave-to { opacity: 0; transform: scale(0.7); }
 
@@ -323,10 +323,10 @@ function onOpen(id: string) {
     animation: pulse-ring-soft 2.4s ease-out infinite !important;
   }
   .float-enter-active {
-    transition: opacity 0.28s linear !important;
+    transition: opacity var(--dur-slow) linear !important;
   }
   .float-leave-active {
-    transition: opacity 0.2s linear !important;
+    transition: opacity var(--dur-base) linear !important;
   }
   .float-enter-from,
   .float-leave-to {
@@ -336,8 +336,8 @@ function onOpen(id: string) {
 
 @media (max-width: 375px) {
   .floating-ball { padding: 6px 10px; gap: 6px; }
-  .fb-icon { font-size: 18px; }
-  .fb-time { font-size: 14px; }
-  .fb-label { font-size: 9px; }
+  .fb-icon { font-size: var(--fs-18); }
+  .fb-time { font-size: var(--fs-14); }
+  .fb-label { font-size: var(--fs-2xs); }
 }
 </style>

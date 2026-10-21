@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -309,11 +309,11 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 4px 14px;
+  padding: 6px var(--space-1) 14px;
 }
 
 .filter-select-label {
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   color: var(--text-secondary);
   flex-shrink: 0;
@@ -350,10 +350,10 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-glass);
   transition:
-    color 0.25s var(--ease-out),
-    background 0.25s var(--ease-out),
-    transform 0.3s var(--spring),
-    border-color 0.25s var(--ease-out);
+    color var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out),
+    transform var(--dur-slow) var(--spring),
+    border-color var(--dur-base) var(--ease-out);
 }
 
 .date-toggle:hover {
@@ -362,7 +362,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 }
 
 .date-toggle:active {
-  transform: scale(0.92);
+  transform: scale(var(--tap-scale-strong));
 }
 
 .date-toggle.active {
@@ -377,13 +377,13 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 }
 
 .date-selected-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--primary);
   background: var(--primary-soft);
-  padding: 2px 8px;
-  border-radius: 999px;
-  margin-left: 8px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  margin-left: var(--space-2);
   flex-shrink: 0;
 }
 
@@ -403,13 +403,13 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   min-width: 0;
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-xs);
-  font-size: 13px;
-  padding: 8px 10px;
+  font-size: var(--fs-13);
+  padding: var(--space-2) 10px;
 }
 
 .date-sep {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-13);
   flex-shrink: 0;
 }
 
@@ -420,7 +420,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   border-radius: 50%;
   flex-shrink: 0;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--fs-14);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -434,26 +434,26 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 
 .empty-inline {
   text-align: center;
-  padding: 40px 12px;
+  padding: 40px var(--space-3);
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 
 .empty-inline p:first-child {
-  font-size: 15px;
+  font-size: var(--fs-base);
   font-weight: 600;
   color: var(--text-secondary);
 }
 
 .empty-hint {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   margin-top: 6px;
 }
 
 /* 查询加载骨架：避免首帧"暂无记录"闪烁（与 React LogView 样式一致） */
 .log-skeleton {
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .sk-group,
@@ -471,8 +471,8 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 .sk-group {
   width: 96px;
   height: 24px;
-  border-radius: 999px;
-  margin: 0 4px 8px;
+  border-radius: var(--radius-pill);
+  margin: 0 var(--space-1) var(--space-2);
 }
 
 .sk-row {
@@ -491,7 +491,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 }
 
 .confirm-text {
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--text);
   line-height: 1.6;
   margin-bottom: 18px;
@@ -501,7 +501,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: var(--space-3) 14px;
   border-radius: var(--radius);
   background: var(--surface-2);
   border: 1px solid var(--glass-border);
@@ -517,7 +517,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: var(--fs-18);
   flex-shrink: 0;
 }
 
@@ -527,13 +527,13 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 }
 
 .confirm-record-title {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 600;
   color: var(--text);
 }
 
 .confirm-record-detail {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--text-secondary);
   margin-top: 2px;
   overflow-wrap: anywhere;
@@ -541,7 +541,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
 }
 
 .confirm-record-time {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-top: 2px;
   font-variant-numeric: tabular-nums;

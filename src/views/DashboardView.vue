@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFormErrors } from '@/composables/useFormErrors'
@@ -248,23 +248,23 @@ function onEditVaccination(v: Vaccination) {
 <style scoped>
 .welcome {
   text-align: center;
-  padding: 48px 24px 24px;
+  padding: 48px var(--space-6) var(--space-6);
 }
 
 .welcome-icon {
-  font-size: 64px;
-  margin-bottom: 12px;
+  font-size: var(--fs-display);
+  margin-bottom: var(--space-3);
 }
 
 .welcome-title {
-  font-size: 22px;
+  font-size: var(--fs-xl);
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .welcome-text {
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--text-secondary);
   line-height: 1.7;
   margin-bottom: 22px;
@@ -276,7 +276,7 @@ function onEditVaccination(v: Vaccination) {
 }
 
 .welcome-btn + .welcome-btn {
-  margin-left: 12px;
+  margin-left: var(--space-3);
 }
 
 .sleep-feed-btn {
@@ -291,7 +291,7 @@ function onEditVaccination(v: Vaccination) {
 }
 
 .sf-btn-icon {
-  font-size: 18px;
+  font-size: var(--fs-18);
 }
 
 .form-actions {
@@ -306,7 +306,7 @@ function onEditVaccination(v: Vaccination) {
 /* 小屏下统计卡单列展示：双列时图标占位过大、数值与说明文字被挤压换行 */
 @media (max-width: 520px) {
   .welcome {
-    padding: 32px 12px 20px;
+    padding: 32px var(--space-3) var(--space-5);
   }
 
   .welcome-btn {
@@ -348,13 +348,13 @@ function onEditVaccination(v: Vaccination) {
   border: 1px solid transparent;
   background: transparent;
   transition:
-    transform 0.3s var(--spring),
-    background 0.25s var(--ease-out),
-    border-color 0.25s var(--ease-out);
+    transform var(--dur-slow) var(--spring),
+    background var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
 }
 
 .quick-btn:active {
-  transform: scale(0.94);
+  transform: scale(var(--tap-scale));
   background: var(--surface-2);
 }
 
@@ -365,15 +365,15 @@ function onEditVaccination(v: Vaccination) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 21px;
+  font-size: var(--fs-xl);
   flex-shrink: 0;
   line-height: 1;
   box-shadow: inset 0 0 0 1px var(--glass-inset), var(--shadow-glass);
-  transition: transform 0.3s var(--spring);
+  transition: transform var(--dur-slow) var(--spring);
 }
 
 .quick-btn:active .quick-icon {
-  transform: scale(0.94);
+  transform: scale(var(--tap-scale));
 }
 
 /* 每种记录类型的图标专属渐变色（浅色容器 + 主题色），暗色下整体降亮 */
@@ -418,7 +418,7 @@ function onEditVaccination(v: Vaccination) {
 }
 
 .quick-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-secondary);
   min-width: 0;

@@ -46,7 +46,7 @@ function handleAction(id: number, onAction?: () => void) {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  z-index: 100;
+  z-index: var(--z-toast);
   pointer-events: none;
 }
 
@@ -60,7 +60,7 @@ function handleAction(id: number, onAction?: () => void) {
   border-radius: var(--radius-lg);
   background: rgba(46, 38, 33, 0.82);
   color: #fff;
-  font-size: 13px;
+  font-size: var(--fs-13);
   line-height: 1.5;
   box-shadow: var(--shadow-glass), 0 8px 32px rgba(0, 0, 0, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -77,13 +77,13 @@ function handleAction(id: number, onAction?: () => void) {
 .toast-action {
   flex-shrink: 0;
   min-height: 0;
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: var(--space-1) 10px;
+  border-radius: var(--radius-pill);
   background: var(--primary);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 700;
-  transition: background 0.15s ease;
+  transition: background var(--dur-fast) ease;
   position: relative;
 }
 
@@ -110,7 +110,7 @@ function handleAction(id: number, onAction?: () => void) {
   margin: -10px -8px -10px 0;
   border-radius: 50%;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
+  font-size: var(--fs-14);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -123,8 +123,8 @@ function handleAction(id: number, onAction?: () => void) {
 .toast-enter-active,
 .toast-leave-active {
   transition:
-    opacity 0.3s var(--ease-out),
-    transform 0.35s var(--spring);
+    opacity var(--dur-slow) var(--ease-out),
+    transform var(--dur-enter) var(--spring);
 }
 
 .toast-enter-from,

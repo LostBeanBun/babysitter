@@ -387,7 +387,7 @@ const hcSubtitle = computed(() => growthSubtitle('hc', hcPoints.value))
   border: 1px solid var(--glass-border);
   background: var(--surface-2);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   line-height: 1;
   display: flex;
@@ -395,9 +395,9 @@ const hcSubtitle = computed(() => growthSubtitle('hc', hcPoints.value))
   justify-content: center;
   cursor: pointer;
   transition:
-    background 0.3s var(--spring),
-    color 0.25s var(--ease-out),
-    border-color 0.25s var(--ease-out);
+    background var(--dur-slow) var(--spring),
+    color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
 }
 
 .growth-info-btn:hover {
@@ -407,19 +407,19 @@ const hcSubtitle = computed(() => growthSubtitle('hc', hcPoints.value))
 }
 
 .who-info {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--text-secondary);
   line-height: 1.7;
 }
 
 .who-intro {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .who-list {
   display: grid;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .who-list li {
@@ -433,7 +433,7 @@ const hcSubtitle = computed(() => growthSubtitle('hc', hcPoints.value))
   min-width: 40px;
   color: var(--primary);
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.8;
 }
 
@@ -441,14 +441,14 @@ const hcSubtitle = computed(() => growthSubtitle('hc', hcPoints.value))
   padding-top: 10px;
   border-top: 1px dashed var(--border);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .empty-inline {
   text-align: center;
-  padding: 20px 12px;
+  padding: var(--space-5) var(--space-3);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-13);
   line-height: 1.6;
 }
 </style>

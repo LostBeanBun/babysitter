@@ -48,7 +48,7 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   right: 0;
   bottom: 0;
   height: calc(var(--tabbar-height) + var(--tabbar-bottom) + 26px);
-  z-index: 49;
+  z-index: var(--z-tabbar-scrim);
   pointer-events: none;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -62,7 +62,7 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   left: 50%;
   transform: translateX(-50%);
   width: min(calc(100% - var(--tabbar-gutter) * 2), var(--tabbar-max-width));
-  z-index: 50;
+  z-index: var(--z-tabbar);
   pointer-events: none;
 }
 
@@ -103,15 +103,15 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 4px 2px;
-  border-radius: 999px;
+  padding: var(--space-1) 2px;
+  border-radius: var(--radius-pill);
   color: var(--text-muted);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
   transition:
-    color 0.25s var(--ease-out),
-    background 0.35s var(--spring),
-    transform 0.35s var(--spring);
+    color var(--dur-base) var(--ease-out),
+    background var(--dur-enter) var(--spring),
+    transform var(--dur-enter) var(--spring);
 }
 
 .tabbar-pill {
@@ -120,11 +120,11 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   justify-content: center;
   width: 100%;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   transition:
-    background 0.35s var(--spring),
-    transform 0.35s var(--spring),
-    box-shadow 0.3s var(--ease-out);
+    background var(--dur-enter) var(--spring),
+    transform var(--dur-enter) var(--spring),
+    box-shadow var(--dur-slow) var(--ease-out);
 }
 
 .tabbar-item:active {
@@ -144,7 +144,7 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
 .tabbar-icon {
   width: 24px;
   height: 24px;
-  transition: transform 0.35s var(--spring);
+  transition: transform var(--dur-enter) var(--spring);
 }
 
 .tabbar-item.active .tabbar-icon {
@@ -152,7 +152,7 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
 }
 
 .tabbar-label {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 500;
   line-height: 1.1;
   letter-spacing: 0.01em;
@@ -160,7 +160,7 @@ const showTabbar = computed(() => babyStore.babies.length > 0)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: font-weight 0.2s ease;
+  transition: font-weight var(--dur-base) ease;
 }
 
 .tabbar-item.active .tabbar-label {

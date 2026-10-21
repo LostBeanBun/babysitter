@@ -137,12 +137,12 @@ onUnmounted(() => {
   background: var(--surface-2);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
-  font-size: 15px;
+  font-size: var(--fs-base);
   border: 1px solid var(--glass-border);
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    transform 0.35s var(--spring);
+    background var(--dur-base) ease,
+    color var(--dur-base) ease,
+    transform var(--dur-enter) var(--spring);
 }
 
 .modal-close:active {

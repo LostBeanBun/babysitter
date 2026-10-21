@@ -88,7 +88,7 @@ function onInput(e: Event) {
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--text-muted);
   pointer-events: none;
 }

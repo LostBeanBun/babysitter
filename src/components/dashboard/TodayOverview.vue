@@ -264,8 +264,8 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   overflow: hidden;
   position: relative;
   transition:
-    box-shadow 0.3s var(--ease-out),
-    transform 0.3s var(--ease-out);
+    box-shadow var(--dur-slow) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
 }
 
 .ov-card::before {
@@ -300,7 +300,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 .ov-card__content {
   flex: 1;
   min-width: 0;
-  padding: 10px 12px 10px 10px;
+  padding: 10px var(--space-3) 10px 10px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -316,12 +316,12 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 }
 
 .ov-card__icon {
-  font-size: 16px;
+  font-size: var(--fs-16);
   line-height: 1;
 }
 
 .ov-card__label {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 600;
   color: var(--text);
   letter-spacing: 0.1px;
@@ -331,12 +331,12 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 /* 标题行右侧：上次结束时间 */
 .ov-card__alert {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--primary);
   background: var(--primary-soft);
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-2xs);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -353,7 +353,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 
 /* 主数值：大号粗体，视觉焦点 */
 .ov-card__hero {
-  font-size: 24px;
+  font-size: var(--fs-24);
   font-weight: 700;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -364,7 +364,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 }
 
 .ov-card__unit {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 500;
   color: var(--text-secondary);
   margin-left: 2px;
@@ -372,7 +372,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 
 /* 参考量：主数值行右侧（换行后右对齐） */
 .ov-card__guide {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   font-style: italic;
   white-space: nowrap;
@@ -416,13 +416,13 @@ const guide = computed(() => dailyGuide(activeBaby.value))
 }
 
 .ov-dt__label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   flex-shrink: 0;
 }
 
 .ov-dt__value {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
@@ -444,7 +444,7 @@ const guide = computed(() => dailyGuide(activeBaby.value))
   }
 
   .ov-card__hero {
-    font-size: 22px;
+    font-size: var(--fs-xl);
   }
 }
 

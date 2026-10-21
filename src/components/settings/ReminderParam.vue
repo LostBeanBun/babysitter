@@ -55,7 +55,7 @@ function onInput(e: Event) {
 
 <style scoped>
 .reminder-param-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -63,13 +63,13 @@ function onInput(e: Event) {
 .form-input.reminder-param-input {
   width: 88px;
   min-height: 44px;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-xs);
 }
 
 .reminder-param-hint {
   width: 100%;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   line-height: 1.6;
 }

@@ -219,7 +219,7 @@ const { onSubmit } = useFormSubmit(submit)
 .side-row {
   display: flex;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .side-btn {
@@ -229,26 +229,27 @@ const { onSubmit } = useFormSubmit(submit)
   justify-content: center;
   gap: 6px;
   min-height: 44px;
-  padding: 10px 8px;
+  padding: 10px var(--space-2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
   background: var(--surface);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
-    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
+  transition: background-color var(--dur-slow) var(--spring), border-color var(--dur-slow) var(--spring), color var(--dur-slow) var(--spring),
+    box-shadow var(--dur-slow) var(--spring), transform var(--dur-slow) var(--spring), opacity var(--dur-slow) var(--spring);
 }
 
 .side-btn.selected {
+  border-width: 1.5px;
   border-color: var(--primary);
-  color: var(--primary);
-  background: rgba(232, 144, 108, 0.08);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
 }
 
 .side-btn:active {
-  transform: scale(0.97);
+  transform: scale(var(--tap-scale));
 }
 
 .side-btn:disabled {
@@ -257,10 +258,10 @@ const { onSubmit } = useFormSubmit(submit)
 }
 
 .duration-hint {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--text-secondary);
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .time-row {
@@ -277,8 +278,8 @@ const { onSubmit } = useFormSubmit(submit)
 
 @media (max-width: 375px) {
   .side-btn {
-    padding: 8px 6px;
-    font-size: 12px;
+    padding: var(--space-2) 6px;
+    font-size: var(--fs-sm);
   }
 }
 </style>

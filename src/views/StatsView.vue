@@ -120,7 +120,7 @@ const milkOption = computed<EChartsOption>(() => ({
       name: t('stats.series.milk'),
       data: days.value.map((d) => d.totalMilkAmount),
       color: CHART_COLORS.feedAmount,
-      area: ['rgba(232,144,108,0.25)', 'rgba(232,144,108,0.02)'],
+      area: ['rgba(255,107,53,0.25)', 'rgba(255,107,53,0.02)'],
     }),
   ],
 }))
@@ -422,11 +422,11 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 4px 4px 10px;
+  padding: var(--space-1) var(--space-1) 10px;
 }
 
 .range-select-label {
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   color: var(--text-secondary);
   flex-shrink: 0;
@@ -468,8 +468,8 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
-  border-radius: 999px;
-  padding: 4px;
+  border-radius: var(--radius-pill);
+  padding: var(--space-1);
   margin-bottom: 10px;
   box-shadow: var(--shadow-glass);
 }
@@ -478,13 +478,13 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
   flex: 1;
   min-width: 0; /* 允许收缩，避免长文本（如英文 tab）撑破容器 */
   min-height: 44px;
-  padding: 9px 12px;
-  border-radius: 999px;
-  font-size: 13px;
+  padding: 9px var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-13);
   font-weight: 600;
   color: var(--text-secondary);
-  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
-    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
+  transition: background-color var(--dur-slow) var(--spring), border-color var(--dur-slow) var(--spring), color var(--dur-slow) var(--spring),
+    box-shadow var(--dur-slow) var(--spring), transform var(--dur-slow) var(--spring), opacity var(--dur-slow) var(--spring);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -498,7 +498,7 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
 
 .overview-sub {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-bottom: 10px;
 }
@@ -522,18 +522,18 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
   -webkit-backdrop-filter: var(--glass-blur-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  padding: 9px 8px;
+  padding: 9px var(--space-2);
   text-align: center;
-  transition: transform 0.3s var(--spring);
+  transition: transform var(--dur-slow) var(--spring);
   box-shadow: var(--shadow-glass);
 }
 
 .summary-item:active {
-  transform: scale(0.97);
+  transform: scale(var(--tap-scale));
 }
 
 .summary-label {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -541,7 +541,7 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
 }
 
 .summary-value {
-  font-size: 15px;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: var(--text);
   margin-top: 3px;
@@ -551,7 +551,7 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
 }
 
 .summary-sub {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--text-muted);
   margin-top: 3px;
   white-space: nowrap;
@@ -560,17 +560,17 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
 }
 
 .compare-head {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .compare-title {
-  font-size: 15px;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: var(--text);
 }
 
 .compare-sub {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-top: 2px;
   display: block;
@@ -597,18 +597,18 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
   -webkit-backdrop-filter: var(--glass-blur-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  padding: 11px 8px;
+  padding: 11px var(--space-2);
   text-align: center;
-  transition: transform 0.3s var(--spring);
+  transition: transform var(--dur-slow) var(--spring);
   box-shadow: var(--shadow-glass);
 }
 
 .compare-item:active {
-  transform: scale(0.97);
+  transform: scale(var(--tap-scale));
 }
 
 .compare-label {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -616,7 +616,7 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
 }
 
 .compare-value {
-  font-size: 15px;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: var(--text);
   margin-top: 3px;
@@ -630,12 +630,12 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   min-width: 0;
 }
 
 .compare-change {
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
 }
 
@@ -652,7 +652,7 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
 }
 
 .compare-prev {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   max-width: 100%;
@@ -662,22 +662,22 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
 
 @media (max-width: 400px) {
   .compare-item {
-    padding: 8px 4px;
+    padding: var(--space-2) var(--space-1);
   }
 
   .compare-value {
-    font-size: 13px;
+    font-size: var(--fs-13);
   }
 
   .compare-prev {
-    font-size: 9px;
+    font-size: var(--fs-2xs);
   }
 }
 
 .note-text {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
-  margin: 12px 4px 4px;
+  margin: var(--space-3) var(--space-1) var(--space-1);
   line-height: 1.6;
 }
 </style>

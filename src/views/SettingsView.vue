@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
@@ -576,7 +576,7 @@ async function confirmClearAll() {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 10px var(--space-3);
   border-radius: var(--radius-lg);
   border: 1px solid var(--glass-border);
   background: var(--surface);
@@ -584,12 +584,12 @@ async function confirmClearAll() {
   -webkit-backdrop-filter: var(--glass-blur);
   cursor: pointer;
   box-shadow: var(--shadow-glass);
-  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
-    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
+  transition: background-color var(--dur-slow) var(--spring), border-color var(--dur-slow) var(--spring), color var(--dur-slow) var(--spring),
+    box-shadow var(--dur-slow) var(--spring), transform var(--dur-slow) var(--spring), opacity var(--dur-slow) var(--spring);
 }
 
 .baby-item:active {
-  transform: scale(0.985);
+  transform: scale(var(--tap-scale-item));
 }
 
 @media (max-width: 400px) {
@@ -601,7 +601,7 @@ async function confirmClearAll() {
   .baby-avatar {
     width: 44px;
     height: 44px;
-    font-size: 16px;
+    font-size: var(--fs-16);
   }
 
   .baby-actions {
@@ -623,7 +623,7 @@ async function confirmClearAll() {
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 18px;
+  font-size: var(--fs-18);
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -634,7 +634,7 @@ async function confirmClearAll() {
 }
 
 .baby-name {
-  font-size: 15px;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: var(--text);
   overflow: hidden;
@@ -643,7 +643,7 @@ async function confirmClearAll() {
 }
 
 .baby-meta {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -663,24 +663,24 @@ async function confirmClearAll() {
   background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
-  font-size: 17px;
+  font-size: var(--fs-md);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
-    background 0.25s var(--ease-out),
-    transform 0.3s var(--spring);
+    background var(--dur-base) var(--ease-out),
+    transform var(--dur-slow) var(--spring);
 }
 
 .icon-btn:active {
-  transform: scale(0.92);
+  transform: scale(var(--tap-scale-strong));
 }
 
 .data-tip {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   line-height: 1.6;
 }
 
@@ -697,27 +697,27 @@ async function confirmClearAll() {
 }
 
 .reminder-title {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   color: var(--text);
 }
 
 .reminder-sub {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-top: 3px;
   line-height: 1.5;
 }
 
 .reminder-hint {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   margin-top: 10px;
   line-height: 1.7;
 }
 
 .reminder-block {
-  padding: 4px 0 10px;
+  padding: var(--space-1) 0 10px;
 }
 
 .reminder-block + .reminder-block {
@@ -730,8 +730,8 @@ async function confirmClearAll() {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 8px;
-  padding: 8px 10px;
+  margin-top: var(--space-2);
+  padding: var(--space-2) 10px;
   background: var(--surface-2);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
@@ -744,10 +744,10 @@ async function confirmClearAll() {
   width: 48px;
   height: 28px;
   min-height: 0; /* 覆盖全局 button 的 min-height:44px，保持开关比例 */
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: none;
   background: var(--track-off);
-  transition: background 0.3s var(--ease-out);
+  transition: background var(--dur-slow) var(--ease-out);
   flex-shrink: 0;
   cursor: pointer;
   padding: 0;
@@ -765,7 +765,7 @@ async function confirmClearAll() {
   height: 22px;
   border-radius: 50%;
   background: #fff;
-  transition: transform 0.35s var(--spring);
+  transition: transform var(--dur-enter) var(--spring);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
@@ -781,15 +781,15 @@ async function confirmClearAll() {
 }
 
 .data-counts span {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
   border: 1px solid var(--glass-border);
-  padding: 4px 11px;
-  border-radius: 999px;
+  padding: var(--space-1) 11px;
+  border-radius: var(--radius-pill);
 }
 
 .btn-block {
@@ -804,21 +804,21 @@ async function confirmClearAll() {
 }
 
 .export-ok {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--accent-green);
   text-align: center;
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .about-text {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--text-secondary);
   line-height: 1.8;
 }
 
 .about-text.muted {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .about-github {
@@ -826,12 +826,12 @@ async function confirmClearAll() {
   align-items: center;
   gap: 6px;
   margin-top: 10px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--text-secondary);
   text-decoration: none;
   transition:
-    color 0.2s var(--ease-out),
-    transform 0.3s var(--spring);
+    color var(--dur-base) var(--ease-out),
+    transform var(--dur-slow) var(--spring);
 }
 
 .about-github:hover {
@@ -839,11 +839,11 @@ async function confirmClearAll() {
 }
 
 .about-github:active {
-  transform: scale(0.96);
+  transform: scale(var(--tap-scale));
 }
 
 .confirm-text {
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--text);
   line-height: 1.7;
   margin-bottom: 18px;
@@ -863,21 +863,21 @@ async function confirmClearAll() {
 
 .gender-option {
   min-height: 44px;
-  padding: 6px 8px;
+  padding: 6px var(--space-2);
   border-radius: var(--radius);
   border: 1px solid var(--glass-border);
   background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 600;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
-    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
+  transition: background-color var(--dur-slow) var(--spring), border-color var(--dur-slow) var(--spring), color var(--dur-slow) var(--spring),
+    box-shadow var(--dur-slow) var(--spring), transform var(--dur-slow) var(--spring), opacity var(--dur-slow) var(--spring);
 }
 
 .gender-option.selected {
@@ -888,7 +888,7 @@ async function confirmClearAll() {
 }
 
 .gender-emoji {
-  font-size: 16px;
+  font-size: var(--fs-16);
 }
 
 /* PC/平板：设置页为表单型页面，限宽居中避免内容被拉得过宽 */
@@ -907,18 +907,18 @@ async function confirmClearAll() {
 
 .avatar-option {
   min-height: 44px;
-  padding: 4px;
+  padding: var(--space-1);
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
   background: var(--surface-translucent);
   backdrop-filter: var(--glass-blur-light);
   -webkit-backdrop-filter: var(--glass-blur-light);
-  font-size: 20px;
+  font-size: var(--fs-lg);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.3s var(--spring), border-color 0.3s var(--spring), color 0.3s var(--spring),
-    box-shadow 0.3s var(--spring), transform 0.3s var(--spring), opacity 0.3s var(--spring);
+  transition: background-color var(--dur-slow) var(--spring), border-color var(--dur-slow) var(--spring), color var(--dur-slow) var(--spring),
+    box-shadow var(--dur-slow) var(--spring), transform var(--dur-slow) var(--spring), opacity var(--dur-slow) var(--spring);
 }
 
 .avatar-option.selected {
