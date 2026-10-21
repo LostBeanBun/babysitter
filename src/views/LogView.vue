@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useFeedingStore } from '@/stores/feeding'
@@ -109,13 +109,33 @@ const {
   confirmDeleteAction,
 } = useRecordModal()
 
-/** 当前选中/交互中的记录（点击后持续高亮，直到点另一条），与列表 key 一致 */
+/** 列表高亮：跟随当前编辑/删除的记录，关闭对应弹窗 1s 后取消 */
 const selectedKey = ref<string | null>(null)
+let selectedTimer: ReturnType<typeof setTimeout> | undefined
 
-function handleEdit(entry: TimelineEntry) {
-  selectedKey.value = entry.kind + '-' + entry.id
-  onEdit(entry)
-}
+// 编辑弹窗（modalState.editing）与删除确认（confirmDelete）本就保存着当前条目，
+// 高亮直接由它们派生：打开即切换，「记录对应的弹窗」全部关闭 1s 后取消
+watch(
+  (): [{ kind: RecordKind; editing?: TimelineEntry } | null, TimelineEntry | null] => [
+    modalState.value,
+    confirmDelete.value,
+  ],
+  ([state, pendingDelete]) => {
+    const entry = state?.editing ?? pendingDelete
+    if (entry) {
+      clearTimeout(selectedTimer)
+      selectedKey.value = entry.kind + '-' + entry.id
+      return
+    }
+    // 新增记录等其它弹窗开着时不清除：取消只发生在关闭记录对应弹窗之后
+    if (state || pendingDelete) return
+    clearTimeout(selectedTimer)
+    selectedTimer = setTimeout(() => {
+      selectedKey.value = null
+    }, 1000)
+  },
+)
+onUnmounted(() => clearTimeout(selectedTimer))
 
 function keep<T extends { id?: number }>(items: T[], kind: RecordKind): T[] {
   return items.filter((x) => !isPending({ kind, id: x.id! }))
@@ -248,7 +268,7 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
         :deleting-key="confirmDelete ? confirmDelete.kind + '-' + confirmDelete.id : null"
         :selected-key="selectedKey"
         grouped
-        @edit="handleEdit"
+        @edit="onEdit"
         @delete="onDelete"
       />
       <div v-else class="empty-inline">
