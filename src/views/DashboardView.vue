@@ -20,7 +20,6 @@ import type { TimelineEntry } from '@/services/timeline'
 import type { FeedType, RecordKind, Vaccination } from '@/types'
 import { useVaccinationStore } from '@/stores/vaccination'
 import { formatDate } from '@/utils/format'
-import { recordQuickUse, sortQuickKinds } from '@/utils/quickOrder'
 
 const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
@@ -92,7 +91,7 @@ async function saveSleepFeed() {
 
 const { onSubmit: onSleepFeedSubmit } = useFormSubmit(saveSleepFeed)
 
-/** 快捷记录按钮（默认顺序与设计稿一致；实际展示按使用频率排序） */
+/** 快捷记录按钮（固定顺序，与设计稿一致） */
 const QUICK_KINDS: RecordKind[] = [
   'feeding',
   'diaper',
@@ -105,20 +104,6 @@ const QUICK_KINDS: RecordKind[] = [
   'temperature',
   'milestone',
 ]
-
-const quickTick = ref(0)
-
-const quickKinds = computed(() => {
-  void quickTick.value
-  return sortQuickKinds(QUICK_KINDS)
-})
-
-/** 点击快捷记录：累计使用次数（立即按频率重排，与 React 端一致） */
-function handleQuick(kind: RecordKind) {
-  recordQuickUse(kind)
-  quickTick.value++
-  openAdd(kind)
-}
 
 /** 样式类名与记录类型名有两处出入（feed/pump） */
 function quickCss(kind: RecordKind): string {
@@ -172,7 +157,7 @@ function onEditVaccination(v: Vaccination) {
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>
       <div class="quick-actions">
-        <button v-for="k in quickKinds" :key="k" class="quick-btn" :class="quickCss(k)" @click="handleQuick(k)">
+        <button v-for="k in QUICK_KINDS" :key="k" class="quick-btn" :class="quickCss(k)" @click="openAdd(k)">
           <span class="quick-icon">{{ KIND_META[k].icon }}</span>
           <span class="quick-label">{{ t(KIND_META[k].labelKey) }}</span>
         </button>
