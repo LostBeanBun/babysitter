@@ -16,10 +16,12 @@ withDefaults(
     chips?: ReminderChip[]
     /** 「全部 N 条」入口文案（疫苗计划数多于提醒条可容纳时展示），点击触发 all */
     allLabel?: string
-    variant?: 'feed' | 'vaccine'
+    /** 操作按钮文案（如备份提醒的「立即备份」），点击触发 action */
+    actionLabel?: string
+    variant?: 'feed' | 'vaccine' | 'backup'
     dismissLabel: string
   }>(),
-  { variant: 'feed', sub: undefined, chips: undefined, allLabel: undefined },
+  { variant: 'feed', sub: undefined, chips: undefined, allLabel: undefined, actionLabel: undefined },
 )
 
 const emit = defineEmits<{
@@ -27,6 +29,7 @@ const emit = defineEmits<{
   click: []
   select: [key: number | string]
   all: []
+  action: []
 }>()
 </script>
 
@@ -40,7 +43,7 @@ const emit = defineEmits<{
     <div class="rb-text">
       <p class="rb-title">{{ title }}</p>
       <p v-if="sub" class="rb-sub">{{ sub }}</p>
-      <p v-if="chips?.length || allLabel" class="rb-sub">
+      <p v-if="chips?.length || allLabel || actionLabel" class="rb-sub">
         <button
           v-for="c in chips"
           :key="c.key"
@@ -53,6 +56,9 @@ const emit = defineEmits<{
         </button>
         <button v-if="allLabel" type="button" class="rb-chip rb-chip-all" @click.stop="emit('all')">
           {{ allLabel }} ›
+        </button>
+        <button v-if="actionLabel" type="button" class="rb-chip rb-chip-all" @click.stop="emit('action')">
+          {{ actionLabel }} ›
         </button>
       </p>
     </div>
@@ -92,6 +98,10 @@ const emit = defineEmits<{
   transition:
     transform var(--dur-slow) var(--spring),
     box-shadow var(--dur-slow) var(--ease-out);
+}
+
+.reminder-banner--backup {
+  background: linear-gradient(135deg, var(--accent-yellow-soft), var(--surface));
 }
 
 .reminder-banner--vaccine:active {

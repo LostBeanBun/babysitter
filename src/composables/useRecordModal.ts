@@ -37,7 +37,9 @@ export function useRecordModal() {
   const temperatureStore = useTemperatureStore()
   const milestoneStore = useMilestoneStore()
 
-  const modalState = ref<{ kind: RecordKind; editing?: TimelineEntry } | null>(null)
+  const modalState = ref<{ kind: RecordKind; editing?: TimelineEntry; prefill?: Record<string, unknown> } | null>(
+    null,
+  )
   const confirmDelete = ref<TimelineEntry | null>(null)
 
   /** 各记录类型真实删除 */
@@ -54,8 +56,8 @@ export function useRecordModal() {
     milestone: (id) => milestoneStore.remove(id),
   }
 
-  function openAdd(kind: RecordKind) {
-    modalState.value = { kind }
+  function openAdd(kind: RecordKind, prefill?: Record<string, unknown>) {
+    modalState.value = { kind, prefill }
   }
 
   function onEdit(entry: TimelineEntry) {

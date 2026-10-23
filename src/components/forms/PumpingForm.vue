@@ -24,15 +24,18 @@ const props = defineProps<{
     amount?: number
     notes?: string
   }
+  /** 「重复上次」预填：只带参数，不带 id/时间 */
+  prefill?: { side?: PumpSide; amount?: number; notes?: string }
 }>()
 const emit = defineEmits<{ saved: []; cancelled: []; startRecord: [] }>()
 
 const pumpingStore = usePumpingStore()
 const err = useFormErrors()
 
-const side = ref<PumpSide>(props.editing?.side ?? 'both')
-const amount = ref<string>(props.editing?.amount != null ? String(props.editing.amount) : '')
-const notes = ref(props.editing?.notes ?? '')
+const side = ref<PumpSide>(props.editing?.side ?? props.prefill?.side ?? 'both')
+const amountSource = props.editing?.amount ?? props.prefill?.amount
+const amount = ref<string>(amountSource != null ? String(amountSource) : '')
+const notes = ref(props.editing?.notes ?? props.prefill?.notes ?? '')
 
 const sideOptions = computed<ChoiceOption[]>(() =>
   PUMP_SIDE_LIST.map((opt) => ({ value: opt.value, icon: opt.icon, label: t(opt.label) })),

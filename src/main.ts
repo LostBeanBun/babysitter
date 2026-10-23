@@ -6,10 +6,14 @@ import router from './router'
 import i18n from './i18n'
 import { initTheme } from './composables/useTheme'
 import { showToast } from '@/composables/useToast'
+import { requestPersistentStorage } from '@/services/backup'
 import './styles/main.css'
 
 // 应用启动即应用主题（含暗色），避免首屏闪烁
 initTheme()
+
+// 申请持久化存储：降低浏览器空间紧张时驱逐 IndexedDB 的概率（失败不影响使用）
+void requestPersistentStorage()
 
 const app = createApp(App)
 app.use(createPinia())

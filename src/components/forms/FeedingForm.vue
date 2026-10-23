@@ -25,17 +25,20 @@ const props = defineProps<{
     amount?: number
     notes?: string
   }
+  /** 「重复上次」预填：只带参数，不带 id/时间 */
+  prefill?: { type?: FeedType; side?: BreastSide; amount?: number; notes?: string }
 }>()
 const emit = defineEmits<{ saved: []; cancelled: []; startRecord: [] }>()
 
 const feedingStore = useFeedingStore()
 const err = useFormErrors()
 
-const type = ref<FeedType>(props.editing?.type ?? 'breast')
-const side = ref<BreastSide>(props.editing?.side ?? 'left')
+const type = ref<FeedType>(props.editing?.type ?? props.prefill?.type ?? 'breast')
+const side = ref<BreastSide>(props.editing?.side ?? props.prefill?.side ?? 'left')
 const isBreast = computed(() => type.value === 'breast')
-const amount = ref<string>(props.editing?.amount != null ? String(props.editing.amount) : '')
-const notes = ref(props.editing?.notes ?? '')
+const amountSource = props.editing?.amount ?? props.prefill?.amount
+const amount = ref<string>(amountSource != null ? String(amountSource) : '')
+const notes = ref(props.editing?.notes ?? props.prefill?.notes ?? '')
 
 const typeOptions = computed<ChoiceOption[]>(() =>
   FEED_TYPE_LIST.map((opt) => ({ value: opt.value, icon: opt.icon, label: t(opt.label), color: opt.color })),

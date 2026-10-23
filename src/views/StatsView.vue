@@ -27,8 +27,14 @@ import {
 } from '@/services/stats'
 import { CHART_COLORS, MS_PER_DAY } from '@/constants'
 import { trendTooltip, trendAxes, areaLineSeries, type ChartThemeColors } from '@/services/chartOptions'
-import { formatDuration, formatPercentChange, formatAmount, startOfDay } from '@/utils/format'
+import { formatDuration, formatPercentChange, formatAmount, startOfDay, formatDate } from '@/utils/format'
 import { useChartTheme } from '@/composables/useChartTheme'
+import { buildWeeklyInsight, type InsightItem } from '@/services/insights'
+import { exportReportPng, type ReportGrowthRow, type ReportMetric } from '@/services/report'
+import { whoData, type WhoField } from '@/constants/whoGrowth'
+import { estimatePercentile, percentileBand } from '@/utils/growthPercentile'
+import { ageInMonths } from '@/utils/age'
+import { showToast } from '@/composables/useToast'
 
 const babyStore = useBabyStore()
 const feedingStore = useFeedingStore()
@@ -307,6 +313,119 @@ const summaryItems = computed(() => {
 
 // —— 成长曲线（已抽取至 GrowthCurveCharts 组件）——
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
+
+// —— P1-5 近 7 天小结 ——
+const weekly = computed(() => buildWeeklyInsight(datasets.value, now.value))
+
+function insightText(item: InsightItem): string {
+  if (item.change == null || item.tone === 'steady') return t(`stats.insights.${item.key}.steady`)
+  return t(`stats.insights.${item.key}.${item.tone}`, { percent: Math.abs(Math.round(item.change)) })
+}
+
+// —— P1-4 儿保报告导出 ——
+const reportBusy = ref(false)
+
+const reportMetrics = computed<ReportMetric[]>(() => {
+  const agg = currentAgg.value
+  const days = summaryDays.value
+  return [
+    {
+      label: t('stats.summary.totalMilk'),
+      value: formatAmount(agg.totalMilkAmount),
+      sub: t('common.daily', { value: formatAmount(agg.totalMilkAmount / days) }),
+    },
+    {
+      label: t('stats.summary.feedCount'),
+      value: t('common.times', { n: agg.feedCount }),
+      sub: t('common.daily', { value: t('common.times', { n: (agg.feedCount / days).toFixed(1) }) }),
+    },
+    {
+      label: t('stats.summary.sleepMs'),
+      value: formatDuration(agg.sleepMs),
+      sub: t('common.daily', { value: formatDuration(agg.sleepMs / days) }),
+    },
+    {
+      label: t('stats.summary.diaper'),
+      value: t('common.times', { n: agg.diaperCount }),
+      sub: t('common.daily', { value: t('common.times', { n: (agg.diaperCount / days).toFixed(1) }) }),
+    },
+    {
+      label: t('stats.summary.pumpAmount'),
+      value: formatAmount(agg.pumpAmount),
+      sub: t('common.daily', { value: formatAmount(agg.pumpAmount / days) }),
+    },
+    {
+      label: t('stats.summary.breastCount'),
+      value: t('common.times', { n: agg.breastCount }),
+      sub: t('common.daily', { value: t('common.times', { n: (agg.breastCount / days).toFixed(1) }) }),
+    },
+  ]
+})
+
+/** 最新一次体重/身高/头围 + WHO 百分位，供报告使用 */
+const reportGrowthRows = computed<ReportGrowthRow[]>(() => {
+  const baby = activeBaby.value
+  if (!baby?.birthDate) return []
+  const who = whoData(baby.gender)
+  const rows: ReportGrowthRow[] = []
+
+  const entries: { field: WhoField; label: string; unit: string; pick: (g: (typeof growthStore.growths)[number]) => number | undefined }[] = [
+    { field: 'weight', label: t('stats.babyWeight'), unit: 'kg', pick: (g) => g.weight },
+    { field: 'length', label: t('stats.babyHeight'), unit: 'cm', pick: (g) => g.height },
+    { field: 'hc', label: t('stats.babyHead'), unit: 'cm', pick: (g) => g.headCircumference },
+  ]
+
+  for (const e of entries) {
+    const latest = [...growthStore.growths]
+      .filter((g) => e.pick(g) != null)
+      .sort((a, b) => b.date - a.date)[0]
+    if (!latest) continue
+    const value = e.pick(latest)!
+    const p = estimatePercentile(who, ageInMonths(baby.birthDate, latest.date), e.field, value)
+    const band = percentileBand(p)
+    rows.push({
+      label: e.label,
+      value: `${value.toFixed(1)} ${e.unit}`,
+      percentile: p,
+      band: t(`stats.bands.${band}`),
+      tone: band === 'normal' ? 'normal' : 'attention',
+    })
+  }
+  return rows
+})
+
+async function handleExportReport() {
+  if (reportBusy.value) return
+  reportBusy.value = true
+  try {
+    const baby = activeBaby.value
+    const babyLine = baby
+      ? baby.birthDate
+        ? `${baby.name} · ${t('settings.ageMonths', { n: Math.floor(ageInMonths(baby.birthDate, now.value)) })}`
+        : baby.name
+      : t('common.baby')
+    await exportReportPng(
+      {
+        title: t('stats.report.title'),
+        babyLine,
+        rangeLine: `${rangeLabel.value} · ${formatDate(rangeStart.value)} ~ ${formatDate(rangeEnd.value - 1)}`,
+        generatedLine: t('stats.report.generatedAt', { date: formatDate(now.value) }),
+        metrics: reportMetrics.value,
+        growthTitle: t('stats.report.growthTitle'),
+        growthRows: reportGrowthRows.value,
+        noGrowth: t('stats.report.noGrowth'),
+        disclaimer: t('stats.report.disclaimer'),
+        footer: t('stats.report.footer'),
+      },
+      `babysitter-report-${formatDate(now.value)}.png`,
+    )
+    showToast(t('stats.report.exported'), { duration: 4000 })
+  } catch {
+    showToast(t('stats.report.failed'))
+  } finally {
+    reportBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -355,6 +474,18 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
     <!-- 总览：区间汇总 -->
     <div v-if="activeView === 'summary'" class="card overview-card">
       <span class="overview-sub">{{ t('stats.summarySub', { n: summaryDays }) }}</span>
+      <div v-if="weekly.items.length" class="insight-block">
+        <p class="insight-title">
+          {{ t('stats.insightTitle') }}
+          <span class="insight-sub">{{ t('stats.insightSub') }}</span>
+        </p>
+        <ul class="insight-list">
+          <li v-for="item in weekly.items" :key="item.key" class="insight-item" :class="item.tone">
+            <span class="insight-dot" aria-hidden="true"></span>
+            <span>{{ insightText(item) }}</span>
+          </li>
+        </ul>
+      </div>
       <div class="summary-grid">
         <div v-for="s in summaryItems" :key="s.label" class="summary-item">
           <p class="summary-label">{{ s.label }}</p>
@@ -362,6 +493,13 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
           <p class="summary-sub">{{ s.sub }}</p>
         </div>
       </div>
+      <button
+        class="btn btn-outline btn-block report-btn"
+        :disabled="reportBusy"
+        @click="handleExportReport"
+      >
+        {{ reportBusy ? t('common.exporting') : t('stats.exportReport') }}
+      </button>
     </div>
 
     <!-- 趋势：趋势图 + 成长曲线 -->
@@ -501,6 +639,70 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
   font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-bottom: 10px;
+}
+
+/* ===== 近 7 天小结 ===== */
+.insight-block {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--glass-border);
+}
+
+.insight-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.insight-sub {
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.insight-list {
+  margin-top: 6px;
+  display: grid;
+  gap: 4px;
+}
+
+.insight-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.insight-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted);
+}
+
+.insight-item.up .insight-dot {
+  background: var(--primary);
+}
+
+.insight-item.down .insight-dot {
+  background: var(--accent-green);
+}
+
+.insight-item.steady .insight-dot {
+  background: var(--text-muted);
+}
+
+.report-btn {
+  margin-top: 12px;
 }
 
 .summary-grid {

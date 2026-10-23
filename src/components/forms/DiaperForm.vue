@@ -18,17 +18,19 @@ const { t } = useI18n()
 
 const props = defineProps<{
   editing?: { id: number; type: DiaperType; time: number; color?: DiaperColor; amount?: DiaperAmount; notes?: string }
+  /** 「重复上次」预填：只带参数，不带 id/时间 */
+  prefill?: { type?: DiaperType; color?: DiaperColor; amount?: DiaperAmount; notes?: string }
 }>()
 const emit = defineEmits<{ saved: []; cancelled: [] }>()
 
 const diaperStore = useDiaperStore()
 const err = useFormErrors()
 
-const type = ref<DiaperType>(props.editing?.type ?? 'wet')
-const color = ref<DiaperColor | ''>(props.editing?.color ?? '')
-const amount = ref<DiaperAmount | ''>(props.editing?.amount ?? '')
+const type = ref<DiaperType>(props.editing?.type ?? props.prefill?.type ?? 'wet')
+const color = ref<DiaperColor | ''>(props.editing?.color ?? props.prefill?.color ?? '')
+const amount = ref<DiaperAmount | ''>(props.editing?.amount ?? props.prefill?.amount ?? '')
 const time = ref(toDateTimeLocal(props.editing?.time ?? Date.now()))
-const notes = ref(props.editing?.notes ?? '')
+const notes = ref(props.editing?.notes ?? props.prefill?.notes ?? '')
 
 const typeOptions = computed<ChoiceOption[]>(() =>
   DIAPER_TYPE_LIST.map((opt) => ({ value: opt.value, icon: opt.icon, label: t(opt.label), color: opt.color })),

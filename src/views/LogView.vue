@@ -58,6 +58,8 @@ const filter = ref<RecordKind | 'all'>('all')
 
 /** 按日期筛选：null=全部，否则为单日 0 点时间戳 */
 const dateFilter = ref<number | null>(null)
+/** 搜索关键词（匹配标题/详情，含备注） */
+const keyword = ref('')
 /** 日期面板展开状态 */
 const dateOpen = ref(false)
 
@@ -150,8 +152,8 @@ function filtered<T extends { id?: number }>(kind: RecordKind, items: T[], timeO
   )
 }
 
-const entries = computed(() =>
-  buildTimelineEntries({
+const entries = computed(() => {
+  const list = buildTimelineEntries({
     feedings: filtered('feeding', feedingStore.feedings, (f) => f.startTime),
     diapers: filtered('diaper', diaperStore.diapers, (d) => d.time),
     pumpings: filtered('pumping', pumpingStore.pumpings, (p) => p.startTime),
@@ -169,8 +171,11 @@ const entries = computed(() =>
     ),
     temperatures: filtered('temperature', temperatureStore.temperatures, (tmp) => tmp.time),
     milestones: filtered('milestone', milestoneStore.milestones, (ms) => ms.time),
-  }),
-)
+  })
+  const kw = keyword.value.trim().toLowerCase()
+  if (!kw) return list
+  return list.filter((e) => `${e.title} ${e.detail}`.toLowerCase().includes(kw))
+})
 
 // 悬浮球导航过来时自动打开对应表单
 let lastTimerKind = ''
@@ -255,6 +260,40 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
       </button>
     </div>
 
+    <!-- 关键词搜索：匹配记录标题/详情（备注包含在详情中） -->
+    <div class="search-row">
+      <svg
+        class="search-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        width="18"
+        height="18"
+        aria-hidden="true"
+      >
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+      <input
+        v-model="keyword"
+        type="search"
+        class="form-input search-input"
+        :placeholder="t('log.searchPlaceholder')"
+        :aria-label="t('log.searchPlaceholder')"
+      />
+      <button
+        v-if="keyword"
+        type="button"
+        class="search-clear"
+        :aria-label="t('log.searchClear')"
+        :title="t('log.searchClear')"
+        @click="keyword = ''"
+      >
+        ✕
+      </button>
+    </div>
+
     <div class="card">
       <div v-if="logLoading" class="log-skeleton" aria-hidden="true">
         <div class="sk-group" />
@@ -272,7 +311,8 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
         @delete="onDelete"
       />
       <div v-else class="empty-inline">
-        <p>{{ t('log.empty', { type: filter === 'all' ? '' : currentFilterLabel }) }}</p>
+        <p v-if="keyword.trim()">{{ t('log.emptySearch', { keyword: keyword.trim() }) }}</p>
+        <p v-else>{{ t('log.empty', { type: filter === 'all' ? '' : currentFilterLabel }) }}</p>
         <p class="empty-hint">{{ t('log.emptyHint') }}</p>
       </div>
     </div>
@@ -385,6 +425,55 @@ const currentFilterLabel = computed(() => t(filters.find((f) => f.key === filter
   border-radius: var(--radius-pill);
   margin-left: var(--space-2);
   flex-shrink: 0;
+}
+
+/* ===== 关键词搜索 ===== */
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--space-1) 14px;
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: calc(var(--space-1) + 12px);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xs);
+  padding-left: 38px;
+  font-size: var(--fs-13);
+}
+
+.search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-clear {
+  width: 44px;
+  height: 44px;
+  min-height: 0;
+  border-radius: 50%;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.search-clear:active {
+  transform: scale(var(--tap-scale));
+  background: var(--surface-2);
 }
 
 .date-wrap {

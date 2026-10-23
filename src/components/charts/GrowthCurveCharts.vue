@@ -6,7 +6,7 @@ import ChartCard from '@/components/charts/ChartCard.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { whoData, type WhoField, type WhoPercentileKey } from '@/constants/whoGrowth'
 import { ageInMonths } from '@/utils/age'
-import { estimatePercentile } from '@/utils/growthPercentile'
+import { estimatePercentile, percentileBand, type PercentileBand } from '@/utils/growthPercentile'
 import { useChartTheme } from '@/composables/useChartTheme'
 import { CHART_COLORS } from '@/constants'
 import { startOfDay, addMonths, parseDateOnly } from '@/utils/format'
@@ -266,6 +266,38 @@ const hcOption = computed<EChartsOption>(() => ({
 const weightSubtitle = computed(() => growthSubtitle('weight', weightPoints.value))
 const heightSubtitle = computed(() => growthSubtitle('length', heightPoints.value))
 const hcSubtitle = computed(() => growthSubtitle('hc', hcPoints.value))
+
+/** 生长结论：把最新一次测量的百分位翻译成区间文案（不做诊断） */
+interface GrowthConclusion {
+  field: WhoField
+  labelKey: string
+  value: number
+  unit: string
+  percentile: number
+  band: PercentileBand
+}
+
+function conclusionFor(
+  field: WhoField,
+  points: { ts: number; value: number }[],
+  unit: string,
+  labelKey: string,
+): GrowthConclusion | null {
+  if (!props.birthDate || points.length === 0) return null
+  const last = points[points.length - 1]
+  const month = ageInMonths(props.birthDate, last.ts)
+  const p = estimatePercentile(whoPoints.value, month, field, last.value)
+  return { field, labelKey, value: last.value, unit, percentile: p, band: percentileBand(p) }
+}
+
+const conclusions = computed(() =>
+  [
+    conclusionFor('weight', weightPoints.value, 'kg', 'stats.babyWeight'),
+    conclusionFor('length', heightPoints.value, 'cm', 'stats.babyHeight'),
+    conclusionFor('hc', hcPoints.value, 'cm', 'stats.babyHead'),
+  ].filter((x): x is GrowthConclusion => x !== null),
+)
+
 </script>
 
 <template>
@@ -342,6 +374,20 @@ const hcSubtitle = computed(() => growthSubtitle('hc', hcPoints.value))
 
       <div v-if="!hasGrowthData" class="card empty-inline">
         {{ t('stats.growthEmptyBoth') }}
+      </div>
+
+      <!-- 生长结论：把最新百分位翻译成可读区间 -->
+      <div v-if="conclusions.length" class="card growth-conclusion">
+        <p class="gc-title">{{ t('stats.growthConclusionTitle') }}</p>
+        <ul class="gc-list">
+          <li v-for="c in conclusions" :key="c.field" class="gc-row">
+            <span class="gc-label">{{ t(c.labelKey) }}</span>
+            <span class="gc-value">{{ c.value.toFixed(1) }}{{ c.unit }}</span>
+            <span class="gc-percentile">P{{ c.percentile }}</span>
+            <span class="gc-band" :class="c.band">{{ t(`stats.bands.${c.band}`) }}</span>
+          </li>
+        </ul>
+        <p class="gc-note">{{ t('stats.growthConclusionNote') }}</p>
       </div>
     </template>
     <div v-else class="card empty-inline">
@@ -449,6 +495,84 @@ const hcSubtitle = computed(() => growthSubtitle('hc', hcPoints.value))
   padding: var(--space-5) var(--space-3);
   color: var(--text-secondary);
   font-size: var(--fs-13);
+  line-height: 1.6;
+}
+
+/* ===== 生长结论 ===== */
+.growth-conclusion {
+  padding: 14px;
+}
+
+.gc-title {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.gc-list {
+  display: grid;
+  gap: 8px;
+}
+
+.gc-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--glass-border);
+}
+
+.gc-label {
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gc-value {
+  font-size: var(--fs-13);
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.gc-percentile {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.gc-band {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.gc-band.low,
+.gc-band.below {
+  background: var(--accent-yellow-soft);
+  color: var(--accent-yellow-dark, #9a6b1f);
+}
+
+.gc-band.high,
+.gc-band.above {
+  background: var(--accent-blue-soft);
+  color: var(--accent-blue-dark, #2f6a8f);
+}
+
+.gc-note {
+  margin-top: 10px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
   line-height: 1.6;
 }
 </style>
