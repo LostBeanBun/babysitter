@@ -148,11 +148,6 @@ function onEditVaccination(v: Vaccination) {
   }
   onEdit(entry)
 }
-
-/** 重复上次：参数预填，时间取当前 */
-function onRepeat(kind: RecordKind, prefill: Record<string, unknown>) {
-  openAdd(kind, prefill)
-}
 </script>
 
 <template>
@@ -172,7 +167,7 @@ function onRepeat(kind: RecordKind, prefill: Record<string, unknown>) {
 
     <template v-else>
       <!-- 今日概览（提醒条 + 统计卡 + 小结按钮） -->
-      <TodayOverview :now="now" @edit="onEditVaccination" @repeat="onRepeat" />
+      <TodayOverview :now="now" @edit="onEditVaccination" />
 
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>

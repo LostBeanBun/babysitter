@@ -82,13 +82,8 @@ type TemperatureFormProps = {
 }
 type MilestoneFormProps = { id: number; time: number; type: MilestoneType; notes?: string }
 
-/** 「重复上次」预填：只带参数，不带 id/时间（时间由表单取当前时间） */
-type FeedingPrefill = { type?: FeedType; side?: BreastSide; amount?: number; notes?: string }
-type DiaperPrefill = { type?: DiaperType; color?: DiaperColor; amount?: DiaperAmount; notes?: string }
-type PumpingPrefill = { side?: PumpSide; amount?: number; notes?: string }
-
 const props = defineProps<{
-  state: { kind: RecordKind; editing?: TimelineEntry; prefill?: Record<string, unknown> } | null
+  state: { kind: RecordKind; editing?: TimelineEntry } | null
 }>()
 const emit = defineEmits<{ close: []; saved: []; cancelled: []; startRecord: [] }>()
 
@@ -100,11 +95,6 @@ const payload = computed<(Record<string, unknown> & { id: number }) | undefined>
   if (!e) return undefined
   return { ...e.raw, id: e.id }
 })
-
-/** 模板里不能写 TS 联合类型（`|` 会被当作旧式过滤器），统一在脚本内收敛类型 */
-const feedingPrefill = computed(() => props.state?.prefill as FeedingPrefill | undefined)
-const diaperPrefill = computed(() => props.state?.prefill as DiaperPrefill | undefined)
-const pumpingPrefill = computed(() => props.state?.prefill as PumpingPrefill | undefined)
 </script>
 
 <template>
@@ -116,7 +106,6 @@ const pumpingPrefill = computed(() => props.state?.prefill as PumpingPrefill | u
     <FeedingForm
       v-if="state?.kind === 'feeding'"
       :editing="state?.editing ? (payload as FeedingFormProps) : undefined"
-      :prefill="feedingPrefill"
       @start-record="emit('startRecord')"
       @saved="emit('saved')"
       @cancelled="emit('cancelled')"
@@ -124,14 +113,12 @@ const pumpingPrefill = computed(() => props.state?.prefill as PumpingPrefill | u
     <DiaperForm
       v-else-if="state?.kind === 'diaper'"
       :editing="state?.editing ? (payload as DiaperFormProps) : undefined"
-      :prefill="diaperPrefill"
       @saved="emit('saved')"
       @cancelled="emit('cancelled')"
     />
     <PumpingForm
       v-else-if="state?.kind === 'pumping'"
       :editing="state?.editing ? (payload as PumpingFormProps) : undefined"
-      :prefill="pumpingPrefill"
       @start-record="emit('startRecord')"
       @saved="emit('saved')"
       @cancelled="emit('cancelled')"

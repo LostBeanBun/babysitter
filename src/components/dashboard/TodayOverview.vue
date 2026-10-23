@@ -19,11 +19,11 @@ import { computeTodayStats } from '@/services/todayStats'
 import { upcomingVaccinations, vaccineDaysLeft } from '@/services/reminders'
 import { recommendedIntervalMs, recommendedIntervalLabel } from '@/utils/feedingGuide'
 import { dailyGuide } from '@/utils/dailyGuides'
-import type { Vaccination, RecordKind } from '@/types'
+import type { Vaccination } from '@/types'
 
 /** 今日概览：喂奶/疫苗提醒条 + 统计卡 + 每日小结（数据按 now 实时重算） */
 const props = defineProps<{ now: number }>()
-const emit = defineEmits<{ edit: [v: Vaccination]; repeat: [kind: RecordKind, prefill: Record<string, unknown>] }>()
+const emit = defineEmits<{ edit: [v: Vaccination] }>()
 
 const { t } = useI18n()
 const router = useRouter()
@@ -121,43 +121,6 @@ const lastSleep = computed(() => {
 const lastDiaper = computed(() => {
   const sorted = [...diaperStore.diapers].sort((a, b) => b.time - a.time)
   return sorted[0]
-})
-const lastPumping = computed(() => {
-  const sorted = [...pumpingStore.pumpings].sort((a, b) => b.startTime - a.startTime)
-  return sorted[0]
-})
-
-/** 「重复上次」：只复用参数（类型/侧别/奶量等），时间取当前，避免误建回顾记录 */
-const repeatables = computed(() => {
-  const list: { kind: RecordKind; icon: string; label: string; prefill: Record<string, unknown> }[] = []
-  const f = lastFeeding.value
-  if (f) {
-    list.push({
-      kind: 'feeding',
-      icon: '🍼',
-      label: t('log.filters.feeding'),
-      prefill: { type: f.type, side: f.side, amount: f.amount, notes: f.notes },
-    })
-  }
-  const d = lastDiaper.value
-  if (d) {
-    list.push({
-      kind: 'diaper',
-      icon: '🧷',
-      label: t('log.filters.diaper'),
-      prefill: { type: d.type, color: d.color, amount: d.amount, notes: d.notes },
-    })
-  }
-  const p = lastPumping.value
-  if (p) {
-    list.push({
-      kind: 'pumping',
-      icon: '🥛',
-      label: t('log.filters.pumping'),
-      prefill: { side: p.side, amount: p.amount, notes: p.notes },
-    })
-  }
-  return list
 })
 const sinceMs = computed(() => {
   if (!lastFeeding.value) return null
@@ -332,21 +295,6 @@ async function handleBackup() {
         </div>
       </div>
     </div>
-    <!-- 重复上次：只复用参数，时间取当前 -->
-    <div v-if="repeatables.length" class="repeat-row">
-      <span class="repeat-row__label">{{ t('dashboard.repeatLast') }}</span>
-      <div class="repeat-row__btns">
-        <button
-          v-for="r in repeatables"
-          :key="r.kind"
-          type="button"
-          class="repeat-btn"
-          @click="emit('repeat', r.kind, r.prefill)"
-        >
-          <span aria-hidden="true">{{ r.icon }}</span>{{ r.label }}
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -356,47 +304,6 @@ async function handleBackup() {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-}
-
-/* ===== 重复上次：参数复用入口 ===== */
-.repeat-row {
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.repeat-row__label {
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-}
-
-.repeat-row__btns {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.repeat-btn {
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--glass-border);
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  font-size: var(--fs-xs);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition:
-    transform var(--dur-fast) var(--ease-out),
-    background var(--dur-fast) ease;
-}
-
-.repeat-btn:active {
-  transform: scale(var(--tap-scale-item));
-  background: var(--surface);
 }
 
 /* ===== 卡片基础 — 液态玻璃 ===== */
