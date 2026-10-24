@@ -152,11 +152,11 @@ function onEditVaccination(v: Vaccination) {
     </div>
 
     <template v-else>
-      <!-- 今日概览（提醒条 + 统计卡 + 小结按钮） -->
+      <!-- 今日概览（提醒条） -->
       <TodayOverview :now="now" @edit="onEditVaccination" />
 
-      <!-- 今日照护卡：下次喂养参考 + 清醒窗口 + 今日待办 + 交接摘要 -->
-      <CarePlanCard :now="now" @add="openAdd" @edit-vaccination="onEditVaccination" />
+      <!-- 今日照护卡：今日汇总 + 下一步参考 + 交接摘要 -->
+      <CarePlanCard :now="now" @add="openAdd" />
 
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>

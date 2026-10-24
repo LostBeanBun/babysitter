@@ -13,16 +13,22 @@ import { useActiveTimer } from '@/composables/useActiveTimer'
 import { useDeleteUndo } from '@/composables/useDeleteUndo'
 import { buildCarePlan } from '@/services/carePlan'
 import { buildHandoffSummary, formatHandoffText } from '@/services/handoff'
-import { vaccineDaysLeft } from '@/services/reminders'
-import { formatClock, formatDate, formatDuration, startOfDay } from '@/utils/format'
+import { computeTodayStats } from '@/services/todayStats'
+import { dailyGuide } from '@/utils/dailyGuides'
+import {
+  formatAmount,
+  formatClock,
+  formatDate,
+  formatDuration,
+  startOfDay,
+} from '@/utils/format'
 import { MS_PER_DAY } from '@/constants'
 import HandoffModal from '@/components/dashboard/HandoffModal.vue'
-import type { RecordKind, Vaccination } from '@/types'
+import type { RecordKind } from '@/types'
 
 const props = defineProps<{ now: number }>()
 const emit = defineEmits<{
   add: [kind: RecordKind]
-  editVaccination: [v: Vaccination]
 }>()
 
 const { t } = useI18n()
@@ -48,6 +54,36 @@ const sleeps = computed(() => keep(sleepStore.sleeps, 'sleep'))
 const medications = computed(() => keep(medicationStore.medications, 'medication'))
 const vaccinations = computed(() => keep(vaccinationStore.vaccinations, 'vaccination'))
 const temperatures = computed(() => keep(temperatureStore.temperatures, 'temperature'))
+
+const todayStart = computed(() => startOfDay(props.now))
+const todayEnd = computed(() => todayStart.value + MS_PER_DAY - 1)
+
+/** 今日汇总：奶量 / 喂养次数 / 吸奶 / 母乳库存 / 睡眠 / 尿布（按当日边界裁剪） */
+const stats = computed(() =>
+  computeTodayStats({
+    feedings: feedings.value.filter(
+      (f) => f.startTime >= todayStart.value && f.startTime <= todayEnd.value,
+    ),
+    diapers: diapers.value.filter(
+      (d) => d.time >= todayStart.value && d.time <= todayEnd.value,
+    ),
+    pumpings: pumpings.value.filter(
+      (p) => p.startTime >= todayStart.value && p.startTime <= todayEnd.value,
+    ),
+    sleeps: sleeps.value.filter(
+      (s) => (s.endTime ?? s.startTime) >= todayStart.value && s.startTime <= todayEnd.value,
+    ),
+    todayStart: todayStart.value,
+    todayEnd: todayEnd.value,
+  }),
+)
+
+/** 按月龄的每日参考（无出生日期时为 null） */
+const guide = computed(() => dailyGuide(babyStore.activeBaby ?? undefined))
+
+const lastDiaper = computed(() =>
+  [...diapers.value].sort((a, b) => b.time - a.time)[0],
+)
 
 const activeFeedingStart = computed(() => {
   const active = activeTimer.getByKind('feeding')
@@ -116,15 +152,30 @@ const feedValue = computed(() => {
   return t('care.nextFeed', { time: formatClock(f.nextAt) })
 })
 
+/** 今日喂养汇总 + 上次喂养时间 */
 const feedHint = computed(() => {
-  const f = plan.value.feeding
-  if (f.activeSince != null) return t('care.feedActiveHint')
-  if (!f.lastFeeding) return t('care.feedEmptyHint')
-  return t('care.feedHint', {
-    time: timeLabel(f.lastFeeding.endTime ?? f.lastFeeding.startTime),
-    amount:
-      f.lastFeeding.amount != null ? t('care.feedAmount', { amount: f.lastFeeding.amount }) : '',
-  })
+  const parts = [
+    t('care.todayMilk', {
+      amount: formatAmount(stats.value.totalMilk),
+      count: stats.value.feedCount,
+    }),
+  ]
+  if (plan.value.feeding.lastAt != null) {
+    parts.push(t('care.lastAt', { time: timeLabel(plan.value.feeding.lastAt) }))
+  }
+  return parts.join(' · ')
+})
+
+/** 吸奶次数 / 母乳库存 + 月龄奶量参考 */
+const feedMeta = computed(() => {
+  const parts = [
+    t('care.feedMeta', {
+      count: stats.value.pumpCount,
+      stock: formatAmount(stats.value.breastStock),
+    }),
+  ]
+  if (guide.value) parts.push(t('care.dailyGuide', { guide: guide.value.milk }))
+  return parts.join(' · ')
 })
 
 const sleepValue = computed(() => {
@@ -138,70 +189,46 @@ const sleepValue = computed(() => {
   return t('care.awake', { duration: formatDuration(s.awakeMs) })
 })
 
+/** 今日睡眠总时长 + 上次睡眠结束时间 */
 const sleepHint = computed(() => {
+  const parts = [t('care.todaySleep', { duration: formatDuration(stats.value.sleepMs) })]
+  if (plan.value.sleep.lastEndAt != null) {
+    parts.push(t('care.lastAt', { time: timeLabel(plan.value.sleep.lastEndAt) }))
+  }
+  return parts.join(' · ')
+})
+
+/** 清醒窗口参考 + 月龄睡眠参考 */
+const sleepMeta = computed(() => {
   const s = plan.value.sleep
-  if (s.activeSince != null) return t('care.sleepingHint')
-  if (s.awakeMs == null) return t('care.sleepEmptyHint')
-  return t('care.awakeHint', {
-    range: `${formatDuration(s.wakeMinMs)}–${formatDuration(s.wakeMaxMs)}`,
-  })
-})
-
-const vaccine = computed(() => plan.value.todo.vaccine)
-
-function vaccineBadge(v: Vaccination): string {
-  const n = vaccineDaysLeft(v.date, startOfDay(props.now))
-  if (n === 0) return t('care.vaccineToday')
-  if (n > 0) return t('care.vaccineDays', { n })
-  return t('care.vaccineOverdue', { n: -n })
-}
-
-const todoLabel = computed(() => {
-  if (vaccine.value) return t('care.todo')
-  if (plan.value.todo.lastMedication) return t('log.filters.medication')
-  return t('care.todo')
-})
-
-const todoValue = computed(() => {
-  const v = vaccine.value
-  if (v) {
-    return t('care.vaccineTodo', {
-      name: v.name,
-      dose: v.dose ? t('care.vaccineDose', { dose: v.dose }) : '',
-    })
+  const parts: string[] = []
+  if (s.activeSince != null) {
+    parts.push(t('care.sleepingHint'))
+  } else if (s.awakeMs != null) {
+    parts.push(
+      t('care.awakeHint', {
+        range: `${formatDuration(s.wakeMinMs)}–${formatDuration(s.wakeMaxMs)}`,
+      }),
+    )
   }
-  if (plan.value.todo.lastMedication) {
-    return t('care.medicationTodo', { n: plan.value.todo.medicationCount })
-  }
-  return t('care.todoEmpty')
+  if (guide.value) parts.push(t('care.dailyGuide', { guide: guide.value.sleep }))
+  return parts.join(' · ')
 })
 
-const todoHint = computed(() => {
-  const v = vaccine.value
-  if (v) return vaccineBadge(v)
-  const med = plan.value.todo.lastMedication
-  if (med) {
-    return t('care.medicationHint', {
-      time: timeLabel(med.time),
-      name: med.name ? t('care.medicationName', { name: med.name }) : '',
-    })
-  }
-  return t('care.todoEmptyHint')
-})
+const diaperValue = computed(() => t('care.todayDiaper', { count: stats.value.diaperCount }))
 
-const todoIcon = computed(() => {
-  if (vaccine.value) return '💉'
-  if (plan.value.todo.lastMedication) return '💊'
-  return '📋'
-})
+const diaperHint = computed(() =>
+  lastDiaper.value ? t('care.lastAt', { time: timeLabel(lastDiaper.value.time) }) : '',
+)
 
-function onTodoClick() {
-  if (vaccine.value) {
-    emit('editVaccination', vaccine.value)
-    return
-  }
-  emit('add', 'medication')
-}
+const diaperMeta = computed(() =>
+  guide.value ? t('care.dailyGuide', { guide: guide.value.diaper }) : '',
+)
+
+/** 照护卡只展示喂养 / 睡眠 / 尿布，三者都为空时给出空态提示 */
+const hasCareRecords = computed(
+  () => feedings.value.length + sleeps.value.length + diapers.value.length > 0,
+)
 </script>
 
 <template>
@@ -224,6 +251,7 @@ function onTodoClick() {
           <span class="care-label">{{ t('care.feeding') }}</span>
           <span class="care-value">{{ feedValue }}</span>
           <span class="care-hint">{{ feedHint }}</span>
+          <span class="care-meta">{{ feedMeta }}</span>
         </span>
         <span class="care-chevron" aria-hidden="true">›</span>
       </button>
@@ -234,22 +262,24 @@ function onTodoClick() {
           <span class="care-label">{{ t('care.sleep') }}</span>
           <span class="care-value">{{ sleepValue }}</span>
           <span class="care-hint">{{ sleepHint }}</span>
+          <span v-if="sleepMeta" class="care-meta">{{ sleepMeta }}</span>
         </span>
         <span class="care-chevron" aria-hidden="true">›</span>
       </button>
 
-      <button type="button" class="care-row" @click="onTodoClick">
-        <span class="care-icon care-icon--todo" aria-hidden="true">{{ todoIcon }}</span>
+      <button type="button" class="care-row" @click="emit('add', 'diaper')">
+        <span class="care-icon care-icon--diaper" aria-hidden="true">🧷</span>
         <span class="care-body">
-          <span class="care-label">{{ todoLabel }}</span>
-          <span class="care-value">{{ todoValue }}</span>
-          <span class="care-hint">{{ todoHint }}</span>
+          <span class="care-label">{{ t('care.diaper') }}</span>
+          <span class="care-value">{{ diaperValue }}</span>
+          <span class="care-hint">{{ diaperHint }}</span>
+          <span v-if="diaperMeta" class="care-meta">{{ diaperMeta }}</span>
         </span>
         <span class="care-chevron" aria-hidden="true">›</span>
       </button>
     </div>
 
-    <p v-if="!plan.hasRecords" class="care-empty">{{ t('care.empty') }}</p>
+    <p v-if="!hasCareRecords" class="care-empty">{{ t('care.empty') }}</p>
 
     <HandoffModal :show="handoffOpen" :text="handoffText" @close="handoffOpen = false" />
   </section>
@@ -362,8 +392,8 @@ function onTodoClick() {
   background: rgba(143, 185, 216, 0.18);
 }
 
-.care-icon--todo {
-  background: rgba(196, 168, 224, 0.18);
+.care-icon--diaper {
+  background: rgba(154, 143, 200, 0.18);
 }
 
 .care-body {
@@ -395,6 +425,12 @@ function onTodoClick() {
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.care-meta {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.35;
 }
 
 .care-chevron {
