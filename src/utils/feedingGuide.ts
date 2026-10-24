@@ -9,14 +9,14 @@ const t = i18n.global.t
 const INTERVAL_HOURS = [2.5, 3, 3.5, 4, 4.5, 5]
 
 /** 按月龄返回推荐喂奶间隔（毫秒），参考常见育儿指南 */
-export function recommendedIntervalMs(baby?: Baby): number {
-  const months = baby?.birthDate ? ageInMonths(baby.birthDate, Date.now()) : 0
+export function recommendedIntervalMs(baby?: Baby, at = Date.now()): number {
+  const months = baby?.birthDate ? ageInMonths(baby.birthDate, at) : 0
   return INTERVAL_HOURS[bucketIndexByMonths(months)] * MS_PER_HOUR
 }
 
 /** 推荐间隔的人类可读文案（如「约 3 小时」） */
-export function recommendedIntervalLabel(baby?: Baby): string {
-  const ms = recommendedIntervalMs(baby)
+export function recommendedIntervalLabel(baby?: Baby, at = Date.now()): string {
+  const ms = recommendedIntervalMs(baby, at)
   const h = ms / MS_PER_HOUR
   return t('feed.aboutHours', { h })
 }

@@ -5,6 +5,8 @@ import { useI18n } from 'vue-i18n'
 const props = defineProps<{
   show: boolean
   title?: string
+  /** 可选的面板附加类名（用于个别弹窗覆盖玻璃底色） */
+  panelClass?: string
 }>()
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
@@ -94,7 +96,15 @@ onUnmounted(() => {
   <Teleport to="body">
     <Transition name="fade">
       <div v-if="show" class="modal-mask" @click.self="emit('close')">
-        <div ref="panelRef" class="modal-panel" role="dialog" aria-modal="true" :aria-label="title" tabindex="-1">
+        <div
+          ref="panelRef"
+          class="modal-panel"
+          :class="panelClass"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="title"
+          tabindex="-1"
+        >
           <div v-if="title" class="modal-header">
             <h3 class="modal-title">{{ title }}</h3>
             <button class="modal-close" :aria-label="t('common.close')" @click="emit('close')">✕</button>

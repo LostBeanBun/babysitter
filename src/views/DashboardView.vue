@@ -10,6 +10,7 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import OnboardingModal from '@/components/dashboard/OnboardingModal.vue'
 import TodayOverview from '@/components/dashboard/TodayOverview.vue'
+import CarePlanCard from '@/components/dashboard/CarePlanCard.vue'
 import RecordFormModal from '@/components/common/RecordFormModal.vue'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { FEED_TYPE_LABELS, KIND_META } from '@/constants'
@@ -153,6 +154,9 @@ function onEditVaccination(v: Vaccination) {
     <template v-else>
       <!-- 今日概览（提醒条 + 统计卡 + 小结按钮） -->
       <TodayOverview :now="now" @edit="onEditVaccination" />
+
+      <!-- 今日照护卡：下次喂养参考 + 清醒窗口 + 今日待办 + 交接摘要 -->
+      <CarePlanCard :now="now" @add="openAdd" @edit-vaccination="onEditVaccination" />
 
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pad2, startOfDay, formatPercentChange, formatAmount, fromDateTimeLocal, toDateTimeLocal, formatTime } from '@/utils/format'
+import { pad2, startOfDay, formatPercentChange, formatAmount, fromDateTimeLocal, toDateTimeLocal, formatTime, formatClock } from '@/utils/format'
 
 describe('format utils', () => {
   it('pad2 补零', () => {
@@ -56,5 +56,10 @@ describe('format utils', () => {
   it('formatTime 输出 HH:mm:ss', () => {
     const ts = new Date(2026, 7, 20, 8, 5, 3).getTime()
     expect(formatTime(ts)).toBe('08:05:03')
+  })
+
+  it('formatClock 输出 HH:mm', () => {
+    const ts = new Date(2026, 7, 20, 8, 5, 3).getTime()
+    expect(formatClock(ts)).toBe('08:05')
   })
 })
