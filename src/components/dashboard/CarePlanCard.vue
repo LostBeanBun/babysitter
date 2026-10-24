@@ -140,6 +140,7 @@ function timeLabel(ts: number): string {
   return `${formatDate(ts).slice(5)} ${formatClock(ts)}`
 }
 
+/** 距上次喂养结束（或开始）已过去多久 */
 const feedValue = computed(() => {
   const f = plan.value.feeding
   if (f.activeSince != null) {
@@ -147,9 +148,8 @@ const feedValue = computed(() => {
       duration: formatDuration(Math.max(0, props.now - f.activeSince)),
     })
   }
-  if (f.nextAt == null) return t('care.feedEmpty')
-  if (f.overdue) return t('care.feedOverdue')
-  return t('care.nextFeed', { time: formatClock(f.nextAt) })
+  if (f.lastAt == null) return t('care.feedEmpty')
+  return `${formatDuration(Math.max(0, props.now - f.lastAt))}${t('common.ago')}`
 })
 
 /** 今日喂养汇总 + 上次喂养时间 */
@@ -215,11 +215,21 @@ const sleepMeta = computed(() => {
   return parts.join(' · ')
 })
 
-const diaperValue = computed(() => t('care.todayDiaper', { count: stats.value.diaperCount }))
+/** 距上次换尿布已过去多久 */
+const diaperValue = computed(() => {
+  const d = lastDiaper.value
+  if (!d) return t('care.diaperEmpty')
+  return `${formatDuration(Math.max(0, props.now - d.time))}${t('common.ago')}`
+})
 
-const diaperHint = computed(() =>
-  lastDiaper.value ? t('care.lastAt', { time: timeLabel(lastDiaper.value.time) }) : '',
-)
+/** 今日换尿布次数 + 上次时间 */
+const diaperHint = computed(() => {
+  const parts = [t('care.todayDiaper', { count: stats.value.diaperCount })]
+  if (lastDiaper.value) {
+    parts.push(t('care.lastAt', { time: timeLabel(lastDiaper.value.time) }))
+  }
+  return parts.join(' · ')
+})
 
 const diaperMeta = computed(() =>
   guide.value ? t('care.dailyGuide', { guide: guide.value.diaper }) : '',

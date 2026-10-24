@@ -92,11 +92,8 @@ async function saveSleepFeed() {
 
 const { onSubmit: onSleepFeedSubmit } = useFormSubmit(saveSleepFeed)
 
-/** 快捷记录按钮（固定顺序，与设计稿一致） */
+/** 快捷记录按钮（固定顺序；喂养 / 睡眠 / 换尿布已并入今日照护，不再重复展示） */
 const QUICK_KINDS: RecordKind[] = [
-  'feeding',
-  'diaper',
-  'sleep',
   'pumping',
   'growth',
   'solidFood',
@@ -106,9 +103,8 @@ const QUICK_KINDS: RecordKind[] = [
   'milestone',
 ]
 
-/** 样式类名与记录类型名有两处出入（feed/pump） */
+/** 样式类名与记录类型名有一处出入（pump） */
 function quickCss(kind: RecordKind): string {
-  if (kind === 'feeding') return 'feed'
   if (kind === 'pumping') return 'pump'
   return kind
 }
@@ -381,20 +377,8 @@ function onEditVaccination(v: Vaccination) {
 }
 
 /* 每种记录类型的图标专属渐变色（浅色容器 + 主题色），暗色下整体降亮 */
-.quick-btn.feed .quick-icon {
-  background: linear-gradient(135deg, rgba(255, 107, 53, 0.28), rgba(255, 107, 53, 0.16));
-}
-
-.quick-btn.diaper .quick-icon {
-  background: linear-gradient(135deg, rgba(175, 82, 222, 0.28), rgba(175, 82, 222, 0.16));
-}
-
 .quick-btn.pump .quick-icon {
   background: linear-gradient(135deg, rgba(255, 45, 85, 0.26), rgba(255, 45, 85, 0.14));
-}
-
-.quick-btn.sleep .quick-icon {
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.26), rgba(0, 122, 255, 0.14));
 }
 
 .quick-btn.growth .quick-icon {
