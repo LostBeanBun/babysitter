@@ -22,7 +22,8 @@ import {
   formatDuration,
   startOfDay,
 } from '@/utils/format'
-import { MS_PER_DAY } from '@/constants'
+import { MS_PER_DAY, MS_PER_HOUR } from '@/constants'
+import { loadReminders } from '@/utils/reminderScheduler'
 import HandoffModal from '@/components/dashboard/HandoffModal.vue'
 import type { RecordKind } from '@/types'
 
@@ -101,11 +102,13 @@ const plan = computed(() =>
     baby: babyStore.activeBaby ?? undefined,
     now: props.now,
     feedings: feedings.value,
+    diapers: diapers.value,
     sleeps: sleeps.value,
     medications: medications.value,
     vaccinations: vaccinations.value,
     activeFeedingStart: activeFeedingStart.value,
     activeSleepStart: activeSleepStart.value,
+    diaperIntervalMs: loadReminders().diaper.intervalHours * MS_PER_HOUR,
   }),
 )
 
@@ -259,9 +262,14 @@ const hasCareRecords = computed(
         <span class="care-icon care-icon--feed" aria-hidden="true">🍼</span>
         <span class="care-body">
           <span class="care-label">{{ t('care.feeding') }}</span>
-          <span class="care-value" :class="{ 'care-value--live': plan.feeding.activeSince != null }">{{
-            feedValue
-          }}</span>
+          <span
+            class="care-value"
+            :class="{
+              'care-value--live': plan.feeding.activeSince != null,
+              'care-value--attention': plan.feeding.overdue && plan.feeding.activeSince == null,
+            }"
+            >{{ feedValue }}</span
+          >
           <span class="care-hint">{{ feedHint }}</span>
           <span class="care-meta">{{ feedMeta }}</span>
         </span>
@@ -272,9 +280,14 @@ const hasCareRecords = computed(
         <span class="care-icon care-icon--sleep" aria-hidden="true">😴</span>
         <span class="care-body">
           <span class="care-label">{{ t('care.sleep') }}</span>
-          <span class="care-value" :class="{ 'care-value--live': plan.sleep.activeSince != null }">{{
-            sleepValue
-          }}</span>
+          <span
+            class="care-value"
+            :class="{
+              'care-value--live': plan.sleep.activeSince != null,
+              'care-value--attention': plan.sleep.overAwake && plan.sleep.activeSince == null,
+            }"
+            >{{ sleepValue }}</span
+          >
           <span class="care-hint">{{ sleepHint }}</span>
           <span v-if="sleepMeta" class="care-meta">{{ sleepMeta }}</span>
         </span>
@@ -285,7 +298,11 @@ const hasCareRecords = computed(
         <span class="care-icon care-icon--diaper" aria-hidden="true">🧷</span>
         <span class="care-body">
           <span class="care-label">{{ t('care.diaper') }}</span>
-          <span class="care-value">{{ diaperValue }}</span>
+          <span
+            class="care-value"
+            :class="{ 'care-value--attention': plan.diaper.overdue && plan.diaper.lastAt != null }"
+            >{{ diaperValue }}</span
+          >
           <span class="care-hint">{{ diaperHint }}</span>
           <span v-if="diaperMeta" class="care-meta">{{ diaperMeta }}</span>
         </span>
@@ -440,6 +457,11 @@ const hasCareRecords = computed(
 /* 正在喂 / 正在睡：计时进行中，用主题色提示关注 */
 .care-value--live {
   color: var(--primary-dark);
+}
+
+/* 超参考间隔：喂养超月龄间隔、清醒超窗口、换尿布超提醒间隔，用警示色提示 */
+.care-value--attention {
+  color: var(--danger);
 }
 
 .care-hint {
