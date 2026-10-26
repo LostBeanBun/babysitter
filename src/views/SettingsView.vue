@@ -312,7 +312,7 @@ async function handleImportFile(e: Event) {
   const file = input.files?.[0]
   if (!file) return
   importBusy.value = true
-  // 覆盖式导入前先自动导出一份当前数据，避免误导入后无法回头
+  // 增量导入前仍自动导出一份当前数据备份，防误导入后无法回头
   try {
     await exportJsonBackup()
     lastBackupAt.value = getLastBackupAt()
@@ -327,6 +327,7 @@ async function handleImportFile(e: Event) {
     showToast(
       t('settings.importSuccess', {
         babies: result.babies,
+        skipped: result.skipped,
         feedings: result.feedings,
         diapers: result.diapers,
         pumpings: result.pumpings,

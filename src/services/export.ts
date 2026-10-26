@@ -1,5 +1,5 @@
-import { db, type BabySitterDB } from '@/db'
-import { RECORD_TABLES } from '@/db/tables'
+import { db } from '@/db'
+import { RECORD_TABLES, type RecordTableName } from '@/db/tables'
 import i18n from '@/i18n'
 import zhCN from '@/i18n/locales/zh-CN'
 import enUS from '@/i18n/locales/en-US'
@@ -700,10 +700,28 @@ function mapCsvRowToRecord(
   return null
 }
 
-/** 导入结果计数 */
-export type ImportCsvResult = { babies: number } & Record<(typeof RECORD_TABLES)[number]['name'], number>
+/** 导入结果计数：per-table 为新增条数，skipped 为去重跳过条数 */
+export type ImportCsvResult = { babies: number; skipped: number } & Record<RecordTableName, number>
 
-/** 导入 CSV 备份（覆盖当前数据） */
+/** 各表判定重复记录时的附加区分字段（与宝宝、时间字段共同构成去重键） */
+const DEDUPE_EXTRA_FIELDS: Partial<Record<RecordTableName, string[]>> = {
+  medications: ['name'],
+  vaccinations: ['name', 'dose'],
+  milestones: ['type'],
+}
+
+/** 记录去重键：宝宝 + 时间 + 附加区分字段 */
+function recordDedupeKey(
+  rec: Record<string, unknown>,
+  timeField: string,
+  extra: string[] | undefined,
+): string {
+  const parts = [String(rec.babyId), String(rec[timeField])]
+  for (const field of extra ?? []) parts.push(String(rec[field] ?? ''))
+  return parts.join('|')
+}
+
+/** 导入 CSV 备份（增量合并：不清空现有数据，按宝宝和时间戳去重，只补充缺失记录） */
 export async function importAllCsv(file: File): Promise<ImportCsvResult> {
   const text = await file.text()
   const rows = parseCsv(text)
@@ -777,39 +795,87 @@ export async function importAllCsv(file: File): Promise<ImportCsvResult> {
   const babyNames = Array.from(babiesMap.entries())
   if (babyNames.length === 0) throw new Error(t('exportCsv.noBaby'))
 
+  let skipped = 0
+  const perTableAdded = Object.fromEntries(
+    RECORD_TABLES.map((r) => [r.name, 0]),
+  ) as Record<RecordTableName, number>
+
   await db.transaction(
     'rw',
     [db.babies, ...RECORD_TABLES.map((r) => db[r.name])],
     async () => {
-      await Promise.all([db.babies.clear(), ...RECORD_TABLES.map((r) => db[r.name].clear())])
-
+      // 宝宝按名字增量合并：已存在则复用（回填 CSV 提供而现有缺失的资料），不存在才新增
+      const existingBabies = await db.babies.toArray()
+      const existingByName = new Map(existingBabies.map((b) => [b.name, b]))
       for (const [, entry] of babyNames) {
-        const realId = (await db.babies.add({
-          name: entry.name,
-          gender: entry.gender,
-          birthDate: entry.birthDate,
-          birthWeight: entry.birthWeight,
-          birthHeight: entry.birthHeight,
-          avatar: entry.avatar,
-          avatarColor: entry.avatarColor ?? AVATAR_COLORS[0],
-          createdAt: now,
-        }))!
-        babyIdMap.set(entry.id, realId)
+        const existed = existingByName.get(entry.name)
+        if (existed && existed.id != null) {
+          const existedId = existed.id
+          babyIdMap.set(entry.id, existedId)
+          const updates: Partial<Baby> = {}
+          if (entry.gender != null && existed.gender == null) updates.gender = entry.gender
+          if (entry.birthDate && !existed.birthDate) updates.birthDate = entry.birthDate
+          if (entry.birthWeight != null && existed.birthWeight == null)
+            updates.birthWeight = entry.birthWeight
+          if (entry.birthHeight != null && existed.birthHeight == null)
+            updates.birthHeight = entry.birthHeight
+          if (entry.avatar && !existed.avatar) updates.avatar = entry.avatar
+          if (entry.avatarColor && !existed.avatarColor) updates.avatarColor = entry.avatarColor
+          if (Object.keys(updates).length > 0) await db.babies.update(existedId, updates)
+        } else {
+          const realId = (await db.babies.add({
+            name: entry.name,
+            gender: entry.gender,
+            birthDate: entry.birthDate,
+            birthWeight: entry.birthWeight,
+            birthHeight: entry.birthHeight,
+            avatar: entry.avatar,
+            avatarColor: entry.avatarColor ?? AVATAR_COLORS[0],
+            createdAt: now,
+          }))!
+          babyIdMap.set(entry.id, realId)
+        }
       }
 
-      for (const [name, records] of Object.entries(recordBuckets)) {
+      // 记录增量合并：按宝宝 + 时间戳（含附加区分字段）去重，只添加现有库没有的记录
+      for (const r of RECORD_TABLES) {
+        const records = recordBuckets[r.name]
         if (records.length === 0) continue
-        const withRealId = records.map((r) => ({
-          ...(r as Record<string, unknown>),
-          babyId: babyIdMap.get((r as Record<string, unknown>).babyId as number) ?? babyIdMap.values().next().value!,
-        }))
-        await (db[name as keyof BabySitterDB] as { bulkAdd: (items: typeof withRealId) => Promise<unknown> }).bulkAdd(withRealId)
+        const table = db[r.name] as unknown as {
+          toArray: () => Promise<unknown[]>
+          bulkAdd: (items: Record<string, unknown>[]) => Promise<unknown>
+        }
+        const existing = await table.toArray()
+        const seen = new Set(
+          existing.map((e) =>
+            recordDedupeKey(e as Record<string, unknown>, r.timeField, DEDUPE_EXTRA_FIELDS[r.name]),
+          ),
+        )
+        const fresh: Record<string, unknown>[] = []
+        for (const raw of records) {
+          const rec = raw as Record<string, unknown>
+          const withRealId = {
+            ...rec,
+            babyId: babyIdMap.get(rec.babyId as number) ?? babyIdMap.values().next().value!,
+          }
+          const key = recordDedupeKey(withRealId, r.timeField, DEDUPE_EXTRA_FIELDS[r.name])
+          if (seen.has(key)) {
+            skipped++
+            continue
+          }
+          seen.add(key)
+          fresh.push(withRealId)
+        }
+        if (fresh.length === 0) continue
+        await table.bulkAdd(fresh)
+        perTableAdded[r.name] = fresh.length
       }
     },
   )
 
   return {
     babies: babyNames.length,
-    ...Object.fromEntries(RECORD_TABLES.map((r) => [r.name, recordBuckets[r.name].length])),
+    skipped,
+    ...perTableAdded,
   } as ImportCsvResult
 }
