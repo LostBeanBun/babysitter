@@ -259,7 +259,9 @@ const hasCareRecords = computed(
         <span class="care-icon care-icon--feed" aria-hidden="true">🍼</span>
         <span class="care-body">
           <span class="care-label">{{ t('care.feeding') }}</span>
-          <span class="care-value">{{ feedValue }}</span>
+          <span class="care-value" :class="{ 'care-value--live': plan.feeding.activeSince != null }">{{
+            feedValue
+          }}</span>
           <span class="care-hint">{{ feedHint }}</span>
           <span class="care-meta">{{ feedMeta }}</span>
         </span>
@@ -270,7 +272,9 @@ const hasCareRecords = computed(
         <span class="care-icon care-icon--sleep" aria-hidden="true">😴</span>
         <span class="care-body">
           <span class="care-label">{{ t('care.sleep') }}</span>
-          <span class="care-value">{{ sleepValue }}</span>
+          <span class="care-value" :class="{ 'care-value--live': plan.sleep.activeSince != null }">{{
+            sleepValue
+          }}</span>
           <span class="care-hint">{{ sleepHint }}</span>
           <span v-if="sleepMeta" class="care-meta">{{ sleepMeta }}</span>
         </span>
@@ -368,8 +372,8 @@ const hasCareRecords = computed(
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 62px;
-  padding: 9px 0;
+  min-height: 68px;
+  padding: 10px 0;
   border: 0;
   border-top: 1px solid var(--glass-border);
   background: transparent;
@@ -410,28 +414,38 @@ const hasCareRecords = computed(
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 1px;
+  gap: 2px;
 }
 
+/* 类别名：加粗放大，作为每行的锚点 */
 .care-label {
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
+  color: var(--text);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  line-height: 1.3;
 }
 
+/* 核心数值（距上次多久 / 进行中）：全行最突出 */
 .care-value {
   overflow: hidden;
   color: var(--text);
-  font-size: var(--fs-14);
-  font-weight: 600;
-  line-height: 1.35;
+  font-size: var(--fs-16);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 正在喂 / 正在睡：计时进行中，用主题色提示关注 */
+.care-value--live {
+  color: var(--primary-dark);
 }
 
 .care-hint {
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
