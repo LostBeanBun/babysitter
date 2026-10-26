@@ -149,7 +149,7 @@ function onEditVaccination(v: Vaccination) {
 
     <template v-else>
       <!-- 今日概览（提醒条） -->
-      <TodayOverview :now="now" @edit="onEditVaccination" />
+      <TodayOverview :now="now" @edit="onEditVaccination" @add="openAdd" />
 
       <!-- 今日照护卡：今日汇总 + 下一步参考 + 交接摘要 -->
       <CarePlanCard :now="now" @add="openAdd" />

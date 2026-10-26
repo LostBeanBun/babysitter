@@ -1,13 +1,19 @@
 import { ref } from 'vue'
 
-export type ReminderKind = 'feed' | 'vaccine' | 'backup'
+export type ReminderKind = 'feed' | 'vaccine' | 'backup' | 'sleep' | 'diaper'
 
 /**
  * 提醒条关闭状态（会话级，仅内存）：关闭后当前会话不再显示，刷新页面即重新提醒。
  * 提醒基于实时数据（如喂奶间隔），跨天重新提醒没有意义，故不持久化。
  */
 export function useDismissedReminders() {
-  const dismissed = ref<Record<ReminderKind, boolean>>({ feed: false, vaccine: false, backup: false })
+  const dismissed = ref<Record<ReminderKind, boolean>>({
+    feed: false,
+    vaccine: false,
+    backup: false,
+    sleep: false,
+    diaper: false,
+  })
 
   /** 关闭某提醒条（当前会话生效） */
   function dismiss(kind: ReminderKind) {

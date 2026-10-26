@@ -6,7 +6,7 @@ export interface ReminderChip {
   badge?: string
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     icon: string
     title: string
@@ -18,7 +18,7 @@ withDefaults(
     allLabel?: string
     /** 操作按钮文案（如备份提醒的「立即备份」），点击触发 action */
     actionLabel?: string
-    variant?: 'feed' | 'vaccine' | 'backup'
+    variant?: 'feed' | 'vaccine' | 'backup' | 'sleep' | 'diaper'
     dismissLabel: string
   }>(),
   { variant: 'feed', sub: undefined, chips: undefined, allLabel: undefined, actionLabel: undefined },
@@ -31,13 +31,15 @@ const emit = defineEmits<{
   all: []
   action: []
 }>()
+  /** 可整条点击直达的变体：喂奶 / 睡眠 / 尿布 / 疫苗（点击打开对应表单），备份条不走点击 */
+  const clickable = props.variant !== 'backup'
 </script>
 
 <template>
   <div
     class="reminder-banner"
     :class="`reminder-banner--${variant}`"
-    @click="variant === 'vaccine' && emit('click')"
+    @click="clickable && emit('click')"
   >
     <span class="rb-icon">{{ icon }}</span>
     <div class="rb-text">
@@ -94,17 +96,35 @@ const emit = defineEmits<{
 
 .reminder-banner--vaccine {
   background: linear-gradient(135deg, var(--accent-blue-soft), var(--surface));
-  cursor: pointer;
-  transition:
-    transform var(--dur-slow) var(--spring),
-    box-shadow var(--dur-slow) var(--ease-out);
 }
 
 .reminder-banner--backup {
   background: linear-gradient(135deg, var(--accent-yellow-soft), var(--surface));
 }
 
-.reminder-banner--vaccine:active {
+.reminder-banner--sleep {
+  background: linear-gradient(135deg, var(--accent-blue-soft), var(--surface));
+}
+
+.reminder-banner--diaper {
+  background: linear-gradient(135deg, var(--accent-green-soft), var(--surface));
+}
+
+/* 可整条点击直达（喂奶 / 睡眠 / 尿布 / 疫苗）：点击打开对应记录表单 */
+.reminder-banner--feed,
+.reminder-banner--vaccine,
+.reminder-banner--sleep,
+.reminder-banner--diaper {
+  cursor: pointer;
+  transition:
+    transform var(--dur-slow) var(--spring),
+    box-shadow var(--dur-slow) var(--ease-out);
+}
+
+.reminder-banner--feed:active,
+.reminder-banner--vaccine:active,
+.reminder-banner--sleep:active,
+.reminder-banner--diaper:active {
   transform: scale(var(--tap-scale-item));
   box-shadow: var(--shadow-md);
 }
