@@ -259,9 +259,11 @@ const hasCareRecords = computed(
 
     <div class="care-list">
       <button type="button" class="care-row" @click="emit('add', 'feeding')">
-        <span class="care-icon care-icon--feed" aria-hidden="true">🍼</span>
-        <span class="care-body">
+        <span class="care-lead">
+          <span class="care-icon care-icon--feed" aria-hidden="true">🍼</span>
           <span class="care-label">{{ t('care.feeding') }}</span>
+        </span>
+        <span class="care-body">
           <span
             class="care-value"
             :class="{
@@ -277,9 +279,11 @@ const hasCareRecords = computed(
       </button>
 
       <button type="button" class="care-row" @click="emit('add', 'sleep')">
-        <span class="care-icon care-icon--sleep" aria-hidden="true">😴</span>
-        <span class="care-body">
+        <span class="care-lead">
+          <span class="care-icon care-icon--sleep" aria-hidden="true">😴</span>
           <span class="care-label">{{ t('care.sleep') }}</span>
+        </span>
+        <span class="care-body">
           <span
             class="care-value"
             :class="{
@@ -295,9 +299,11 @@ const hasCareRecords = computed(
       </button>
 
       <button type="button" class="care-row" @click="emit('add', 'diaper')">
-        <span class="care-icon care-icon--diaper" aria-hidden="true">🧷</span>
-        <span class="care-body">
+        <span class="care-lead">
+          <span class="care-icon care-icon--diaper" aria-hidden="true">🧷</span>
           <span class="care-label">{{ t('care.diaper') }}</span>
+        </span>
+        <span class="care-body">
           <span
             class="care-value"
             :class="{ 'care-value--attention': plan.diaper.overdue && plan.diaper.lastAt != null }"
@@ -385,7 +391,7 @@ const hasCareRecords = computed(
 
 .care-row {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 16px;
+  grid-template-columns: 48px minmax(0, 1fr) 16px;
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -403,6 +409,15 @@ const hasCareRecords = computed(
 
 .care-row:first-child {
   border-top: 0;
+}
+
+/* 左侧组合：图标在上、类别名在下，整体居中 */
+.care-lead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
 }
 
 .care-icon {
@@ -434,12 +449,13 @@ const hasCareRecords = computed(
   gap: 2px;
 }
 
-/* 类别名：加粗放大，作为每行的锚点 */
+/* 类别名：图标下方的居中说明 */
 .care-label {
-  color: var(--text);
-  font-size: var(--fs-13);
-  font-weight: 700;
-  line-height: 1.3;
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 /* 核心数值（距上次多久 / 进行中）：全行最突出 */
