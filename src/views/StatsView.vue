@@ -105,12 +105,16 @@ const rangeEnd = computed(() => {
 })
 
 // 每日序列（趋势图数据）
-const days = computed<DayAggregate[]>(() => buildDailySeries(datasets.value, rangeStart.value, rangeEnd.value))
+const days = computed<DayAggregate[]>(() =>
+  buildDailySeries(datasets.value, rangeStart.value, rangeEnd.value, now.value),
+)
 
 // 当前区间 vs 上一等长区间（对比）
 const previousStart = computed(() => rangeStart.value - (rangeEnd.value - rangeStart.value))
 const currentAgg = computed(() => sumDays(days.value))
-const previousAgg = computed(() => aggregateRange(datasets.value, previousStart.value, rangeStart.value))
+const previousAgg = computed(() =>
+  aggregateRange(datasets.value, previousStart.value, rangeStart.value, now.value),
+)
 const comparisons = computed<ComparisonResult[]>(() => compareRanges(currentAgg.value, previousAgg.value))
 
 // 格式化轴标签

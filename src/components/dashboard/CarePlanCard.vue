@@ -57,25 +57,29 @@ const vaccinations = computed(() => keep(vaccinationStore.vaccinations, 'vaccina
 const temperatures = computed(() => keep(temperatureStore.temperatures, 'temperature'))
 
 const todayStart = computed(() => startOfDay(props.now))
-const todayEnd = computed(() => todayStart.value + MS_PER_DAY - 1)
+/** 当日结束（不含）：次日 0 点 */
+const todayEnd = computed(() => todayStart.value + MS_PER_DAY)
 
 /** 今日汇总：奶量 / 喂养次数 / 吸奶 / 母乳库存 / 睡眠 / 尿布（按当日边界裁剪） */
 const stats = computed(() =>
   computeTodayStats({
     feedings: feedings.value.filter(
-      (f) => f.startTime >= todayStart.value && f.startTime <= todayEnd.value,
+      (f) => f.startTime >= todayStart.value && f.startTime < todayEnd.value,
     ),
     diapers: diapers.value.filter(
-      (d) => d.time >= todayStart.value && d.time <= todayEnd.value,
+      (d) => d.time >= todayStart.value && d.time < todayEnd.value,
     ),
     pumpings: pumpings.value.filter(
-      (p) => p.startTime >= todayStart.value && p.startTime <= todayEnd.value,
+      (p) => p.startTime >= todayStart.value && p.startTime < todayEnd.value,
     ),
+    // 跨天 / 进行中的睡眠：只要与今日有重叠就纳入，具体时长由 computeTodayStats 裁剪
     sleeps: sleeps.value.filter(
-      (s) => (s.endTime ?? s.startTime) >= todayStart.value && s.startTime <= todayEnd.value,
+      (s) =>
+        (s.endTime ?? props.now) >= todayStart.value && s.startTime < todayEnd.value,
     ),
     todayStart: todayStart.value,
     todayEnd: todayEnd.value,
+    now: props.now,
   }),
 )
 

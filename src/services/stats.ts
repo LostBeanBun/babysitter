@@ -1,5 +1,6 @@
 import type { Feeding, DiaperChange, Pumping, Sleep, SolidFood, Medication, Temperature } from '@/types'
 import { startOfDay, startOfMonth, endOfMonth, formatDate } from '@/utils/format'
+import { overlapMs, endOf } from '@/utils/interval'
 import { MS_PER_DAY } from '@/constants'
 
 /** 统计用的记录数据集 */
@@ -125,7 +126,12 @@ function forEachDay<T>(
 }
 
 /** 生成从 start 到 end（不含）的每日序列 */
-export function buildDailySeries(ds: RecordDatasets, start: number, end: number): DayAggregate[] {
+export function buildDailySeries(
+  ds: RecordDatasets,
+  start: number,
+  end: number,
+  now: number = Date.now(),
+): DayAggregate[] {
   const days: DayAggregate[] = []
   const startDay = startOfDay(start)
   const endDay = startOfDay(end)
@@ -135,10 +141,17 @@ export function buildDailySeries(ds: RecordDatasets, start: number, end: number)
   const dayMap = new Map<number, DayAggregate>()
   for (const d of days) dayMap.set(d.dayStart, d)
 
-  // 睡眠可能跨天，按开始时间归到当天
-  forEachDay(ds.sleeps, dayMap, (s) => s.startTime, (d, s) => {
-    d.sleepMs += Math.max(0, (s.endTime ?? s.startTime) - s.startTime)
-  })
+  // 睡眠可能跨天：按与每日窗口的重叠时长分摊（未结束的按 now 截断）
+  const dayEnds = days.map((d, i) => days[i + 1]?.dayStart ?? startOfDay(d.dayStart + MS_PER_DAY))
+  for (const s of ds.sleeps) {
+    const sleepEnd = endOf(s.startTime, s.endTime, s.duration, now)
+    if (sleepEnd <= s.startTime) continue
+    for (let i = 0; i < days.length; i++) {
+      if (dayEnds[i] <= s.startTime) continue
+      if (days[i].dayStart >= sleepEnd) break
+      days[i].sleepMs += overlapMs(s.startTime, sleepEnd, days[i].dayStart, dayEnds[i], now)
+    }
+  }
 
   forEachDay(ds.feedings, dayMap, (f) => f.startTime, (d, f) => {
     d.feedCount++
@@ -200,8 +213,13 @@ export function sumDays(days: DayAggregate[]): RangeAggregate {
 }
 
 /** 区间汇总（用于对比面板） */
-export function aggregateRange(ds: RecordDatasets, start: number, end: number): RangeAggregate {
-  return sumDays(buildDailySeries(ds, start, end))
+export function aggregateRange(
+  ds: RecordDatasets,
+  start: number,
+  end: number,
+  now: number = Date.now(),
+): RangeAggregate {
+  return sumDays(buildDailySeries(ds, start, end, now))
 }
 
 /** 区间比较结果：当前 vs 上一周期 */

@@ -55,8 +55,13 @@ function makeItem(
 /** 生成近 7 天小结（now 当天算完整一天，便于与记录页的「今日」口径一致） */
 export function buildWeeklyInsight(ds: RecordDatasets, now: number): WeeklyInsight {
   const today = startOfDay(now)
-  const current = aggregateRange(ds, today - (DAYS - 1) * MS_PER_DAY, today + MS_PER_DAY)
-  const previous = aggregateRange(ds, today - (DAYS * 2 - 1) * MS_PER_DAY, today - (DAYS - 1) * MS_PER_DAY)
+  const current = aggregateRange(ds, today - (DAYS - 1) * MS_PER_DAY, today + MS_PER_DAY, now)
+  const previous = aggregateRange(
+    ds,
+    today - (DAYS * 2 - 1) * MS_PER_DAY,
+    today - (DAYS - 1) * MS_PER_DAY,
+    now,
+  )
 
   const items = [
     makeItem('milk', current.totalMilkAmount / DAYS, previous.totalMilkAmount / DAYS, THRESHOLDS.milk),
