@@ -1,16 +1,12 @@
 /**
- * 近 7 天小结：对比「最近 7 天」与「前 7 天」的每日均值，产出温和的变化描述。
+ * 区间小结：把「所选时间范围」与「上一等长周期」的每日均值对比，产出温和的变化描述。
  *
  * 只做描述性统计（多了/少了/基本持平），不做健康判断；
  * 变化幅度低于阈值时归为「基本持平」，避免把正常波动说成异常。
  */
 import { aggregateRange, type RecordDatasets, type RangeAggregate } from './stats'
-import { startOfDay } from '@/utils/format'
-import { MS_PER_DAY } from '@/constants'
 
-const DAYS = 7
-
-/** 各指标视为「变化」的最小幅度（相对前 7 天） */
+/** 各指标视为「变化」的最小幅度（相对上一周期） */
 const THRESHOLDS = {
   milk: 0.15,
   sleep: 0.1,
@@ -24,13 +20,13 @@ export type InsightTone = 'up' | 'down' | 'steady'
 export interface InsightItem {
   key: InsightKey
   tone: InsightTone
-  /** 相对前 7 天的变化百分比（前 7 天为 0 时为 null） */
+  /** 相对上一周期的变化百分比（上一周期为 0 时为 null） */
   change: number | null
   currentDaily: number
   previousDaily: number
 }
 
-export interface WeeklyInsight {
+export interface RangeInsight {
   current: RangeAggregate
   previous: RangeAggregate
   items: InsightItem[]
@@ -52,22 +48,32 @@ function makeItem(
   return { key, tone, change, currentDaily, previousDaily }
 }
 
-/** 生成近 7 天小结（now 当天算完整一天，便于与记录页的「今日」口径一致） */
-export function buildWeeklyInsight(ds: RecordDatasets, now: number): WeeklyInsight {
-  const today = startOfDay(now)
-  const current = aggregateRange(ds, today - (DAYS - 1) * MS_PER_DAY, today + MS_PER_DAY, now)
-  const previous = aggregateRange(
-    ds,
-    today - (DAYS * 2 - 1) * MS_PER_DAY,
-    today - (DAYS - 1) * MS_PER_DAY,
-    now,
-  )
+/**
+ * 生成区间小结：start / end 为当前区间（end 不含），上一周期取紧邻的等长区间。
+ * 日均按区间自身天数计算，因此今天（1 天）、近 7 天、本月等范围都能直接用。
+ */
+export function buildRangeInsight(
+  ds: RecordDatasets,
+  start: number,
+  end: number,
+  now: number,
+): RangeInsight {
+  const span = Math.max(1, end - start)
+  const current = aggregateRange(ds, start, end, now)
+  const previous = aggregateRange(ds, start - span, start, now)
+  const days = Math.max(1, current.dayCount)
+  const prevDays = Math.max(1, previous.dayCount)
 
   const items = [
-    makeItem('milk', current.totalMilkAmount / DAYS, previous.totalMilkAmount / DAYS, THRESHOLDS.milk),
-    makeItem('sleep', current.sleepMs / DAYS, previous.sleepMs / DAYS, THRESHOLDS.sleep),
-    makeItem('feed', current.feedCount / DAYS, previous.feedCount / DAYS, THRESHOLDS.feed),
-    makeItem('diaper', current.diaperCount / DAYS, previous.diaperCount / DAYS, THRESHOLDS.diaper),
+    makeItem(
+      'milk',
+      current.totalMilkAmount / days,
+      previous.totalMilkAmount / prevDays,
+      THRESHOLDS.milk,
+    ),
+    makeItem('sleep', current.sleepMs / days, previous.sleepMs / prevDays, THRESHOLDS.sleep),
+    makeItem('feed', current.feedCount / days, previous.feedCount / prevDays, THRESHOLDS.feed),
+    makeItem('diaper', current.diaperCount / days, previous.diaperCount / prevDays, THRESHOLDS.diaper),
   ].filter((x): x is InsightItem => x !== null)
 
   return { current, previous, items }

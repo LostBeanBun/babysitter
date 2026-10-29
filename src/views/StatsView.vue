@@ -29,7 +29,7 @@ import { CHART_COLORS, MS_PER_DAY } from '@/constants'
 import { trendTooltip, trendAxes, areaLineSeries, type ChartThemeColors } from '@/services/chartOptions'
 import { formatDuration, formatPercentChange, formatAmount, startOfDay, formatDate } from '@/utils/format'
 import { useChartTheme } from '@/composables/useChartTheme'
-import { buildWeeklyInsight, type InsightItem } from '@/services/insights'
+import { buildRangeInsight, type InsightItem } from '@/services/insights'
 import { exportReportPng, type ReportGrowthRow, type ReportMetric } from '@/services/report'
 import { whoData, type WhoField } from '@/constants/whoGrowth'
 import { estimatePercentile, percentileBand } from '@/utils/growthPercentile'
@@ -60,8 +60,8 @@ const now = ref(Date.now())
 const nowTimer = window.setInterval(() => (now.value = Date.now()), 60_000)
 onUnmounted(() => window.clearInterval(nowTimer))
 
-// 时间范围选择
-const rangeKey = ref('today')
+// 时间范围选择（默认近 7 天：单看今天样本太少，趋势/对比更需要一段区间）
+const rangeKey = ref('7d')
 const range = computed(() => RANGE_PRESETS.find((p) => p.key === rangeKey.value)!)
 
 // 概览 tab：对比 / 汇总
@@ -318,8 +318,12 @@ const summaryItems = computed(() => {
 // —— 成长曲线（已抽取至 GrowthCurveCharts 组件）——
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
 
-// —— P1-5 近 7 天小结 ——
-const weekly = computed(() => buildWeeklyInsight(datasets.value, now.value))
+// —— 区间小结：跟随所选时间范围（「全部」没有可比的上期，不展示）——
+const insight = computed(() =>
+  rangeKey.value === 'all'
+    ? null
+    : buildRangeInsight(datasets.value, rangeStart.value, rangeEnd.value, now.value),
+)
 
 function insightText(item: InsightItem): string {
   if (item.change == null || item.tone === 'steady') return t(`stats.insights.${item.key}.steady`)
@@ -478,13 +482,13 @@ async function handleExportReport() {
     <!-- 总览：区间汇总 -->
     <div v-if="activeView === 'summary'" class="card overview-card">
       <span class="overview-sub">{{ t('stats.summarySub', { n: summaryDays }) }}</span>
-      <div v-if="weekly.items.length" class="insight-block">
+      <div v-if="insight?.items.length" class="insight-block">
         <p class="insight-title">
-          {{ t('stats.insightTitle') }}
+          {{ t('stats.insightTitle', { range: t(range.label) }) }}
           <span class="insight-sub">{{ t('stats.insightSub') }}</span>
         </p>
         <ul class="insight-list">
-          <li v-for="item in weekly.items" :key="item.key" class="insight-item" :class="item.tone">
+          <li v-for="item in insight.items" :key="item.key" class="insight-item" :class="item.tone">
             <span class="insight-dot" aria-hidden="true"></span>
             <span>{{ insightText(item) }}</span>
           </li>
@@ -645,7 +649,7 @@ async function handleExportReport() {
   margin-bottom: 10px;
 }
 
-/* ===== 近 7 天小结 ===== */
+/* ===== 区间小结（跟随时间范围） ===== */
 .insight-block {
   margin-bottom: 12px;
   padding: 10px 12px;
