@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
 import { exportBabyCsvs, exportAllBabiesCsv, importAllCsv } from '@/services/export'
-import { exportJsonBackup, importJsonBackup, getLastBackupAt } from '@/services/backup'
+import { exportJsonBackup, importJsonBackup, getLastBackupAt, isBackupRemindEnabled, setBackupRemindEnabled } from '@/services/backup'
 import { formatDate } from '@/utils/format'
 import { BABY_AVATARS, MS_PER_DAY, MS_PER_HOUR } from '@/constants'
 import { APP_VERSION } from '@/constants/version'
@@ -55,6 +55,13 @@ const lastBackupAt = ref<number | null>(getLastBackupAt())
 const jsonFileRef = ref<HTMLInputElement | null>(null)
 const jsonImportPending = ref<File | null>(null)
 const jsonBusy = ref(false)
+/** 首页备份提醒开关（关闭后永久不再提示，可随时再打开） */
+const backupRemindEnabled = ref(isBackupRemindEnabled())
+
+function toggleBackupRemind() {
+  backupRemindEnabled.value = !backupRemindEnabled.value
+  setBackupRemindEnabled(backupRemindEnabled.value)
+}
 
 // —— 分享给朋友 ——
 const shareFeedback = ref<string | null>(null)
@@ -549,6 +556,23 @@ async function confirmClearAll() {
       <p class="data-tip">
         {{ lastBackupAt ? t('settings.lastBackup', { date: formatDate(lastBackupAt) }) : t('settings.neverBackup') }}
       </p>
+      <div class="reminder-block backup-remind">
+        <div class="reminder-row">
+          <div class="reminder-info">
+            <p class="reminder-title">{{ t('settings.backupRemindTitle') }}</p>
+            <p class="reminder-sub">{{ t('settings.backupRemindSub') }}</p>
+          </div>
+          <button
+            class="switch"
+            :class="{ on: backupRemindEnabled }"
+            role="switch"
+            :aria-checked="backupRemindEnabled"
+            @click="toggleBackupRemind"
+          >
+            <span class="switch-knob"></span>
+          </button>
+        </div>
+      </div>
       <button class="btn btn-primary btn-block" @click="handleExportJson">{{ t('settings.exportJson') }}</button>
       <button class="btn btn-outline btn-block" :disabled="jsonBusy" @click="jsonFileRef?.click()">
         {{ t('settings.importJson') }}
@@ -873,6 +897,12 @@ async function confirmClearAll() {
 .reminder-block + .reminder-block {
   border-top: 1px dashed var(--border);
   padding-top: 10px;
+}
+
+/* 数据管理卡里的「首页备份提醒」开关：与上方「上次备份」文案拉开距离 */
+.backup-remind {
+  margin-top: 10px;
+  padding: 0;
 }
 
 .reminder-param {

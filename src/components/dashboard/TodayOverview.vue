@@ -11,7 +11,8 @@ import { useVaccinationStore } from '@/stores/vaccination'
 import { useDismissedReminders } from '@/composables/useDismissedReminders'
 import { useActiveTimer } from '@/composables/useActiveTimer'
 import ReminderBanner from '@/components/common/ReminderBanner.vue'
-import { exportJsonBackup, getLastBackupAt, shouldSuggestBackup } from '@/services/backup'
+import { exportJsonBackup, getBackupSnoozeUntil, getLastBackupAt, isBackupRemindEnabled, shouldSuggestBackup, snoozeBackupReminder } from '@/services/backup'
+import { showToast } from '@/composables/useToast'
 import { isSnoozed, snoozeReminder, loadReminders } from '@/utils/reminderScheduler'
 import { startOfDay, formatDuration } from '@/utils/format'
 import { MS_PER_DAY, MS_PER_HOUR } from '@/constants'
@@ -159,8 +160,10 @@ const diaperSnoozed = computed(() => {
 })
 const diaperBannerActive = computed(() => diaperDue.value && !diaperSnoozed.value && !dismissed.value.diaper)
 
-// —— 备份提醒：本地数据唯一兜底，超过 7 天未备份时提示（本会话可关闭）——
+// —— 备份提醒：本地数据唯一兜底，超过 7 天未备份时提示（关闭后静默 1 天，设置页可永久关闭）——
 const lastBackupAt = ref<number | null>(getLastBackupAt())
+const backupSnoozeUntil = ref<number | null>(getBackupSnoozeUntil())
+const backupRemindEnabled = ref(isBackupRemindEnabled())
 const hasAnyData = computed(
   () =>
     feedingStore.feedings.length +
@@ -171,7 +174,13 @@ const hasAnyData = computed(
     0,
 )
 const backupDue = computed(() =>
-  shouldSuggestBackup({ lastBackupAt: lastBackupAt.value, hasData: hasAnyData.value, now: props.now }),
+  shouldSuggestBackup({
+    lastBackupAt: lastBackupAt.value,
+    hasData: hasAnyData.value,
+    now: props.now,
+    snoozeUntil: backupSnoozeUntil.value,
+    enabled: backupRemindEnabled.value,
+  }),
 )
 const backupDays = computed(() =>
   lastBackupAt.value == null ? 0 : Math.floor((props.now - lastBackupAt.value) / MS_PER_DAY),
@@ -179,6 +188,14 @@ const backupDays = computed(() =>
 async function handleBackup() {
   await exportJsonBackup()
   lastBackupAt.value = getLastBackupAt()
+  backupSnoozeUntil.value = getBackupSnoozeUntil()
+}
+
+/** 关闭备份提醒条：持久静默 1 天（刷新不再重现），不是会话级关闭 */
+function dismissBackup() {
+  snoozeBackupReminder(props.now)
+  backupSnoozeUntil.value = getBackupSnoozeUntil()
+  showToast(t('dashboard.backupSnoozed'))
 }
 
 </script>
@@ -231,9 +248,9 @@ async function handleBackup() {
       @dismiss="dismiss('diaper')"
     />
 
-    <!-- 备份提醒：本地数据超过 7 天未备份 / 从未备份时提示 -->
+    <!-- 备份提醒：本地数据超过 7 天未备份 / 从未备份时提示；关闭后静默 1 天 -->
     <ReminderBanner
-      v-if="backupDue && !dismissed.backup"
+      v-if="backupDue"
       icon="💾"
       variant="backup"
       :title="t('dashboard.backupTitle')"
@@ -245,7 +262,7 @@ async function handleBackup() {
       :action-label="t('dashboard.backupAction')"
       :dismiss-label="t('common.close')"
       @action="handleBackup"
-      @dismiss="dismiss('backup')"
+      @dismiss="dismissBackup"
     />
 
     <!-- 疫苗提醒条：点击打开最近一条待种记录进行编辑，点具体芯片可直接编辑该条，「全部」进记录页 -->
