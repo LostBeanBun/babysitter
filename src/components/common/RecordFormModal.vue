@@ -25,6 +25,7 @@ import type {
   MilestoneType,
 } from '@/types'
 import type { TimelineEntry } from '@/services/timeline'
+import { buildRecordEditPayload } from '@/services/recordForm'
 
 /** 各表单编辑 props 结构（与表单组件 props.editing 一致） */
 type FeedingFormProps = {
@@ -90,11 +91,7 @@ const emit = defineEmits<{ close: []; saved: []; cancelled: []; startRecord: [] 
 const { t } = useI18n()
 
 /** 编辑回填：原始记录完整透传（避免遗漏字段，如头围），id 以条目为准 */
-const payload = computed<(Record<string, unknown> & { id: number }) | undefined>(() => {
-  const e = props.state?.editing
-  if (!e) return undefined
-  return { ...e.raw, id: e.id }
-})
+const payload = computed(() => buildRecordEditPayload(props.state?.editing))
 </script>
 
 <template>
