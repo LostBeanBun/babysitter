@@ -30,7 +30,14 @@ import { trendTooltip, trendAxes, areaLineSeries, type ChartThemeColors } from '
 import { formatDuration, formatPercentChange, formatAmount, startOfDay, formatDate } from '@/utils/format'
 import { useChartTheme } from '@/composables/useChartTheme'
 import { buildRangeInsight, type InsightItem } from '@/services/insights'
-import { exportReportPng, type ReportGrowthRow, type ReportMetric } from '@/services/report'
+import {
+  exportReportPng,
+  buildReportBlob,
+  type ReportData,
+  type ReportGrowthRow,
+  type ReportMetric,
+} from '@/services/report'
+import { canShareReportPng, shareOrDownloadReport } from '@/services/reportShare'
 import { whoData, type WhoField } from '@/constants/whoGrowth'
 import { estimatePercentile, percentileBand } from '@/utils/growthPercentile'
 import { ageInMonths } from '@/utils/age'
@@ -332,6 +339,8 @@ function insightText(item: InsightItem): string {
 
 // —— P1-4 儿保报告导出 ——
 const reportBusy = ref(false)
+/** 分享能力仅在支持分享文件时显示按钮（不支持的浏览器只有导出） */
+const shareSupported = canShareReportPng()
 
 const reportMetrics = computed<ReportMetric[]>(() => {
   const agg = currentAgg.value
@@ -402,32 +411,56 @@ const reportGrowthRows = computed<ReportGrowthRow[]>(() => {
   return rows
 })
 
+/** 报告内容（导出与分享共用，避免两条路径文案/数据不一致） */
+function reportData(): ReportData {
+  const baby = activeBaby.value
+  const babyLine = baby
+    ? baby.birthDate
+      ? `${baby.name} · ${t('settings.ageMonths', { n: Math.floor(ageInMonths(baby.birthDate, now.value)) })}`
+      : baby.name
+    : t('common.baby')
+  return {
+    title: t('stats.report.title'),
+    babyLine,
+    rangeLine: `${rangeLabel.value} · ${formatDate(rangeStart.value)} ~ ${formatDate(rangeEnd.value - 1)}`,
+    generatedLine: t('stats.report.generatedAt', { date: formatDate(now.value) }),
+    metrics: reportMetrics.value,
+    growthTitle: t('stats.report.growthTitle'),
+    growthRows: reportGrowthRows.value,
+    noGrowth: t('stats.report.noGrowth'),
+    disclaimer: t('stats.report.disclaimer'),
+    footer: t('stats.report.footer'),
+  }
+}
+
+function reportFilename(): string {
+  return `babysitter-report-${formatDate(now.value)}.png`
+}
+
 async function handleExportReport() {
   if (reportBusy.value) return
   reportBusy.value = true
   try {
-    const baby = activeBaby.value
-    const babyLine = baby
-      ? baby.birthDate
-        ? `${baby.name} · ${t('settings.ageMonths', { n: Math.floor(ageInMonths(baby.birthDate, now.value)) })}`
-        : baby.name
-      : t('common.baby')
-    await exportReportPng(
-      {
-        title: t('stats.report.title'),
-        babyLine,
-        rangeLine: `${rangeLabel.value} · ${formatDate(rangeStart.value)} ~ ${formatDate(rangeEnd.value - 1)}`,
-        generatedLine: t('stats.report.generatedAt', { date: formatDate(now.value) }),
-        metrics: reportMetrics.value,
-        growthTitle: t('stats.report.growthTitle'),
-        growthRows: reportGrowthRows.value,
-        noGrowth: t('stats.report.noGrowth'),
-        disclaimer: t('stats.report.disclaimer'),
-        footer: t('stats.report.footer'),
-      },
-      `babysitter-report-${formatDate(now.value)}.png`,
-    )
+    await exportReportPng(reportData(), reportFilename())
     showToast(t('stats.report.exported'), { duration: 4000 })
+  } catch {
+    showToast(t('stats.report.failed'))
+  } finally {
+    reportBusy.value = false
+  }
+}
+
+async function handleShareReport() {
+  if (reportBusy.value) return
+  reportBusy.value = true
+  try {
+    const outcome = await shareOrDownloadReport(await buildReportBlob(reportData()), reportFilename(), {
+      title: t('stats.report.title'),
+      text: t('stats.report.footer'),
+    })
+    // 用户主动取消不提示；回退下载时提示导出成功
+    if (outcome === 'shared') showToast(t('stats.report.shared'), { duration: 4000 })
+    else if (outcome === 'downloaded') showToast(t('stats.report.exported'), { duration: 4000 })
   } catch {
     showToast(t('stats.report.failed'))
   } finally {
@@ -507,6 +540,14 @@ async function handleExportReport() {
         @click="handleExportReport"
       >
         {{ reportBusy ? t('common.exporting') : t('stats.exportReport') }}
+      </button>
+      <button
+        v-if="shareSupported"
+        class="btn btn-outline btn-block report-btn"
+        :disabled="reportBusy"
+        @click="handleShareReport"
+      >
+        {{ reportBusy ? t('common.exporting') : t('stats.shareReport') }}
       </button>
     </div>
 
