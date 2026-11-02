@@ -5,7 +5,13 @@ export type ThemeMode = 'system' | 'light' | 'dark'
 const THEME_KEY = 'babysitter.theme'
 const mq = window.matchMedia('(prefers-color-scheme: dark)')
 
-const saved = (localStorage.getItem(THEME_KEY) as ThemeMode) || 'system'
+/** 只接受已知取值，损坏值回退 system（与 React 端 readSavedMode 一致） */
+function readSavedMode(): ThemeMode {
+  const saved = localStorage.getItem(THEME_KEY)
+  return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system'
+}
+
+const saved = readSavedMode()
 
 function resolveDark(mode: ThemeMode): boolean {
   return mode === 'dark' || (mode === 'system' && mq.matches)
