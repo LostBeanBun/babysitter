@@ -4,6 +4,7 @@ import { toDateTimeLocal, fromDateTimeLocal, formatDuration } from '@/utils/form
 import type { FormErrors } from './useFormErrors'
 import { useActiveTimer, type TimerKind } from './useActiveTimer'
 import { showToast } from './useToast'
+import { planTimedSubmit } from '@/services/timedRecord'
 
 export interface TimedRecordOptions<TFields> {
   /** 计时种类（feeding/pumping/sleep） */
@@ -73,55 +74,54 @@ export function useTimedRecord<TFields>(opts: TimedRecordOptions<TFields>) {
     opts.err.clearAll()
     try {
       const start = fromDateTimeLocal(startTime.value)
-      if (start == null) {
-        opts.err.set('startTime', opts.invalidStart())
-        return
-      }
       const end = endTime.value ? fromDateTimeLocal(endTime.value) : undefined
+      const plan = planTimedSubmit<TFields>({
+        start,
+        end,
+        recording: isRecording.value,
+        editing: isEditing.value && !!opts.editing,
+        buildFields: opts.buildFields,
+        validateEdit: opts.validateEdit,
+        startTimer: opts.startTimer,
+      })
 
-      // 计时中：结束记录，结束时间写回（空则取当前时间）
-      if (isRecording.value && activeEntry.value) {
-        const fields = opts.buildFields()
-        if (fields === null) return
-        const endTs = end ?? Date.now()
-        if (endTs <= start) {
+      switch (plan.type) {
+        case 'invalidStart':
+          opts.err.set('startTime', opts.invalidStart())
+          return
+        case 'invalidFields':
+        case 'editRejected':
+          return
+        case 'invalidOrder':
           opts.err.set('endTime', opts.invalidOrder())
           return
-        }
-        await opts.finishRecording(activeEntry.value.recordId, endTs, fields)
-        activeTimer.reset(activeEntry.value.id)
-        opts.emit.saved()
-        return
-      }
-
-      // 编辑
-      if (isEditing.value && opts.editing) {
-        const fields = opts.buildFields()
-        if (fields === null) return
-        if (opts.validateEdit && !opts.validateEdit(start, end)) return
-        await opts.update(opts.editing.id, fields, start, end)
-        opts.emit.saved()
-        return
-      }
-
-      // 新记录：结束时间已填 → 直接保存；空 → 按表单决定是否启动计时
-      const fields = opts.buildFields()
-      if (fields === null) return
-      if (end != null) {
-        if (end <= start) {
-          opts.err.set('endTime', opts.invalidOrder())
+        case 'finishRecording': {
+          const entry = activeEntry.value
+          if (!entry) return
+          await opts.finishRecording(entry.recordId, plan.end, plan.fields)
+          activeTimer.reset(entry.id)
+          opts.emit.saved()
           return
         }
-        await opts.addRange(fields, start, end)
-        opts.emit.saved()
-        return
-      }
-      const id = await opts.add(fields, start)
-      if (opts.startTimer?.() ?? true) {
-        activeTimer.start(opts.kind, id, start)
-        opts.emit.startRecord()
-      } else {
-        opts.emit.saved()
+        case 'update':
+          if (!opts.editing) return
+          await opts.update(opts.editing.id, plan.fields, plan.start, plan.end)
+          opts.emit.saved()
+          return
+        case 'addRange':
+          await opts.addRange(plan.fields, plan.start, plan.end)
+          opts.emit.saved()
+          return
+        case 'add': {
+          const id = await opts.add(plan.fields, plan.start)
+          if (plan.timer) {
+            activeTimer.start(opts.kind, id, plan.start)
+            opts.emit.startRecord()
+          } else {
+            opts.emit.saved()
+          }
+          return
+        }
       }
     } catch {
       showToast(t('errors.generic'))
