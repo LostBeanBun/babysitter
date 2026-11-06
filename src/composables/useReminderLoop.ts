@@ -4,6 +4,7 @@
  */
 import { onMounted, onUnmounted } from 'vue'
 import { checkReminders } from '@/utils/reminderScheduler'
+import { canNotify, showReminderNotification } from '@/services/notification'
 import { useBabyStore } from '@/stores/baby'
 import { useFeedingStore } from '@/stores/feeding'
 import { useMedicationStore } from '@/stores/medication'
@@ -24,7 +25,7 @@ export function useReminderLoop() {
   const sleepStore = useSleepStore()
 
   function sendNotifications() {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    if (!canNotify()) return
     const now = Date.now()
     const activeBaby = babyStore.babies.find((b) => b.id === babyStore.activeBabyId)
     const hits = checkReminders({
@@ -36,15 +37,8 @@ export function useReminderLoop() {
       diapers: diaperStore.diapers,
       sleeps: sleepStore.sleeps,
     })
-    hits.forEach((h) => {
-      const notification = new Notification(h.title, { body: h.body, tag: h.tag })
-      // 点击通知时聚焦窗口，并跳转到首页查看详情
-      notification.onclick = () => {
-        window.focus()
-        if (!window.location.hash.startsWith('#/')) window.location.hash = '#/'
-        notification.close()
-      }
-    })
+    // 移动端必须走 Service Worker 通知，点击行为由 SW 的 notificationclick 处理
+    hits.forEach((h) => void showReminderNotification(h))
   }
 
   onMounted(() => {

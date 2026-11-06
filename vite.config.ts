@@ -68,6 +68,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: 'index.html',
+        // 提醒通知点击处理（public/push-sw.js），注入到生成的 sw.js
+        importScripts: ['push-sw.js'],
       },
     }),
   ],
