@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
@@ -17,6 +17,7 @@ import ReminderParam from '@/components/settings/ReminderParam.vue'
 import { useFormErrors } from '@/composables/useFormErrors'
 import { useFormSubmit } from '@/composables/useFormSubmit'
 import { showToast } from '@/composables/useToast'
+import { getNotifyStatus, requestNotifyPermission, type NotifyStatus } from '@/services/notification'
 import type { Baby, BabyGender } from '@/types'
 
 const babyStore = useBabyStore()
@@ -112,23 +113,50 @@ const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStor
 // —— 提醒设置（多类提醒，默认全部关闭，由用户自行开启）——
 const reminders = ref<ReminderConfig>(loadReminders())
 
-async function requestNotificationPermission(): Promise<boolean> {
-  if (!('Notification' in window)) return false
-  if (Notification.permission === 'granted') return true
-  if (Notification.permission === 'default') {
-    try {
-      const p = await Notification.requestPermission()
-      return p === 'granted'
-    } catch {
-      return false
-    }
-  }
-  return false
+// —— 通知权限状态（iOS 未添加到主屏幕时无法授权）——
+const notifyStatus = ref<NotifyStatus>('unsupported')
+
+function refreshNotifyStatus() {
+  notifyStatus.value = getNotifyStatus()
 }
+
+const notifyStatusText = computed(() => {
+  switch (notifyStatus.value) {
+    case 'granted':
+      return t('settings.notifyGranted')
+    case 'default':
+      return t('settings.notifyDefault')
+    case 'denied':
+      return t('settings.notifyDenied')
+    case 'ios-install':
+      return t('settings.notifyIosInstall')
+    default:
+      return t('settings.notifyUnsupported')
+  }
+})
+
+const notifyStatusTone = computed(() => {
+  switch (notifyStatus.value) {
+    case 'granted':
+      return 'ok'
+    case 'denied':
+      return 'danger'
+    case 'default':
+    case 'ios-install':
+      return 'warn'
+    default:
+      return 'muted'
+  }
+})
 
 async function toggleReminder(type: ReminderType) {
   reminders.value[type].enabled = !reminders.value[type].enabled
-  if (reminders.value[type].enabled) await requestNotificationPermission()
+  if (reminders.value[type].enabled) {
+    notifyStatus.value = await requestNotifyPermission()
+    if (notifyStatus.value === 'denied') showToast(t('settings.notifyDeniedToast'))
+    else if (notifyStatus.value === 'unsupported') showToast(t('settings.notifyUnsupportedToast'))
+    else if (notifyStatus.value === 'ios-install') showToast(t('settings.notifyIosToast'))
+  }
   saveReminders(reminders.value)
 }
 
@@ -175,7 +203,13 @@ const reminderRows = computed(() => [
 ])
 
 onMounted(async () => {
+  refreshNotifyStatus()
+  document.addEventListener('visibilitychange', refreshNotifyStatus)
   recordCounts.value = await countAllRecords()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', refreshNotifyStatus)
 })
 
 function openAddBaby() {
@@ -408,6 +442,10 @@ async function confirmClearAll() {
     <p class="section-title">{{ t('settings.reminderSectionTitle') }}</p>
     <div class="card">
       <p class="data-tip">{{ t('settings.reminderTip') }}</p>
+      <div class="notify-status" :class="`notify-status--${notifyStatusTone}`">
+        <span class="notify-dot" aria-hidden="true"></span>
+        <span class="notify-text">{{ notifyStatusText }}</span>
+      </div>
       <div v-for="r in reminderRows" :key="r.type" class="reminder-block">
         <div class="reminder-row">
           <div class="reminder-info">
@@ -856,6 +894,49 @@ async function confirmClearAll() {
   color: var(--text-muted);
   margin-bottom: var(--space-2);
   line-height: 1.6;
+}
+
+/* 通知权限状态行：颜色区分可用 / 待授权 / 被拒绝 / 不支持 */
+.notify-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: var(--space-3);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+
+.notify-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.notify-status--ok {
+  color: var(--accent-green);
+  background: var(--accent-green-soft);
+}
+
+.notify-status--warn {
+  color: var(--accent-yellow);
+  background: var(--accent-yellow-soft);
+}
+
+.notify-status--danger {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.notify-status--muted {
+  color: var(--text-muted);
+  background: var(--surface-2);
 }
 
 .reminder-row {
