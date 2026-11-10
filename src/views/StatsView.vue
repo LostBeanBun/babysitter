@@ -31,6 +31,13 @@ import { formatDuration, formatPercentChange, formatAmount, startOfDay, formatDa
 import { useChartTheme } from '@/composables/useChartTheme'
 import { buildRangeInsight, type InsightItem } from '@/services/insights'
 import {
+  buildCareInsights,
+  buildGrowthVelocity,
+  buildMonthlyReport,
+  monthRange,
+  type GrowthVelocityItem,
+} from '@/services/monthlyReport'
+import {
   exportReportPng,
   buildReportBlob,
   type ReportData,
@@ -71,8 +78,8 @@ onUnmounted(() => window.clearInterval(nowTimer))
 const rangeKey = ref('7d')
 const range = computed(() => RANGE_PRESETS.find((p) => p.key === rangeKey.value)!)
 
-// 概览 tab：对比 / 汇总
-const activeView = ref<'summary' | 'trend' | 'compare'>('summary')
+// 概览 tab：汇总 / 趋势 / 对比 / 月报
+const activeView = ref<'summary' | 'trend' | 'compare' | 'monthly'>('summary')
 
 // 统计用记录数据集
 const datasets = computed<RecordDatasets>(() => ({
@@ -224,17 +231,35 @@ const temperatureOption = computed<EChartsOption>(() => ({
 }))
 
 // 对比面板格式化
-function formatComparisonValue(c: ComparisonResult, value: number): string {
-  if (c.key === 'sleepMs') return formatDuration(value)
+function formatMetricValue(key: string, value: number): string {
+  if (key === 'sleepMs') return formatDuration(value)
   if (
-    c.key === 'totalMilkAmount' ||
-    c.key === 'breastMilkAmount' ||
-    c.key === 'formulaAmount' ||
-    c.key === 'pumpAmount'
+    key === 'totalMilkAmount' ||
+    key === 'breastMilkAmount' ||
+    key === 'formulaAmount' ||
+    key === 'pumpAmount'
   ) {
     return `${Math.round(value)} ml`
   }
   return t('common.times', { n: Math.round(value) })
+}
+
+function formatComparisonValue(c: ComparisonResult, value: number): string {
+  return formatMetricValue(c.key, value)
+}
+
+/** 日均值：次数保留一位小数，避免低频指标被取整成 0（月报环比用） */
+function formatDailyMetricValue(key: string, value: number): string {
+  if (key === 'sleepMs') return formatDuration(value)
+  if (
+    key === 'totalMilkAmount' ||
+    key === 'breastMilkAmount' ||
+    key === 'formulaAmount' ||
+    key === 'pumpAmount'
+  ) {
+    return formatAmount(value)
+  }
+  return t('common.times', { n: value.toFixed(1) })
 }
 
 /** 对比行文案：上一周期 → 当前周期（睡眠时长等长文本换行展示，title 挂完整文案） */
@@ -324,6 +349,147 @@ const summaryItems = computed(() => {
 
 // —— 成长曲线（已抽取至 GrowthCurveCharts 组件）——
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
+
+// —— 月报：自然月汇总 + 上月日均对比 + 照护洞察 + 成长速度 ——
+const monthOffset = ref(0)
+const month = computed(() => monthRange(now.value, monthOffset.value))
+const monthly = computed(() =>
+  buildMonthlyReport(datasets.value, growthStore.growths, month.value, now.value),
+)
+const careInsights = computed(() =>
+  buildCareInsights(datasets.value, month.value.start, month.value.end, now.value),
+)
+const growthVelocity = computed(() => buildGrowthVelocity(growthStore.growths, activeBaby.value))
+
+const monthDays = computed(() => Math.max(1, monthly.value.current.dayCount))
+const isCurrentMonth = computed(() => monthOffset.value >= 0)
+
+function monthLabelOf(start: number): string {
+  const d = new Date(start)
+  return t('stats.monthly.label', { year: d.getFullYear(), month: d.getMonth() + 1 })
+}
+
+const monthLabel = computed(() => monthLabelOf(month.value.start))
+const previousMonthLabel = computed(() => monthLabelOf(monthly.value.previousRange.start))
+
+const monthSummaryItems = computed(() => {
+  const agg = monthly.value.current
+  const days = monthDays.value
+  const daily = (value: string) => t('common.daily', { value })
+  const times = (n: number) => t('common.times', { n: Math.round(n) })
+  return [
+    {
+      label: t('stats.summary.totalMilk'),
+      num: agg.totalMilkAmount,
+      format: (n: number) => formatAmount(n),
+      sub: daily(formatAmount(agg.totalMilkAmount / days)),
+    },
+    {
+      label: t('stats.summary.feedCount'),
+      num: agg.feedCount,
+      format: (n: number) => times(n),
+      sub: daily(t('common.times', { n: (agg.feedCount / days).toFixed(1) })),
+    },
+    {
+      label: t('stats.summary.sleepMs'),
+      num: agg.sleepMs,
+      format: (n: number) => formatDuration(n),
+      sub: daily(formatDuration(agg.sleepMs / days)),
+    },
+    {
+      label: t('stats.summary.diaper'),
+      num: agg.diaperCount,
+      format: (n: number) => times(n),
+      sub: daily(t('common.times', { n: (agg.diaperCount / days).toFixed(1) })),
+    },
+    {
+      label: t('stats.summary.pumpAmount'),
+      num: agg.pumpAmount,
+      format: (n: number) => formatAmount(n),
+      sub: daily(formatAmount(agg.pumpAmount / days)),
+    },
+    {
+      label: t('stats.summary.growthRecords'),
+      num: monthly.value.growthCount,
+      format: (n: number) => t('common.records', { n: Math.round(n) }),
+      sub: monthLabel.value,
+    },
+  ]
+})
+
+/** 18:00 起的平均分钟数 → HH:MM */
+function bedtimeText(minutes: number): string {
+  const total = 18 * 60 + minutes
+  const h = Math.floor(total / 60) % 24
+  const m = total % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+const careInsightRows = computed(() => {
+  const c = careInsights.value
+  const rows: { key: string; icon: string; text: string }[] = []
+  if (c.sleep) {
+    rows.push({
+      key: 'sleep',
+      icon: '😴',
+      text: t('stats.monthly.insightSleep', { duration: formatDuration(c.sleep.avgDailyMs) }),
+    })
+    if (c.sleep.avgBedtimeMinutes != null) {
+      rows.push({
+        key: 'bedtime',
+        icon: '🌙',
+        text: t('stats.monthly.insightBedtime', { time: bedtimeText(c.sleep.avgBedtimeMinutes) }),
+      })
+    }
+    if (c.sleep.nightWakes > 0) {
+      rows.push({
+        key: 'wakes',
+        icon: '👀',
+        text: t('stats.monthly.insightNightWakes', { n: c.sleep.nightWakes }),
+      })
+    }
+  }
+  if (c.feed) {
+    if (c.feed.avgIntervalMs != null) {
+      rows.push({
+        key: 'interval',
+        icon: '🍼',
+        text: t('stats.monthly.insightFeedInterval', { duration: formatDuration(c.feed.avgIntervalMs) }),
+      })
+    }
+    rows.push({
+      key: 'amount',
+      icon: '🥛',
+      text: t('stats.monthly.insightFeedAmount', { amount: formatAmount(c.feed.avgDailyAmount) }),
+    })
+  }
+  if (c.diaper) {
+    rows.push({
+      key: 'diaper',
+      icon: '🧷',
+      text: t('stats.monthly.insightDiaper', { n: c.diaper.avgDailyCount.toFixed(1) }),
+    })
+    if (c.diaper.wetShare != null) {
+      rows.push({
+        key: 'wet',
+        icon: '💧',
+        text: t('stats.monthly.insightDiaperWet', { percent: Math.round(c.diaper.wetShare * 100) }),
+      })
+    }
+  }
+  return rows
+})
+
+function formatVelocity(v: GrowthVelocityItem): string {
+  if (v.rate == null) return '—'
+  return v.rateUnit === 'g/week'
+    ? t('stats.monthly.rateWeight', { value: Math.round(v.rate) })
+    : t('stats.monthly.rateLength', { value: v.rate.toFixed(1) })
+}
+
+function handlePrint() {
+  window.print()
+}
 
 // —— 区间小结：跟随所选时间范围（「全部」没有可比的上期，不展示）——
 const insight = computed(() =>
@@ -510,6 +676,15 @@ async function handleShareReport() {
       >
         {{ t('stats.tabCompare') }}
       </button>
+      <button
+        class="overview-tab"
+        :class="{ active: activeView === 'monthly' }"
+        role="tab"
+        :aria-selected="activeView === 'monthly'"
+        @click="activeView = 'monthly'"
+      >
+        {{ t('stats.tabMonthly') }}
+      </button>
     </div>
 
     <!-- 总览：区间汇总 -->
@@ -586,7 +761,7 @@ async function handleShareReport() {
     </template>
 
     <!-- 对比：与上一周期对比 -->
-    <div v-else class="card overview-card">
+    <div v-else-if="activeView === 'compare'" class="card overview-card">
       <span class="overview-sub">{{ t('stats.compareSub', { range: rangeLabel }) }}</span>
       <div class="compare-grid">
         <div v-for="c in comparisons" :key="c.key" class="compare-item">
@@ -600,6 +775,97 @@ async function handleShareReport() {
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 月报：自然月汇总 + 上月日均对比 + 照护洞察 + 成长速度 -->
+    <div v-else class="card overview-card monthly-card">
+      <div class="month-switch">
+        <button
+          class="month-nav"
+          type="button"
+          :aria-label="t('stats.monthly.prevMonth')"
+          @click="monthOffset--"
+        >
+          ‹
+        </button>
+        <span class="month-label">{{ monthLabel }}</span>
+        <button
+          class="month-nav"
+          type="button"
+          :aria-label="t('stats.monthly.nextMonth')"
+          :disabled="isCurrentMonth"
+          @click="monthOffset++"
+        >
+          ›
+        </button>
+        <button
+          v-if="!isCurrentMonth"
+          class="month-back"
+          type="button"
+          @click="monthOffset = 0"
+        >
+          {{ t('stats.monthly.backToCurrent') }}
+        </button>
+      </div>
+
+      <template v-if="monthly.hasData">
+        <span class="overview-sub">{{ t('stats.monthly.sub', { days: monthDays }) }}</span>
+        <div class="summary-grid">
+          <div v-for="s in monthSummaryItems" :key="s.label" class="summary-item">
+            <p class="summary-label">{{ s.label }}</p>
+            <p class="summary-value"><CountUp :value="s.num" :format="s.format" /></p>
+            <p class="summary-sub">{{ s.sub }}</p>
+          </div>
+        </div>
+
+        <p class="section-title">{{ t('stats.monthly.compareTitle', { previous: previousMonthLabel }) }}</p>
+        <ul class="month-rows">
+          <li v-for="row in monthly.rows" :key="row.key" class="month-row">
+            <span class="month-row-label">{{ t(row.label) }}</span>
+            <span class="month-row-daily">{{ formatDailyMetricValue(row.key, row.currentDaily) }}</span>
+            <span
+              class="month-row-change"
+              :class="row.change === null ? 'none' : row.change >= 0 ? 'up' : 'down'"
+            >
+              {{ row.change === null ? '—' : formatPercentChange(row.change) }}
+            </span>
+            <span class="month-row-prev">
+              {{ t('stats.monthly.previousDaily', { value: formatDailyMetricValue(row.key, row.previousDaily) }) }}
+            </span>
+          </li>
+        </ul>
+
+        <p class="section-title">{{ t('stats.monthly.careTitle') }}</p>
+        <ul v-if="careInsightRows.length" class="care-list">
+          <li v-for="row in careInsightRows" :key="row.key" class="care-item">
+            <span class="care-icon" aria-hidden="true">{{ row.icon }}</span>
+            <span>{{ row.text }}</span>
+          </li>
+        </ul>
+        <p v-else class="note-text">{{ t('stats.monthly.noInsight') }}</p>
+
+        <template v-if="growthVelocity.length">
+          <p class="section-title">{{ t('stats.monthly.growthTitle') }}</p>
+          <ul class="velocity-list">
+            <li v-for="v in growthVelocity" :key="v.field" class="velocity-item">
+              <span class="velocity-label">{{ t(v.labelKey) }}</span>
+              <span class="velocity-value">{{ formatVelocity(v) }}</span>
+              <span class="velocity-sub">
+                {{ t('stats.monthly.percentile', { value: v.percentile == null ? '—' : Math.round(v.percentile) }) }}
+                <template v-if="v.percentileDelta != null">
+                  {{ v.percentileDelta >= 0 ? '+' : '' }}{{ Math.round(v.percentileDelta) }}
+                </template>
+              </span>
+            </li>
+          </ul>
+        </template>
+
+        <button class="btn btn-outline btn-block report-btn" type="button" @click="handlePrint">
+          {{ t('stats.monthly.print') }}
+        </button>
+        <p class="note-text print-hint">{{ t('stats.monthly.printHint') }}</p>
+      </template>
+      <p v-else class="note-text">{{ t('stats.monthly.noData') }}</p>
     </div>
   </div>
 </template>
@@ -930,5 +1196,177 @@ async function handleShareReport() {
   color: var(--text-muted);
   margin: var(--space-3) var(--space-1) var(--space-1);
   line-height: 1.6;
+}
+
+/* —— 月报 —— */
+.month-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.month-nav {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--surface-translucent);
+  color: var(--text);
+  font-size: var(--fs-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.month-nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.month-label {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.month-back {
+  margin-left: auto;
+  border: none;
+  background: none;
+  padding: 4px 6px;
+  color: var(--primary);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.month-rows {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.month-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'label daily change'
+    'label prev prev';
+  align-items: center;
+  gap: 2px 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface-translucent);
+  border: 1px solid var(--glass-border);
+}
+
+.month-row-label {
+  grid-area: label;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.month-row-daily {
+  grid-area: daily;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.month-row-change {
+  grid-area: change;
+  min-width: 52px;
+  text-align: right;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-row-change.up {
+  color: var(--primary);
+}
+
+.month-row-change.down {
+  color: var(--accent-green);
+}
+
+.month-row-change.none {
+  color: var(--text-muted);
+}
+
+.month-row-prev {
+  grid-area: prev;
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.care-list,
+.velocity-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.care-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius);
+  background: var(--surface-translucent);
+  border: 1px solid var(--glass-border);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.care-icon {
+  flex-shrink: 0;
+  font-size: var(--fs-base);
+}
+
+.velocity-item {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface-translucent);
+  border: 1px solid var(--glass-border);
+}
+
+.velocity-label {
+  min-width: 52px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.velocity-value {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.velocity-sub {
+  margin-left: auto;
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 </style>

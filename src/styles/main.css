@@ -772,3 +772,63 @@ select.form-input:focus {
     scroll-behavior: auto !important;
   }
 }
+
+/* 打印：只保留内容卡片（月报「打印 / 保存 PDF」使用） */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  .tabbar,
+  .tabbar-scrim,
+  .page-header,
+  .range-select-row,
+  .overview-tabs,
+  .month-nav,
+  .month-back,
+  .report-btn,
+  .print-hint,
+  .toast-container,
+  .floating-ball {
+    display: none !important;
+  }
+
+  html,
+  body,
+  #app {
+    height: auto !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  body::before {
+    display: none !important;
+  }
+
+  .page {
+    min-height: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .card,
+  .summary-item,
+  .month-row,
+  .care-item,
+  .velocity-item {
+    background: #fff !important;
+    border-color: #d9d9d9 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    break-inside: avoid;
+  }
+
+  .note-text,
+  .summary-sub,
+  .month-row-prev,
+  .velocity-sub {
+    color: #555 !important;
+  }
+}
