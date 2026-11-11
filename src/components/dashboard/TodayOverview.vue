@@ -70,6 +70,8 @@ function openAllVaccinations() {
 
 // —— 喂奶提醒 ——
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
+/** 提醒配置与稍后状态按宝宝隔离：全部读写都带上当前宝宝 id */
+const activeBabyId = computed(() => babyStore.activeBabyId)
 const lastFeeding = computed(() => {
   const sorted = [...feedingStore.feedings].sort((a, b) => b.startTime - a.startTime)
   return sorted[0]
@@ -86,24 +88,24 @@ const overdue = computed(() => sinceMs.value != null && sinceMs.value > recommen
 const snoozeTick = ref(0)
 const feedSnoozed = computed(() => {
   void snoozeTick.value
-  return isSnoozed('feed', props.now)
+  return isSnoozed('feed', props.now, activeBabyId.value)
 })
 function snoozeFeed() {
-  snoozeReminder('feed', 15, props.now)
+  snoozeReminder('feed', 15, props.now, activeBabyId.value)
   snoozeTick.value++
 }
 function snoozeSleep() {
-  snoozeReminder('sleep', 15, props.now)
+  snoozeReminder('sleep', 15, props.now, activeBabyId.value)
   snoozeTick.value++
 }
 function snoozeDiaper() {
-  snoozeReminder('diaper', 15, props.now)
+  snoozeReminder('diaper', 15, props.now, activeBabyId.value)
   snoozeTick.value++
 }
 
 // —— 睡眠提醒条 ——（仅当睡眠提醒开启：就寝时间前 1 小时窗口内 / 距上次睡眠超过设定间隔；正在进行睡眠时不显示）
 const activeTimer = useActiveTimer()
-const sleepReminders = computed(() => loadReminders().sleep)
+const sleepReminders = computed(() => loadReminders(activeBabyId.value).sleep)
 const lastSleepStart = computed(() => {
   const sorted = [...sleepStore.sleeps].sort((a, b) => b.startTime - a.startTime)
   return sorted[0]?.startTime ?? null
@@ -127,7 +129,7 @@ const sleepIntervalDue = computed(() => {
 })
 const sleepSnoozed = computed(() => {
   void snoozeTick.value
-  return isSnoozed('sleep', props.now)
+  return isSnoozed('sleep', props.now, activeBabyId.value)
 })
 const sleepBannerActive = computed(
   () =>
@@ -139,7 +141,7 @@ const sleepBannerActive = computed(
 )
 
 // —— 尿布提醒条 ——（阈值与今日照护共用：距上次换尿布超过提醒设置间隔，默认 3 小时，常显）
-const diaperReminders = computed(() => loadReminders().diaper)
+const diaperReminders = computed(() => loadReminders(activeBabyId.value).diaper)
 const lastDiaperTime = computed(() => {
   const sorted = [...diaperStore.diapers].sort((a, b) => b.time - a.time)
   return sorted[0]?.time ?? null
@@ -156,7 +158,7 @@ const diaperDue = computed(
 )
 const diaperSnoozed = computed(() => {
   void snoozeTick.value
-  return isSnoozed('diaper', props.now)
+  return isSnoozed('diaper', props.now, activeBabyId.value)
 })
 const diaperBannerActive = computed(() => diaperDue.value && !diaperSnoozed.value && !dismissed.value.diaper)
 

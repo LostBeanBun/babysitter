@@ -11,6 +11,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import OnboardingModal from '@/components/dashboard/OnboardingModal.vue'
 import TodayOverview from '@/components/dashboard/TodayOverview.vue'
 import CarePlanCard from '@/components/dashboard/CarePlanCard.vue'
+import AnomalyCard from '@/components/dashboard/AnomalyCard.vue'
 import RecordFormModal from '@/components/common/RecordFormModal.vue'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/utils/format'
 import { FEED_TYPE_LABELS, KIND_META } from '@/constants'
@@ -153,6 +154,9 @@ function onEditVaccination(v: Vaccination) {
 
       <!-- 今日照护卡：今日汇总 + 下一步参考 + 交接摘要 -->
       <CarePlanCard :now="now" @add="openAdd" />
+
+      <!-- 值得留意：近 3 天 vs 前 7 天的记录变化与体温提示（无异常时隐藏） -->
+      <AnomalyCard :now="now" />
 
       <!-- 快捷记录 -->
       <p class="section-title">{{ t('dashboard.quickRecord') }}</p>

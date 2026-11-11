@@ -112,7 +112,7 @@ const plan = computed(() =>
     vaccinations: vaccinations.value,
     activeFeedingStart: activeFeedingStart.value,
     activeSleepStart: activeSleepStart.value,
-    diaperIntervalMs: loadReminders().diaper.intervalHours * MS_PER_HOUR,
+    diaperIntervalMs: loadReminders(babyStore.activeBaby?.id ?? null).diaper.intervalHours * MS_PER_HOUR,
   }),
 )
 

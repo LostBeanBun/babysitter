@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBabyStore } from '@/stores/baby'
 import { countAllRecords, clearAllData } from '@/db'
@@ -111,7 +111,14 @@ async function handleShare() {
 const activeBaby = computed(() => babyStore.babies.find((b) => b.id === babyStore.activeBabyId))
 
 // —— 提醒设置（多类提醒，默认全部关闭，由用户自行开启）——
-const reminders = ref<ReminderConfig>(loadReminders())
+// 配置按宝宝独立存储：切换宝宝时重新载入，避免把 A 的提醒参数写到 B 上
+const reminders = ref<ReminderConfig>(loadReminders(babyStore.activeBabyId))
+watch(
+  () => babyStore.activeBabyId,
+  (id) => {
+    reminders.value = loadReminders(id)
+  },
+)
 
 // —— 通知权限状态（iOS 未添加到主屏幕时无法授权）——
 const notifyStatus = ref<NotifyStatus>('unsupported')
@@ -157,11 +164,11 @@ async function toggleReminder(type: ReminderType) {
     else if (notifyStatus.value === 'unsupported') showToast(t('settings.notifyUnsupportedToast'))
     else if (notifyStatus.value === 'ios-install') showToast(t('settings.notifyIosToast'))
   }
-  saveReminders(reminders.value)
+  saveReminders(reminders.value, babyStore.activeBabyId)
 }
 
 function persistReminders() {
-  saveReminders(reminders.value)
+  saveReminders(reminders.value, babyStore.activeBabyId)
 }
 
 /** 间隔类提醒参数更新（组件统一回调，转 number 后写回配置） */
@@ -177,7 +184,7 @@ function setSleepTime(v: number | string) {
 // —— 免打扰时段 ——
 function toggleQuiet() {
   reminders.value.quiet.enabled = !reminders.value.quiet.enabled
-  saveReminders(reminders.value)
+  saveReminders(reminders.value, babyStore.activeBabyId)
 }
 
 function setQuietTime(which: 'start' | 'end', v: number | string) {
@@ -190,7 +197,7 @@ const recommendedHours = computed(() => recommendedIntervalMs(activeBaby.value) 
 function applyAgeRecommendation() {
   const hours = recommendedHours.value
   reminders.value.feed.intervalHours = clampIntervalHours(hours, 0)
-  saveReminders(reminders.value)
+  saveReminders(reminders.value, babyStore.activeBabyId)
   showToast(t('settings.recommendApplied', { hours }))
 }
 
@@ -442,6 +449,13 @@ async function confirmClearAll() {
     <p class="section-title">{{ t('settings.reminderSectionTitle') }}</p>
     <div class="card">
       <p class="data-tip">{{ t('settings.reminderTip') }}</p>
+      <p class="data-tip reminder-scope">
+        {{
+          activeBaby
+            ? t('settings.reminderScope', { name: activeBaby.name })
+            : t('settings.reminderScopeNoBaby')
+        }}
+      </p>
       <div class="notify-status" :class="`notify-status--${notifyStatusTone}`">
         <span class="notify-dot" aria-hidden="true"></span>
         <span class="notify-text">{{ notifyStatusText }}</span>
@@ -894,6 +908,12 @@ async function confirmClearAll() {
   color: var(--text-muted);
   margin-bottom: var(--space-2);
   line-height: 1.6;
+}
+
+/* 提醒配置作用域提示：紧跟在说明下方，与权限状态行留出间距 */
+.reminder-scope {
+  margin-top: calc(-1 * var(--space-1));
+  color: var(--text-secondary);
 }
 
 /* 通知权限状态行：颜色区分可用 / 待授权 / 被拒绝 / 不支持 */
