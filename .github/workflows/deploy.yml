@@ -28,7 +28,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build
+      # GitHub Pages 项目页部署在子路径（/babysitter/），vite 资源必须按子路径输出
+      - run: npm run build -- --base=/babysitter/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
