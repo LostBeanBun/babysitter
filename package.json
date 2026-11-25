@@ -1,6 +1,6 @@
 {
   "name": "babysitter",
-  "version": "1.16.0",
+  "version": "1.16.1",
   "description": "宝宝喂养记录与统计 - 温馨简约的本地优先 PWA 应用",
   "private": true,
   "type": "module",
@@ -32,6 +32,7 @@
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.9.0",
+    "@vue/test-utils": "^2.6.0",
     "eslint": "^10.8.1",
     "eslint-plugin-vue": "^10.10.0",
     "jsdom": "^29.1.1",

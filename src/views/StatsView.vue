@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { EChartsOption } from 'echarts'
 import PageHeader from '@/components/common/PageHeader.vue'
 import CountUp from '@/components/common/CountUp.vue'
 import ChartCard from '@/components/charts/ChartCard.vue'
@@ -20,13 +19,21 @@ import {
   aggregateRange,
   sumDays,
   compareRanges,
+  earliestRecordStart,
   RANGE_PRESETS,
   type DayAggregate,
   type ComparisonResult,
   type RecordDatasets,
 } from '@/services/stats'
-import { CHART_COLORS, MS_PER_DAY } from '@/constants'
-import { trendTooltip, trendAxes, areaLineSeries, type ChartThemeColors } from '@/services/chartOptions'
+import { MS_PER_DAY } from '@/constants'
+import {
+  milkTrendOption,
+  sleepTrendOption,
+  diaperTrendOption,
+  pumpTrendOption,
+  temperatureTrendOption,
+  type ChartThemeColors,
+} from '@/services/chartOptions'
 import { formatDuration, formatPercentChange, formatAmount, startOfDay, formatDate } from '@/utils/format'
 import { useChartTheme } from '@/composables/useChartTheme'
 import { buildRangeInsight, type InsightItem } from '@/services/insights'
@@ -92,21 +99,10 @@ const datasets = computed<RecordDatasets>(() => ({
   temperatures: temperatureStore.temperatures,
 }))
 
-// “全部”按实际最早记录收窄，避免从 1970 起逐日建桶导致日均失真
+// “全部”按实际最早记录收窄（服务层 earliestRecordStart 钳制），避免从 1970 起逐日建桶导致日均失真
 const allDataStart = computed<number | null>(() => {
   if (rangeKey.value !== 'all') return null
-  const stamps = [
-    ...datasets.value.feedings.map((f) => f.startTime),
-    ...datasets.value.diapers.map((d) => d.time),
-    ...datasets.value.pumpings.map((p) => p.startTime),
-    ...datasets.value.sleeps.map((s) => s.startTime),
-    ...growthStore.growths.map((g) => g.date),
-    ...(datasets.value.solidFoods ?? []).map((sf) => sf.time),
-    ...(datasets.value.medications ?? []).map((m) => m.time),
-    ...(datasets.value.temperatures ?? []).map((tp) => tp.time),
-  ].filter((ts) => Number.isFinite(ts) && ts > 0)
-  if (stamps.length === 0) return startOfDay(now.value) - 30 * MS_PER_DAY
-  return startOfDay(Math.min(...stamps))
+  return earliestRecordStart(datasets.value, growthStore.growths.map((g) => g.date))
 })
 
 const rangeStart = computed(() => {
@@ -135,100 +131,20 @@ const comparisons = computed<ComparisonResult[]>(() => compareRanges(currentAgg.
 const xLabels = computed(() => days.value.map((d) => d.date.slice(5).replace('-', '/')))
 const yFormatter = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v))
 
-// —— 趋势图配置 ——
-const milkOption = computed<EChartsOption>(() => ({
-  tooltip: trendTooltip((v) => `${Math.round(v)} ml`),
-  ...trendAxes({ theme: chartTheme.value, xLabels: xLabels.value, yFormatter }),
-  series: [
-    areaLineSeries({
-      name: t('stats.series.milk'),
-      data: days.value.map((d) => d.totalMilkAmount),
-      color: CHART_COLORS.feedAmount,
-      area: ['rgba(255,107,53,0.25)', 'rgba(255,107,53,0.02)'],
-    }),
-  ],
-}))
+// —— 趋势图配置（builder 已抽至 services/chartOptions，两端共用同一份） ——
+const trendArgs = () => ({
+  days: days.value,
+  xLabels: xLabels.value,
+  theme: chartTheme.value,
+  t,
+  yFormatter,
+})
 
-const sleepOption = computed<EChartsOption>(() => ({
-  tooltip: trendTooltip((v) => `${v} h`),
-  ...trendAxes({ theme: chartTheme.value, xLabels: xLabels.value }),
-  series: [
-    {
-      name: t('stats.series.sleep'),
-      type: 'bar',
-      barMaxWidth: 22,
-      data: days.value.map((d) => +(d.sleepMs / 3600_000).toFixed(1)),
-      itemStyle: { color: CHART_COLORS.sleep, borderRadius: [4, 4, 0, 0] },
-    },
-  ],
-}))
-
-const diaperOption = computed<EChartsOption>(() => ({
-  tooltip: trendTooltip((v) => t('common.times', { n: Math.round(v) })),
-  ...trendAxes({ theme: chartTheme.value, xLabels: xLabels.value }),
-  series: [
-    {
-      name: t('stats.series.wet'),
-      type: 'bar',
-      stack: 'diaper',
-      barMaxWidth: 22,
-      data: days.value.map((d) => d.wetCount),
-      itemStyle: { color: '#8FB9D8' },
-    },
-    {
-      name: t('stats.series.dirty'),
-      type: 'bar',
-      stack: 'diaper',
-      barMaxWidth: 22,
-      data: days.value.map((d) => d.dirtyCount),
-      itemStyle: { color: '#B58B62' },
-    },
-  ],
-}))
-
-const pumpOption = computed<EChartsOption>(() => ({
-  tooltip: trendTooltip((v) => `${Math.round(v)} ml`),
-  ...trendAxes({ theme: chartTheme.value, xLabels: xLabels.value, yFormatter }),
-  series: [
-    areaLineSeries({
-      name: t('stats.series.pump'),
-      data: days.value.map((d) => d.pumpAmount),
-      color: CHART_COLORS.pump,
-      area: ['rgba(216,168,200,0.25)', 'rgba(216,168,200,0.02)'],
-    }),
-  ],
-}))
-
-const temperatureOption = computed<EChartsOption>(() => ({
-  tooltip: trendTooltip((v) => `${v} ℃`),
-  ...trendAxes({
-    theme: chartTheme.value,
-    xLabels: xLabels.value,
-    yMin: 35,
-    yMax: 40,
-    yFormatter: (v) => `${v}℃`,
-  }),
-  series: [
-    {
-      name: t('stats.series.temperature'),
-      type: 'line',
-      smooth: true,
-      symbol: 'circle',
-      symbolSize: 6,
-      data: days.value.map((d) => (d.temperatureCount > 0 ? +d.temperatureAvg.toFixed(1) : null)),
-      connectNulls: false,
-      lineStyle: { width: 2.5, color: CHART_COLORS.temperature },
-      itemStyle: { color: CHART_COLORS.temperature },
-      markLine: {
-        silent: true,
-        symbol: 'none',
-        label: { show: false },
-        data: [{ yAxis: 37.3 }],
-        lineStyle: { color: '#ff7a45', type: 'dashed', width: 1 },
-      },
-    },
-  ],
-}))
+const milkOption = computed(() => milkTrendOption(trendArgs()))
+const sleepOption = computed(() => sleepTrendOption(trendArgs()))
+const diaperOption = computed(() => diaperTrendOption(trendArgs()))
+const pumpOption = computed(() => pumpTrendOption(trendArgs()))
+const temperatureOption = computed(() => temperatureTrendOption(trendArgs()))
 
 // 对比面板格式化
 function formatMetricValue(key: string, value: number): string {

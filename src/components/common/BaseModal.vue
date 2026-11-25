@@ -1,3 +1,11 @@
+<script lang="ts">
+// —— body 滚动锁计数器（模块级：多个 BaseModal 实例共享） ——
+// <script setup> 内的顶层声明属于每个实例的 setup 作用域，按实例计数会让
+// 叠加弹窗中先关闭的那个提前恢复滚动，导致仍在显示的弹窗背后可以滚动
+let scrollLockCount = 0
+let prevBodyOverflow = ''
+</script>
+
 <script setup lang="ts">
 import { ref, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -13,9 +21,7 @@ const { t } = useI18n()
 
 const panelRef = ref<HTMLElement | null>(null)
 
-// —— body 滚动锁（计数器：确认框叠在表单上时只在全部关闭后恢复） ——
-let scrollLockCount = 0
-let prevBodyOverflow = ''
+// 每个实例自身的开锁标记（防止同一实例重复上锁/解锁）
 let locked = false
 
 function lockBodyScroll() {

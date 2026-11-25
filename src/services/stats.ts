@@ -135,18 +135,24 @@ export function buildDailySeries(
   const days: DayAggregate[] = []
   const startDay = startOfDay(start)
   const endDay = startOfDay(end)
-  for (let t = startDay; t < endDay; t += MS_PER_DAY) {
-    days.push(emptyDay(t))
+  // 按自然日推进而非固定 24h 步长：夏令时切换的 23h / 25h 天会让
+  // t += MS_PER_DAY 的桶偏移出本地零点，切换日之后记录 startOfDay 查表落空被静默丢弃
+  for (let d = new Date(startDay); d.getTime() < endDay; d.setDate(d.getDate() + 1)) {
+    days.push(emptyDay(d.getTime()))
   }
   const dayMap = new Map<number, DayAggregate>()
   for (const d of days) dayMap.set(d.dayStart, d)
 
   // 睡眠可能跨天：按与每日窗口的重叠时长分摊（未结束的按 now 截断）
   const dayEnds = days.map((d, i) => days[i + 1]?.dayStart ?? startOfDay(d.dayStart + MS_PER_DAY))
+  // 按起止日直接定位重叠的桶区间，避免 O(睡眠数 × 天数) 的全量扫描
+  const dayIndex = new Map(days.map((d, i) => [d.dayStart, i]))
   for (const s of ds.sleeps) {
     const sleepEnd = endOf(s.startTime, s.endTime, s.duration, now)
     if (sleepEnd <= s.startTime) continue
-    for (let i = 0; i < days.length; i++) {
+    const fromIdx = dayIndex.get(startOfDay(s.startTime)) ?? 0
+    const toIdx = dayIndex.get(startOfDay(sleepEnd)) ?? days.length - 1
+    for (let i = fromIdx; i <= toIdx && i < days.length; i++) {
       if (dayEnds[i] <= s.startTime) continue
       if (days[i].dayStart >= sleepEnd) break
       days[i].sleepMs += overlapMs(s.startTime, sleepEnd, days[i].dayStart, dayEnds[i], now)
@@ -201,6 +207,22 @@ export function buildDailySeries(
   }
 
   return days
+}
+
+/** 「全部」时间范围的起点：数据集内全部记录的最早时间戳所在日（无记录返回 null） */
+export function earliestRecordStart(ds: RecordDatasets, extraStamps: number[] = []): number | null {
+  const stamps = [
+    ...ds.feedings.map((f) => f.startTime),
+    ...ds.diapers.map((d) => d.time),
+    ...ds.pumpings.map((p) => p.startTime),
+    ...ds.sleeps.map((s) => s.startTime),
+    ...(ds.solidFoods ?? []).map((sf) => sf.time),
+    ...(ds.medications ?? []).map((m) => m.time),
+    ...(ds.temperatures ?? []).map((t) => t.time),
+    ...extraStamps,
+  ].filter((ts) => Number.isFinite(ts) && ts > 0)
+  if (stamps.length === 0) return null
+  return startOfDay(Math.min(...stamps))
 }
 
 /** 将每日序列汇总为区间聚合（可复用已有 days，避免二次分桶） */
@@ -306,7 +328,7 @@ export const RANGE_PRESETS: RangePreset[] = [
   {
     key: 'all',
     label: 'stats.periods.all',
-    // 用有限上界：MAX_SAFE_INTEGER 会使 startOfDay 得到 NaN，日序列直接变空
+    // 实际起点由视图按数据集最早记录钳制（earliestRecordStart），此处仅为占位
     getRange: (now) => [0, startOfDay(now) + MS_PER_DAY],
   },
 ]

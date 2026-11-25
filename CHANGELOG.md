@@ -3,15 +3,25 @@
 版本号唯一来源为 `package.json`（两端仓库保持同值），每次改动都必须升版并在此登记。
 规则：`major` 不兼容变更 · `minor` 新功能 · `patch` 修复与内部调整。
 
-## [1.16.0] - 2026-11-11
-
-### 新增
-
-- 
+## [1.16.1] - 2026-11-25
 
 ### 修复
 
-- 
+- 修复夏令时（DST）时区下统计丢数据：`buildDailySeries` 逐日建桶改用自然日推进，切换日的 23h/25h 天不再让桶偏移出本地零点（此前切换日之后的喂养 / 尿布 / 吸奶等记录会在趋势、汇总、周期对比中静默消失）；新增 America/New_York 时区回归用例（`stats.dst.spec.ts`，覆盖回拨 / 拨快 / 跨切换日睡眠分摊）
+- 修复叠加弹窗的滚动锁计数按实例独立，先关闭的弹窗会提前恢复 body 滚动：计数改为模块级共享，全部弹窗关闭后才恢复
+
+### 新增
+
+- 组件级测试（新增 devDependency `@vue/test-utils`）：`BaseModal`（滚动锁含叠加、Escape、焦点陷阱、焦点归还）、`TimelineList`（渐进挂载、编辑 / 删除事件、高亮类）、`ToastContainer`（自动关闭、操作回调）共 15 例
+- CI 工作流（`.github/workflows/ci.yml`）：push / PR 跑 typecheck、lint、测试（UTC / America/New_York / Asia/Shanghai 三时区矩阵）；部署改为 CI 通过后自动触发
+
+### 变更
+
+- 趋势图配置（奶量 / 睡眠 / 尿布 / 吸奶 / 体温）从 StatsView 抽至两端共用的 `services/chartOptions.ts` 纯函数 builder，补 5 例单测
+- 「全部」时间范围起点钳制从 StatsView 下沉至 `services/stats.ts` 的 `earliestRecordStart`
+- 睡眠跨天分摊按起止日直接定位桶区间，避免 O(睡眠数 × 天数) 全量扫描
+- 数据导入导出按职责拆分 `exportCsv.ts` / `importCsv.ts` / `csvLabels.ts`（`services/export.ts` 保持统一入口，引用方与既有 40 例单测不变）
+- 路由 `meta.title` 增加 vue-router `RouteMeta` 类型扩展，移除 `as string` 断言
 
 ## [1.16.0] - 2026-11-11
 
