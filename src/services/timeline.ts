@@ -1,4 +1,4 @@
-import i18n from '@/i18n'
+import { serviceT as t } from '@/i18n/service'
 import type {
   Feeding,
   DiaperChange,
@@ -25,8 +25,6 @@ import {
   RECORD_KINDS,
 } from '@/constants'
 import { formatTime, formatDuration, formatAmount, formatDate } from '@/utils/format'
-
-const t = i18n.global.t
 
 export type TimelineKind = RecordKind
 

@@ -13,11 +13,10 @@ import type {
   Temperature,
   Milestone,
 } from '@/types'
-import i18n from '@/i18n'
+import { serviceT as t } from '@/i18n/service'
 import { KIND_META } from '@/constants'
 import { formatAmount, formatDuration, formatDate, formatTime } from '@/utils/format'
 
-const t = i18n.global.t
 const T0 = 1_700_000_000_000
 
 const feed = (p: Partial<Feeding>): Feeding => ({

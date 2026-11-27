@@ -4,13 +4,12 @@
  */
 import { db } from '@/db'
 import { RECORD_TABLES, type RecordTableName } from '@/db/tables'
-import i18n from '@/i18n'
+import { serviceT as t } from '@/i18n/service'
 import type { Baby } from '@/types'
 import { parseDate, startOfDay } from '@/utils/format'
 import { AVATAR_COLORS } from '@/constants'
 import { HEADER_ALIASES, headerCell, toInternal } from './csvLabels'
 
-const t = i18n.global.t
 
 /** 解析 CSV 文本（支持 BOM、引号转义、字段内逗号/换行） */
 export function parseCsv(text: string): string[][] {

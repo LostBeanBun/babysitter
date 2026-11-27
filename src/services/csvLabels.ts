@@ -4,11 +4,10 @@
  * 导出把内部键值转成本地化显示文本（bl），导入按 zh / en 双语标签反查回
  * 内部键值（toInternal），并兼容 React 旧版导出的别名。
  */
-import i18n from '@/i18n'
+import { serviceLocale, serviceT as t } from '@/i18n/service'
 import zhCN from '@/i18n/locales/zh-CN'
 import enUS from '@/i18n/locales/en-US'
 
-const t = i18n.global.t
 
 /** CSV 数据列（不含可选宝宝名列与宝宝信息专用列），列序单一来源 */
 export const CSV_COLUMN_KEYS = ['recordType', 'date', 'time', 'endDate', 'endTime', 'item', 'value', 'duration', 'status', 'notes'] as const
@@ -136,7 +135,7 @@ const LABELS_EN: Record<string, string> = {
 
 /** 获取当前语言标签，未找到返回原键值 */
 export function bl(key: string): string {
-  const locale = i18n.global.locale.value
+  const locale = serviceLocale()
   const map = locale === 'en-US' ? LABELS_EN : LABELS_ZH
   return map[key] ?? key
 }
@@ -147,7 +146,7 @@ const BREAST_SIDE_LABELS_MAP: Record<string, Record<string, string>> = {
   'en-US': { left: 'Left', right: 'Right', both: 'Both' },
 }
 export function breastSideLabel(side: string): string {
-  const locale = i18n.global.locale.value
+  const locale = serviceLocale()
   return BREAST_SIDE_LABELS_MAP[locale]?.[side] ?? side
 }
 

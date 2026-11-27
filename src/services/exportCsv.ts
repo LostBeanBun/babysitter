@@ -4,7 +4,7 @@
  */
 import { db } from '@/db'
 import { RECORD_TABLES } from '@/db/tables'
-import i18n from '@/i18n'
+import { serviceT as t } from '@/i18n/service'
 import type {
   Feeding,
   DiaperChange,
@@ -21,7 +21,6 @@ import type {
 import { downloadBlob, formatDate, formatTime } from '@/utils/format'
 import { bl, breastSideLabel, CSV_COLUMN_KEYS, BABY_COLUMN_KEYS } from './csvLabels'
 
-const t = i18n.global.t
 
 /** CSV 转义：含逗号/引号/换行时包裹引号 */
 export function csvEscape(v: string | number | undefined | null): string {

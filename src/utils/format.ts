@@ -1,5 +1,5 @@
 /** 通用工具函数 */
-import i18n from '@/i18n'
+import { serviceT } from '@/i18n/service'
 
 /** 补零 */
 export function pad2(n: number): string {
@@ -71,7 +71,7 @@ export function durationParts(ms: number): { hours: number; minutes: number; sec
 
 /** 格式化时长：秒/分钟 → "X小时Y分" / "Y分钟"（跟随当前界面语言） */
 export function formatDuration(ms: number): string {
-  const t = i18n.global.t
+  const t = serviceT
   if (!ms || ms < 0) return t('duration.zero')
   const totalMin = Math.floor(ms / 60000)
   if (totalMin < 1) return `${Math.max(1, Math.floor(ms / 1000))}${t('duration.second')}`
